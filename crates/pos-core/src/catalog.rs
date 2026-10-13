@@ -194,8 +194,16 @@ impl Pos {
             ProductView::NotForSale => q.filter(products::on_sale.eq(false)),
         };
         let rows = q
-            .order((products::category, products::name, products::id))
-            .limit(i64::from(query.limit.clamp(1, 2000)))
+            // The shop's category order, then name; uncategorised last.
+            .order((
+                diesel::dsl::sql::<diesel::sql_types::BigInt>(
+                    "COALESCE((SELECT c.position FROM categories c WHERE c.name = products.category), 1000000000)",
+                ),
+                products::category,
+                products::name,
+                products::id,
+            ))
+            .limit(i64::from(query.limit.clamp(1, 10_000)))
             .offset(i64::from(query.offset))
             .select(ProductRow::as_select())
             .load::<ProductRow>(&mut self.conn)?;

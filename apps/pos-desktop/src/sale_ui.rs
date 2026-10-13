@@ -40,6 +40,11 @@ pub struct SellState {
     pub split_pay: Option<SplitDraft>,
     /// Choosing items to move to a separate bill.
     pub bill_split: Option<BillSplit>,
+    /// Products loaded in the grid beyond the first page (grows as the
+    /// grid is scrolled to the end; reset when the category changes).
+    pub more: u32,
+    /// A "load more" refresh is on its way.
+    pub loading_more: bool,
     pub category: Option<String>,
     pub current: Option<usize>,
     pub flash: Option<(usize, Instant)>,
@@ -67,6 +72,13 @@ pub struct OptionSheet {
     quantity: u32,
     note: String,
     edit: Option<usize>,
+}
+/// Products the Sell grid loads per step.
+pub const PAGE: u32 = 500;
+impl SellState {
+    pub fn limit(&self) -> u32 {
+        PAGE.saturating_add(self.more).min(10_000)
+    }
 }
 impl OptionSheet {
     pub fn new(product: Product, edit: Option<(usize, pos_domain::CartLine)>) -> Self {
@@ -2063,6 +2075,7 @@ fn categories(app: &mut App, ui: &mut egui::Ui) {
             for (value, label, n) in entries {
                 if nav_item(ui, &t, &label, n, app.sell.category == value).clicked() {
                     app.sell.category = value;
+                    app.sell.more = 0;
                     app.refresh();
                 }
             }
@@ -2208,6 +2221,18 @@ fn products(app: &mut App, ui: &mut egui::Ui) {
                 });
                 ui.add_space(gap - ui.spacing().item_spacing.y);
             }
+            // A full page may have more: load the next when the end shows.
+            if list.len() as u32 >= app.sell.limit() && app.sell.limit() < 10_000 {
+                let r = ui.label(t.muted(
+                    app.lang.text("กำลังโหลดสินค้าเพิ่ม…", "Loading more products…"),
+                    type_scale::CAPTION,
+                ));
+                if ui.is_rect_visible(r.rect) && !app.sell.loading_more && !app.busy {
+                    app.sell.loading_more = true;
+                    app.sell.more = app.sell.more.saturating_add(PAGE);
+                    app.refresh();
+                }
+            }
         });
     if let Some(p) = add {
         app.add(p);
@@ -2301,6 +2326,7 @@ fn empty_products(app: &mut App, ui: &mut egui::Ui) {
             {
                 app.search.clear();
                 app.sell.category = None;
+                app.sell.more = 0;
                 app.refresh();
             }
         });

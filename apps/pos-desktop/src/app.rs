@@ -445,7 +445,7 @@ impl App {
                 category: self.sell.category.clone(),
                 view: ProductView::All,
                 offset: 0,
-                limit: 500,
+                limit: self.sell.limit(),
             },
         };
         Query {
@@ -683,6 +683,7 @@ impl App {
                         self.known.insert(p.id, p.clone());
                     }
                     self.data = *data;
+                    self.sell.loading_more = false;
                     if !self.ready {
                         self.ready = true;
                         #[cfg(debug_assertions)]

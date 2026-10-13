@@ -542,6 +542,13 @@ fn categories_keep_an_order_rename_merge_and_delete_with_their_products() -> Res
     );
     pos.reorder_categories(&["Food".into(), "Desserts".into(), "Drinks".into()])?;
     assert_eq!(names(&mut pos)?[0].0, "Food");
+    // Product lists follow the same order; uncategorised last.
+    let listed: Vec<String> = pos
+        .products("", 0)?
+        .into_iter()
+        .map(|p| p.category)
+        .collect();
+    assert_eq!(listed, vec!["Food", "Drinks", "Drinks", ""]);
     assert!(pos.reorder_categories(&["Food".into()]).is_err());
     // Rename moves the products; renaming into an existing name merges.
     assert_eq!(pos.rename_category("Drinks", "Beverages", 2)?, 2);

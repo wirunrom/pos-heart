@@ -627,6 +627,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .collect();
         pos.link_option_set(size.id, &drinks, true, real_now - 800)?;
     }
+    // `--many N`: N generated products in ten categories, for checking a
+    // large catalog (Sell loads 500 at a time).
+    if let Some(n) = std::env::args()
+        .skip_while(|a| a != "--many")
+        .nth(1)
+        .and_then(|n| n.parse::<u32>().ok())
+    {
+        for i in 0..n {
+            pos.save_product(pos_domain::ProductInput {
+                sku: format!("M-{i:05}"),
+                name: format!("สินค้าตัวอย่าง {i} / Sample {i}"),
+                category: format!("หมวด {} / Group {}", i % 10, i % 10),
+                price: pos_domain::Money::from_satang(1000 + i64::from(i % 50) * 100)?,
+                ..Default::default()
+            })?;
+        }
+    }
     // `--promos`: a buy-2-get-1 tea, 10% off drinks 14:00–17:00, spend 500
     // save 50, and a WELCOME coupon (10%, 100 bills).
     if std::env::args().any(|a| a == "--promos") {

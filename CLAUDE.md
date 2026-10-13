@@ -22,6 +22,7 @@ cargo run -p pos-desktop --example seed_screens -- /tmp/shots   # add --staff fo
 cargo run -p pos-desktop --bin pos-heart -- --data-dir /tmp/shots --page sell --preview sell-options --window-size 1280x820 --screenshot out.png
 # Staff (seed with --staff): --preview approval | report-staff | staff-editor | role-editor; prefix as-cashier:<preset> or as-owner:<preset> to sign in that sample member first
 # Categories: --page products --preview categories | category-rename
+# Large catalogs: seed_screens DIR --many 1500 adds generated products in ten categories (Sell loads 500 at a time and more on scrolling to the end)
 # Option sets (seed with --sets, a cup-size set on every drink): --page products --preview option-sets | option-set-editor | option-set-bulk
 # Pictures (seed with --pictures, generated coloured samples): --page sell (tiles) | --page products --preview product-cost (editor picture field)
 # Ingredients (seed with --ingredients): --page products --preview ingredients | ingredient-history | product-recipe (scrolls to the recipe and option rows); --page reports --preview report-promos | report-ingredients

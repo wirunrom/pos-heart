@@ -275,3 +275,7 @@ Not verified: Windows; clicked-through reorder/rename/delete.
 Automated on macOS: `tests/option_sets.rs` (a set linked to two products in bulk; editing the set adds a priced choice both products sell at checkout with the right total and snapshot; saving a product keeps its set apart from its own groups; unknown sets refused; deleting a set unlinks it everywhere). Full workspace: 182 tests; the schema-version test expects 22 and refuses 23.
 
 Native captures on macOS (debug build, `seed_screens DIR --restaurant --sets`): the Option sets list and set editor (Dark Thai 1280×820), the bulk dialog and the Sell options sheet with the shared Cup size group after the product's own groups (Light English Touch 1000×700). The seeded open bill's tea line shows "Options changed · choose again" because the required set was added after it was rung up — the intended behaviour.
+
+## Large catalog — 2026-10-14
+
+`seed_screens DIR --many 1500` (1,512 products, 14 categories): Sell at 1280×820 Dark Thai renders the first page with category counts in the sidebar; `tests/catalog.rs` checks that product lists follow the category order. Scrolling to load further pages was not exercised in a capture; memory and frame time with thousands of tiles were not measured.

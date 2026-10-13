@@ -257,3 +257,7 @@ Products → Manage → Categories lists categories in the shop's order (also us
 ## Shared option sets (2026-10-14)
 
 Products → Manage → Option sets keeps option groups used by many products (sweetness, toppings, cup size). Edit a set once and every product using it changes; past receipts keep what was sold. Link sets in the product editor (Shared option sets chips, below the product's own options) or select products in the table and use Option set in the bulk bar to add or remove one on all of them. Deleting a set removes it from every product. Adding a required set, or removing a choice, makes open bills with those products choose again.
+
+### Large catalogs
+
+Sell loads 500 products at a time and loads more when the end of the grid comes into view (up to 10,000 per category or search); products are listed in the shop's category order, then by name. `seed_screens DIR --many 1500` creates a large sample catalog for checks.
