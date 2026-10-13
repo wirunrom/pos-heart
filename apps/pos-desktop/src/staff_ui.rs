@@ -45,7 +45,7 @@ pub struct Editor {
 
 /// Locked while staff exist and nobody is signed in.
 pub fn locked(app: &App) -> bool {
-    app.ready && app.data.staff_enabled && app.data.signed_in.is_none()
+    app.ready && app.data.staff_enabled && (app.session_locked || app.data.signed_in.is_none())
 }
 pub fn role_of<'a>(app: &'a App, id: &str) -> Option<&'a RoleDef> {
     app.data.roles.iter().find(|r| r.id == id)
@@ -459,11 +459,7 @@ pub fn topbar_chip(app: &mut App, ui: &mut egui::Ui) {
         });
 }
 pub fn lock(app: &mut App) {
-    if app.data.staff_enabled && !app.busy {
-        app.staff.pin.clear();
-        app.staff.pin_error = None;
-        app.send(Command::SignOut);
-    }
+    app.lock_session();
 }
 
 /// Settings → Staff. Only owners edit; everyone sees who is on the roster.
@@ -950,5 +946,15 @@ pub fn preview_role_editor(app: &mut App) {
             limit: percent_text(role.discount_limit_bp),
             def: role,
         });
+    }
+}
+
+impl StaffState {
+    pub fn clear_pin_drafts(&mut self) {
+        self.pin.clear();
+        if let Some(editor) = &mut self.editor {
+            editor.pin.clear();
+            editor.confirm.clear();
+        }
     }
 }

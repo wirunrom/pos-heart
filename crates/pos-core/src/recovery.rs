@@ -59,6 +59,14 @@ pub fn inspect_database(path: &Path) -> Result<BackupInfo> {
 }
 
 impl crate::Pos {
+    /// A sidecar marker must never resurrect a paid/deleted bill in a snapshot.
+    pub fn has_held_cart(&mut self, id: uuid::Uuid) -> Result<bool> {
+        use crate::schema::held_carts;
+        Ok(diesel::select(diesel::dsl::exists(
+            held_carts::table.filter(held_carts::id.eq(id.to_string())),
+        ))
+        .get_result(&mut self.conn)?)
+    }
     /// Device operations recheck Settings against the current database session.
     pub fn authorize_recovery(&mut self) -> Result<()> {
         let session = self.session.clone();

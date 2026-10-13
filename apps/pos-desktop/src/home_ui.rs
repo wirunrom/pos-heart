@@ -290,13 +290,11 @@ fn pending(app: &mut App, ui: &mut egui::Ui) {
         }
     }
     let week = Duration::from_secs(7 * 24 * 3600);
-    let backup_old = app
-        .home
-        .last_backup
-        .is_none_or(|t| t.elapsed().is_ok_and(|e| e > week));
+    let latest_backup = app.home.last_backup.max(app.auto_backup.latest);
+    let backup_old = latest_backup.is_none_or(|t| t.elapsed().is_ok_and(|e| e > week));
     if backup_old && app.data.counts.total > 0 {
         any = true;
-        let text = match app.home.last_backup {
+        let text = match latest_backup {
             None => lang.text("ยังไม่เคยสำรองข้อมูลในเครื่องนี้", "No backup on this device yet"),
             Some(_) => lang.text(
                 "สำรองข้อมูลล่าสุดนานกว่า 7 วัน",

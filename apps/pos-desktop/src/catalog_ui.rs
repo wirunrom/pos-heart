@@ -521,6 +521,16 @@ fn stock_dialog(app: &mut App, ctx: &egui::Context) {
     app.catalog.stock_dialog = Some(dialog);
 }
 impl CatalogState {
+    /// Cancel queued intents and destructive overlays, retain the product draft.
+    pub fn cancel_confirmations(&mut self) {
+        self.archive_confirm = false;
+        self.pending_nav = None;
+        self.pending_open = None;
+        self.close_after_prompt = false;
+        self.save_requested = false;
+        self.stock_dialog = None;
+        self.bulk_category = None;
+    }
     pub fn dirty(&self) -> bool {
         self.editor.as_ref().is_some_and(Editor::dirty)
     }

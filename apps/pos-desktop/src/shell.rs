@@ -97,7 +97,10 @@ impl App {
 pub fn toasts(app: &mut App, ctx: &egui::Context) {
     let now = Instant::now();
     app.toasts.retain(|t| t.until > now);
-    if app.toasts.is_empty() {
+    if app.toasts.is_empty()
+        || crate::staff_ui::locked(app)
+        || ctx.memory(|m| m.top_modal_layer().is_some())
+    {
         return;
     }
     if let Some(next) = app.toasts.iter().map(|t| t.until).min() {

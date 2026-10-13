@@ -43,6 +43,20 @@ pub fn apply(app: &mut App, ctx: &egui::Context) {
     app.preview_frame = app.frames;
     let total = app.total().ok();
     match name.as_str() {
+        "automatic-backups" => {
+            app.page = crate::app::Page::Settings;
+            app.settings_section = crate::settings_ui::Section::Data;
+            app.auto_backup.draft.enabled = true;
+        }
+        "idle-settings" => {
+            app.page = crate::app::Page::Settings;
+            app.settings_section = crate::settings_ui::Section::Staff;
+        }
+        "idle-lock" => {
+            app.auto_lock.settings.timeout_minutes = 1;
+            app.auto_lock
+                .reset(std::time::Instant::now() - std::time::Duration::from_secs(61));
+        }
         "palette" => {
             app.palette.open();
             app.palette.query = "ชา".into();

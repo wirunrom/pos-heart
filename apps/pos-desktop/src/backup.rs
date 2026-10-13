@@ -132,6 +132,15 @@ fn validate_local(dir: &Path) -> io::Result<String> {
 }
 pub fn create(pos: &mut Pos, data: &Path, destination: &Path) -> pos_core::Result<PathBuf> {
     pos.authorize_recovery()?;
+    create_maintenance(pos, data, destination)
+}
+/// Scheduled device maintenance is authorized by the saved opt-in configuration.
+/// Callers must validate that configuration; interactive backup remains guarded above.
+pub(crate) fn create_maintenance(
+    pos: &mut Pos,
+    data: &Path,
+    destination: &Path,
+) -> pos_core::Result<PathBuf> {
     validate_local(data)?;
     fs::create_dir(destination)?;
     let result = (|| -> pos_core::Result<()> {
@@ -141,6 +150,13 @@ pub fn create(pos: &mut Pos, data: &Path, destination: &Path) -> pos_core::Resul
             let name = file.file_name();
             let name = name.to_string_lossy();
             if name != DB && business_file(&name) {
+                if name == "current-bill.txt" {
+                    let id = Uuid::parse_str(fs::read_to_string(file.path())?.trim())
+                        .map_err(io::Error::other)?;
+                    if !pos.has_held_cart(id)? {
+                        continue;
+                    }
+                }
                 copy_file(&file.path(), &destination.join(name.as_ref()))?;
             }
         }
@@ -287,6 +303,8 @@ pub fn prepare(pos: &mut Pos, data: &Path, reviewed: &Review) -> pos_core::Resul
             "density.txt",
             "language.txt",
             "window.txt",
+            "auto-backup.json",
+            "auto-lock.json",
         ] {
             if data.join(name).exists() {
                 copy_file(&data.join(name), &stage.join(name))?;
@@ -397,6 +415,35 @@ mod tests {
         fs::write(data.join("printer.json"), "device-local")?;
         fs::write(data.join("language.txt"), "en")?;
         Ok(pos)
+    }
+    #[test]
+    fn maintenance_omits_stale_marker_and_restore_keeps_device_policies()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let temp = tempfile::tempdir()?;
+        let data = temp.path().join("shop");
+        let source = temp.path().join("backup");
+        let mut pos = populate(&data)?;
+        let stale = Uuid::new_v4();
+        fs::write(data.join("current-bill.txt"), stale.to_string())?;
+        let lock = br#"{"version":1,"timeout_minutes":5}"#;
+        let policy = br#"{"version":1,"enabled":true,"daily":true,"after_shift":true,"keep":7}"#;
+        fs::write(data.join("auto-lock.json"), lock)?;
+        fs::write(data.join("auto-backup.json"), policy)?;
+        create_maintenance(&mut pos, &data, &source)?;
+        assert!(!source.join("current-bill.txt").exists());
+        assert!(!source.join("auto-lock.json").exists());
+        assert!(!source.join("auto-backup.json").exists());
+        assert_eq!(
+            fs::read_to_string(data.join("current-bill.txt"))?,
+            stale.to_string()
+        );
+        let review = inspect(&source)?;
+        prepare(&mut pos, &data, &review)?;
+        drop(pos);
+        activate_pending(&data)?;
+        assert_eq!(fs::read(data.join("auto-lock.json"))?, lock);
+        assert_eq!(fs::read(data.join("auto-backup.json"))?, policy);
+        Ok(())
     }
     #[test]
     fn complete_backup_restore_preserves_previous_and_device_settings()

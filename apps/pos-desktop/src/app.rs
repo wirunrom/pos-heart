@@ -53,6 +53,12 @@ struct Autosave {
 }
 pub struct App {
     pub worker: Worker,
+    pub auto_lock: crate::auto_lock::State,
+    pub auto_backup: crate::auto_backup_ui::State,
+    /// Immediate local gate; only a current-generation successful PIN clears it.
+    pub session_locked: bool,
+    /// Canceled confirmation payload, preserved as an inert draft, never replayed.
+    _locked_review: Option<sale_ui::PaymentReview>,
     pub recovery: crate::backup_ui::State,
     pub activity: crate::activity_ui::ActivityState,
     pub data: Data,
@@ -188,6 +194,18 @@ impl App {
                 )
             )
         }));
+        let auto_lock = crate::auto_lock::State::load(&data_dir);
+        let settings_error = settings_error.or_else(|| {
+            auto_lock.error.as_ref().map(|error| {
+                format!(
+                    "{}: {error}",
+                    lang.text(
+                        "อ่านการตั้งค่าล็อกอัตโนมัติไม่ได้ ไฟล์จะไม่ถูกเขียนทับ",
+                        "Cannot read auto-lock settings; the file will not be overwritten"
+                    )
+                )
+            })
+        });
         let onboarding = !shop.setup_complete;
         let page = start_page.unwrap_or(if shop.start_in_sell && !onboarding {
             Page::Sell
@@ -198,6 +216,10 @@ impl App {
         let worker = Worker::start(data_dir.join("pos-heart.sqlite3"), cc.egui_ctx.clone())?;
         Ok(Self {
             worker,
+            auto_lock,
+            auto_backup: crate::auto_backup_ui::State::load(&data_dir),
+            session_locked: false,
+            _locked_review: None,
             recovery: crate::backup_ui::State::default(),
             activity: crate::activity_ui::ActivityState::default(),
             data: Data::default(),
@@ -269,16 +291,20 @@ impl App {
         })
     }
     pub fn send(&mut self, command: Command) {
-        if self.busy || self.fatal {
+        if self.busy
+            || self.fatal
+            || (crate::staff_ui::locked(self)
+                && !matches!(&command, Command::SignIn(..) | Command::Refresh(_)))
+        {
             return;
         }
         self.last_command = Some(command.clone());
-        match self.worker.tx.try_send(command) {
-            Ok(()) => {
+        match self.worker.send(command) {
+            true => {
                 self.busy = true;
                 self.error = None;
             }
-            Err(_) => {
+            false => {
                 self.error = Some(
                     self.lang
                         .text(
@@ -293,6 +319,9 @@ impl App {
     /// Never blocks the UI; a full queue simply retries on the next change.
     /// Kitchen screen actions never block the counter.
     pub fn kitchen_command(&mut self, command: Command) {
+        if crate::staff_ui::locked(self) {
+            return;
+        }
         if !self.send_background(command) {
             self.toast(self.lang.text("ระบบไม่ว่าง ลองอีกครั้ง", "Busy, try again"));
         }
@@ -322,7 +351,74 @@ impl App {
         }
     }
     fn send_background(&mut self, command: Command) -> bool {
-        !self.fatal && self.worker.tx.try_send(command).is_ok()
+        !self.fatal && self.worker.send(command)
+    }
+    /// Manual and idle locks use the same immediate gate and queue revocation.
+    pub fn lock_session(&mut self) {
+        if !self.data.staff_enabled {
+            return;
+        }
+        self.session_locked = true;
+        self.data.signed_in = None;
+        self.worker.revoke();
+        self.auto_lock.reset(Instant::now());
+        self.staff.clear_pin_drafts();
+        self.staff.pin_error = None;
+        self.staff.approval = None;
+        self.last_command = None;
+        if self.payment_review.is_some() {
+            self._locked_review = self.payment_review.take();
+        }
+        self.void_editor = None;
+        self.history.refund_editor = None;
+        self.held_delete = None;
+        self.catalog.cancel_confirmations();
+        self.tax.invoice = None;
+        self.drawer.pending = None;
+        self.drawer.reviewing = false;
+        self.sell.confirm_large_cash = false;
+        self.sell.large_cash_ok = false;
+        self.sell.pay_requested = false;
+        self.sell.hold_requested = false;
+        self.sell.kitchen_requested = false;
+        self.sell.discount_requested = None;
+        self.sell.remove_requested = None;
+        self.sell.edit_requested = None;
+        self.sell.bill_split = None;
+        self.recovery.confirm = false;
+        self.palette = shell::Palette::default();
+        self.display_open = false;
+        self.close_confirm = false;
+        self.ctx.memory_mut(|memory| {
+            if let Some(id) = memory.focused() {
+                memory.surrender_focus(id);
+            }
+        });
+        egui::Popup::close_all(&self.ctx);
+        self.ctx.request_repaint();
+    }
+    /// Call before handling actual input in each native viewport.
+    pub fn idle_input(&mut self, ctx: &egui::Context) {
+        let now = Instant::now();
+        let due = ctx.input(|input| {
+            self.auto_lock.poll(
+                now,
+                self.data.staff_enabled,
+                self.data.signed_in.is_some() && !self.session_locked,
+                &input.events,
+            )
+        });
+        if due {
+            self.lock_session();
+            // The event that encountered expiry belongs to the old session.
+            // Do not let it type a PIN or click a lock-screen control.
+            ctx.input_mut(|input| {
+                input.events.clear();
+            });
+        }
+        if let Some(remaining) = self.auto_lock.remaining(now) {
+            ctx.request_repaint_after(remaining);
+        }
     }
     pub fn query(&self) -> Query {
         let products = match self.page {
@@ -543,24 +639,35 @@ impl App {
     }
     fn events(&mut self) {
         self.print_events();
-        while let Ok(event) = self.worker.rx.try_recv() {
-            // Background replies (autosave, kitchen screen) never end a
-            // foreground command's busy state.
-            if !matches!(
-                event,
-                Event::Quiet | Event::Restored(..) | Event::Kitchen(_)
-            ) {
+        while let Ok(envelope) = self.worker.rx.try_recv() {
+            let stale = envelope.generation != self.worker.generation();
+            let event = envelope.event;
+            // Background replies never complete a foreground command.
+            if !envelope.background {
                 self.busy = false;
             }
+            if stale
+                && matches!(
+                    &event,
+                    Event::SignedIn(_) | Event::SignedOut | Event::Failed(_)
+                )
+            {
+                continue;
+            }
             // A finished restricted command closes its approval dialog.
-            if !matches!(
-                event,
-                Event::Quiet | Event::Restored(..) | Event::Failed(_) | Event::Kitchen(_)
-            ) {
+            if !envelope.background
+                && !matches!(
+                    event,
+                    Event::Quiet | Event::Restored(..) | Event::Failed(_) | Event::Kitchen(_)
+                )
+            {
                 self.staff.approval = None;
             }
             match event {
-                Event::Ready(data) => {
+                Event::Ready(mut data) => {
+                    if stale || self.session_locked {
+                        data.signed_in = None;
+                    }
                     for p in data.products.iter() {
                         self.known.insert(p.id, p.clone());
                     }
@@ -808,6 +915,49 @@ impl App {
                     ));
                     self.refresh();
                 }
+                Event::AutoBackupSaved(settings) => {
+                    self.auto_backup.saved(settings);
+                    self.toast(
+                        self.lang
+                            .text("บันทึกการสำรองอัตโนมัติแล้ว", "Automatic backup settings saved."),
+                    );
+                }
+                Event::AutoBackupResult(result) => {
+                    let text = match result {
+                        Ok(outcome) => {
+                            self.auto_backup.latest = outcome
+                                .latest
+                                .and_then(|snapshot| u64::try_from(snapshot.created_at).ok())
+                                .and_then(|seconds| {
+                                    std::time::UNIX_EPOCH
+                                        .checked_add(std::time::Duration::from_secs(seconds))
+                                });
+                            if let Some(warning) = outcome.warning {
+                                self.error = Some(warning.clone());
+                                warning
+                            } else if let Some(path) = outcome.created {
+                                format!(
+                                    "{} {}",
+                                    self.lang.text("สำรองอัตโนมัติแล้ว:", "Automatic backup saved:"),
+                                    path.display()
+                                )
+                            } else {
+                                self.lang
+                                    .text(
+                                        "ตรวจแล้ว ไม่มีชุดสำรองใหม่ที่ต้องสร้าง",
+                                        "Checked; no new backup was needed.",
+                                    )
+                                    .into()
+                            }
+                        }
+                        Err(error) => {
+                            let message = format!("{}: {error}", self.lang.text("สำรองอัตโนมัติไม่สำเร็จ ข้อมูลที่บันทึกแล้วยังอยู่ ลองใหม่ในตั้งค่า → ข้อมูลและการสำรอง", "Automatic backup failed; saved records are intact. Retry in Settings → Data & backup"));
+                            self.error = Some(message.clone());
+                            message
+                        }
+                    };
+                    self.auto_backup.last_result = Some(text);
+                }
                 Event::BackupInspected(review) => self.recovery.review = Some(review),
                 Event::RecoveryPending(previous) => {
                     self.recovery.confirm = false;
@@ -823,7 +973,9 @@ impl App {
                     )
                 )),
                 Event::SignedIn(me) => {
-                    self.staff.pin.clear();
+                    self.session_locked = false;
+                    self.auto_lock.reset(Instant::now());
+                    self.staff.clear_pin_drafts();
                     self.staff.pin_error = None;
                     self.toast(format!("{} {}", self.lang.text("สวัสดี", "Hello,"), me.name));
                     self.data.signed_in = Some(me);
@@ -831,13 +983,6 @@ impl App {
                 }
                 Event::SignedOut => {
                     self.data.signed_in = None;
-                    self.payment_review = None;
-                    self.void_editor = None;
-                    self.history.refund_editor = None;
-                    self.sell.discount = None;
-                    self.staff.approval = None;
-                    self.staff.editor = None;
-                    self.receipt = None;
                 }
                 Event::StaffSaved(member) => {
                     self.staff.editor = None;
@@ -958,7 +1103,7 @@ impl App {
                 }
                 Event::Failed(pos_core::Error::SignInRequired) if self.ready => {
                     // The member was switched off or the session ended: lock.
-                    self.data.signed_in = None;
+                    self.lock_session();
                     self.refresh();
                 }
                 Event::Failed(error) => {
@@ -1152,6 +1297,7 @@ impl App {
             || self.print.draft != self.print.settings
             || self.pricing_draft.is_some()
             || self.tax.draft.is_some()
+            || self.auto_backup.dirty()
         {
             self.error = Some(
                 self.lang
@@ -1312,7 +1458,8 @@ impl App {
         }
         let unsaved = self.shop_draft != self.shop
             || self.print.draft != self.print.settings
-            || self.catalog.dirty();
+            || self.catalog.dirty()
+            || self.auto_backup.dirty();
         if unsaved {
             ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
             self.close_confirm = true;
@@ -1333,6 +1480,7 @@ impl eframe::App for App {
         self.theme_is_dark = ctx.theme() == egui::Theme::Dark;
         self.window.update(&ctx, self.fullscreen);
         self.frames += 1;
+        self.idle_input(&ctx);
         self.events();
         // `--page tables` and older links land on the Sell floor.
         if self.page == Page::Tables {
@@ -1379,8 +1527,7 @@ impl eframe::App for App {
                 ctx.request_repaint_after(Duration::from_millis(100));
             }
         }
-        let locked = crate::staff_ui::locked(self);
-        if !locked {
+        if !crate::staff_ui::locked(self) {
             shell::global_keys(self, &ctx);
             if ctx.input_mut(|i| i.consume_key(egui::Modifiers::COMMAND, egui::Key::L)) {
                 crate::staff_ui::lock(self);
@@ -1407,6 +1554,10 @@ impl eframe::App for App {
                     }),
             )
             .show(root, |ui| {
+                if crate::staff_ui::locked(self) {
+                    crate::staff_ui::lock_screen(self, ui);
+                    return;
+                }
                 if let Some(message) = self.error.clone()
                     && self.void_editor.is_none()
                     && self.payment_review.is_none()
@@ -1433,10 +1584,6 @@ impl eframe::App for App {
                     ui.add_space(space::S2);
                 }
                 ui.add_enabled_ui(!self.fatal, |ui| {
-                    if locked {
-                        crate::staff_ui::lock_screen(self, ui);
-                        return;
-                    }
                     if self.onboarding {
                         crate::settings_ui::onboard(self, ui);
                         return;
@@ -1491,14 +1638,17 @@ impl eframe::App for App {
                     }
                 });
             });
-        self.confirmations(&ctx);
-        if locked {
-            shell::toasts(self, &ctx);
+        // Keep the second window alive but gate its content while locked.
+        crate::kitchen_ui::window(self, &ctx);
+        if crate::staff_ui::locked(self) {
             return;
         }
+        self.confirmations(&ctx);
         sale_ui::payment_dialog(self, &ctx);
         sale_ui::bill_split_dialog(self, &ctx);
-        crate::promo_ui::editor_dialog(self, &ctx);
+        if crate::staff_ui::may(self, pos_domain::Permission::Settings) {
+            crate::promo_ui::editor_dialog(self, &ctx);
+        }
         crate::promo_ui::coupon_dialog(self, &ctx);
         sale_ui::options_sheet(self, &ctx);
         crate::discount_ui::dialog(self, &ctx);
@@ -1507,11 +1657,16 @@ impl eframe::App for App {
         crate::history_ui::receipt_dialog(self, &ctx);
         crate::shift_ui::confirm(self, &ctx);
         crate::catalog_ui::dialogs(self, &ctx);
-        crate::staff_ui::editor_dialog(self, &ctx);
-        crate::tables_ui::editor_dialog(self, &ctx);
+        if crate::staff_ui::may(self, pos_domain::Permission::ManageStaff) {
+            crate::staff_ui::editor_dialog(self, &ctx);
+        }
+        if crate::staff_ui::may(self, pos_domain::Permission::Settings) {
+            crate::tables_ui::editor_dialog(self, &ctx);
+        }
         crate::print_ui::preview_dialog(self, &ctx);
-        crate::kitchen_ui::window(self, &ctx);
-        crate::staff_ui::role_dialog(self, &ctx);
+        if crate::staff_ui::may(self, pos_domain::Permission::ManageStaff) {
+            crate::staff_ui::role_dialog(self, &ctx);
+        }
         crate::tax_ui::invoice_dialog(self, &ctx);
         crate::backup_ui::dialog(self, &ctx);
         crate::staff_ui::approval_dialog(self, &ctx);

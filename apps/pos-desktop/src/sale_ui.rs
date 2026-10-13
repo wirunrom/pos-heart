@@ -551,8 +551,18 @@ fn current_bill(app: &mut App, ui: &mut egui::Ui) {
             });
         });
     });
-    // Footer is a bottom panel so totals and the pay button never scroll away.
-    egui::Panel::bottom("cart-footer")
+    // Keep room for scrollable bill lines. A split has more fields than can
+    // fit on a short touch screen, so only its payment details may scroll.
+    let footer_limit = (ui.available_height() - t.m.row_height * 2.0 - space::S2)
+        .max(t.m.control_xl + t.m.control_md * 2.0 + space::S4)
+        .min(ui.available_height());
+    let panel = egui::Panel::bottom("cart-footer").max_size(footer_limit);
+    let panel = if !app.cart.lines.is_empty() {
+        panel.exact_size(footer_limit)
+    } else {
+        panel
+    };
+    panel
         .resizable(false)
         .show_separator_line(false)
         .frame(egui::Frame::NONE.inner_margin(egui::Margin {
@@ -566,6 +576,8 @@ fn current_bill(app: &mut App, ui: &mut egui::Ui) {
             footer(app, ui);
         });
     egui::CentralPanel::no_frame().show(ui, |ui| {
+        // Panels reserve layout space; explicitly clip tall cart rows to it.
+        ui.set_clip_rect(ui.clip_rect().intersect(ui.max_rect()));
         let out = egui::ScrollArea::vertical()
             .id_salt("cart-lines")
             .auto_shrink([false, false])
@@ -1432,6 +1444,39 @@ fn footer(app: &mut App, ui: &mut egui::Ui) {
         .and_then(|t| cash.and_then(|c| t.change_from(c).ok()));
     // Short windows (touch at 1000×700) merge rows so several bill lines stay visible.
     let compact = ui.ctx().content_rect().height() < if t.touch() { 900.0 } else { 640.0 };
+    ui.horizontal(|ui| {
+        ui.label(t.text(lang.text("ยอดชำระ", "Amount due"), type_scale::BODY_STRONG));
+        ui.label(t.muted(
+            format!(
+                "{} {}",
+                format::count(units),
+                lang.noun(units, "ชิ้น", "item", "items")
+            ),
+            type_scale::CAPTION,
+        ));
+        ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
+            ui.label(
+                RichText::new(total.as_ref().map_or("—".into(), |m| format::baht(*m))).font(
+                    t.strong_font(if compact {
+                        type_scale::MONEY_LG
+                    } else {
+                        type_scale::MONEY_XL
+                    }),
+                ),
+            );
+        });
+    });
+    let action_height = if app.data.shift.is_some() {
+        t.m.control_xl
+    } else {
+        t.m.control_lg * 2.0 + space::S2
+    };
+    let details_height = (ui.available_height() - action_height - space::S2).max(0.0);
+    egui::ScrollArea::vertical()
+        .id_salt("cart-payment-details")
+        .max_height(details_height)
+        .auto_shrink([false, true])
+        .show(ui, |ui| {
     t.sunken().show(ui, |ui| {
         ui.set_width(ui.available_width());
         ui.spacing_mut().item_spacing.y = space::S1;
@@ -1528,26 +1573,6 @@ fn footer(app: &mut App, ui: &mut egui::Ui) {
                 }
             }
         }
-        ui.horizontal(|ui| {
-            ui.label(t.text(lang.text("ยอดชำระ", "Amount due"), type_scale::BODY_STRONG));
-            if compact {
-                ui.label(t.muted(
-                    format!("{} {}", format::count(units), lang.noun(units, "ชิ้น", "item", "items")),
-                    type_scale::CAPTION,
-                ));
-            }
-            ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
-                ui.label(
-                    RichText::new(total.as_ref().map_or("—".into(), |m| format::baht(*m))).font(
-                        t.strong_font(if compact {
-                            type_scale::MONEY_LG
-                        } else {
-                            type_scale::MONEY_XL
-                        }),
-                    ),
-                );
-            });
-        });
         ui.horizontal(|ui| {
             ui.add_enabled_ui(!app.busy, |ui| {
                 // None is "split between methods".
@@ -1663,6 +1688,7 @@ fn footer(app: &mut App, ui: &mut egui::Ui) {
     if app.cart.table.is_none() {
         kitchen_button(app, ui);
     }
+        });
     if app.data.shift.is_none() {
         shift_gate(app, ui);
         app.sell.pay_requested = false;

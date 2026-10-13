@@ -1,6 +1,10 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 mod activity_ui;
 mod app;
+mod auto_backup;
+mod auto_backup_ui;
+mod auto_lock;
+mod auto_lock_ui;
 mod backup;
 mod backup_ui;
 mod catalog_ui;

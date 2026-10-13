@@ -44,6 +44,7 @@ pub fn window(app: &mut App, ctx: &egui::Context) {
             if ui.input(|i| i.viewport().close_requested()) {
                 app.kitchen_open = false;
             }
+            app.idle_input(ui.ctx());
             // Waiting times tick even when nothing else happens.
             ui.ctx()
                 .request_repaint_after(std::time::Duration::from_secs(20));
@@ -53,7 +54,18 @@ pub fn window(app: &mut App, ctx: &egui::Context) {
                 .inner_margin(egui::Margin::same(space::S3 as i8))
                 .show(ui, |ui| {
                     ui.set_min_size(ui.available_size());
-                    board(app, ui);
+                    if crate::staff_ui::locked(app) {
+                        w::title(ui, app.lang.text("จอครัวถูกล็อก", "Kitchen is locked"));
+                        w::help_text(
+                            ui,
+                            app.lang.text(
+                                "ใส่ PIN ที่หน้าจอขายเพื่อกลับมาใช้งาน",
+                                "Enter a PIN at the counter to resume.",
+                            ),
+                        );
+                    } else {
+                        board(app, ui);
+                    }
                 });
         },
     );

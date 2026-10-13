@@ -38,6 +38,7 @@ pub fn controls(app: &mut App, ui: &mut egui::Ui) {
             if w::button(lang.text("ตรวจและยืนยันการกู้คืน…", "Review recovery…")).show(ui).clicked() { app.recovery.confirm = true; }
         }
     });
+    crate::auto_backup_ui::card(app, ui);
     if app.recovery.focus {
         ui.scroll_to_cursor(Some(egui::Align::BOTTOM));
         app.recovery.focus = false;
@@ -57,6 +58,7 @@ pub fn dialog(app: &mut App, ctx: &egui::Context) {
         || app.print.draft != app.print.settings
         || app.pricing_draft.is_some()
         || app.tax.draft.is_some()
+        || app.auto_backup.dirty()
         || !app.cart.lines.is_empty();
     let response = w::dialog(ctx, "restore-review", crate::ui::space::S6 * 20.0, |ui| {
         w::dialog_title(

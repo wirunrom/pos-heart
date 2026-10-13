@@ -96,3 +96,14 @@ Read docs/architecture.md "Print templates, preview and check bill" before chang
 - Preview renders the same `Doc` the printer gets and works without a printer; it never prints on its own.
 
 Verify template defaults/partial and future-safe JSON, validation limits, logo import/reload and backup, VAT lines with every toggle off, kitchen notes/cancellations, check-bill totals against checkout (service, VAT on top, discounts, rounding), and the template card/preview in Light/Dark, Thai/English, Compact/Touch at 1000×700 and 1280×820.
+
+## Automatic backups and idle lock
+
+Read docs/architecture.md "Automatic device backups" before changing schedules, retention or maintenance authorization, and "Idle locking and worker session revocation" before changing inactivity, locking or command/result handling.
+
+- Automatic backup is opt-in, versioned and device-local; scheduled maintenance may bypass current staff Settings only through the persisted enabled policy. Foreground configuration/retry and recovery keep Settings authorization.
+- Create and verify a new snapshot before pruning only valid indexed automatic snapshots (retention 3–30). Preserve manual, damaged/unindexed and safety backups. Snapshot committed autosaves, not UI drafts; failures never undo business commits.
+- Lock by monotonic native-input inactivity (default off; 1/5/10/15/30), inactive without staff. Revoke stale queued actions/sign-ins by worker epoch; preserve drafts/cart and results of already executing transactions. Clear PIN drafts and require fresh authentication/review.
+- Portable recovery excludes `auto-backup.json` and `auto-lock.json`; restoring preserves destination policies.
+
+Verify opt-in/future-format refusal, Bangkok-day and successful-close triggers, retention ownership/failure behavior, locked/cashier maintenance, stale queue/sign-in revocation, in-flight committed results and draft preservation. Include `development_flow` combined restaurant/payment/tax/recovery regressions. Report native macOS and synthetic tests separately from unverified Windows/hardware.

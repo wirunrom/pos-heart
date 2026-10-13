@@ -207,11 +207,8 @@ fn unsaved(app: &App, section: Section) -> bool {
                     .as_ref()
                     .is_some_and(|d| *d != app.shop.templates)
         }
-        Section::Promotions
-        | Section::Tables
-        | Section::Staff
-        | Section::Display
-        | Section::Data => false,
+        Section::Promotions | Section::Tables | Section::Staff | Section::Display => false,
+        Section::Data => app.auto_backup.dirty(),
     }
 }
 /// One SideNav row; `unsaved` is the tooltip of the warning dot.
@@ -327,7 +324,8 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
                             });
                         }
                         Section::Staff => {
-                            card(ui, &t, |ui| crate::staff_ui::settings_card(app, ui))
+                            card(ui, &t, |ui| crate::auto_lock_ui::card(app, ui));
+                            card(ui, &t, |ui| crate::staff_ui::settings_card(app, ui));
                         }
                         Section::Display => card(ui, &t, |ui| display_card(app, ui)),
                         Section::Data => card(ui, &t, |ui| data_card(app, ui)),

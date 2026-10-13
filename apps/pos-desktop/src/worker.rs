@@ -8,7 +8,11 @@ use std::{
     collections::HashMap,
     io::Write,
     path::{Path, PathBuf},
-    sync::mpsc::{self, Receiver, SyncSender},
+    sync::{
+        Arc,
+        atomic::{AtomicU64, Ordering},
+        mpsc::{self, Receiver, SyncSender},
+    },
     thread,
 };
 use uuid::Uuid;
@@ -77,6 +81,8 @@ pub enum Command {
     Lookup(String),
     Demo,
     RecoveryBackup(PathBuf, PathBuf, Cart, Option<Uuid>),
+    SaveAutoBackup(PathBuf, crate::auto_backup::Settings),
+    RetryAutoBackup(PathBuf),
     InspectBackup(PathBuf),
     PrepareRecovery(PathBuf, crate::backup::Review),
     PreviewImport(PathBuf),
@@ -91,7 +97,7 @@ pub enum Command {
     /// Background: reopens the bill that was current when the app last closed.
     Restore(Uuid),
     SignIn(Uuid, String),
-    SignOut,
+    RevokeSession,
     SaveStaff(pos_domain::StaffInput),
     SaveRole(pos_domain::RoleDef),
     DeleteRole(String),
@@ -123,6 +129,7 @@ impl Command {
                 | Self::Restore(_)
                 | Self::BumpTicket(..)
                 | Self::TicketLine(..)
+                | Self::RevokeSession
         )
     }
 }
@@ -148,6 +155,8 @@ pub enum Event {
     Backup(PathBuf),
     Exported(PathBuf),
     BackupInspected(crate::backup::Review),
+    AutoBackupSaved(crate::auto_backup::Settings),
+    AutoBackupResult(Result<crate::auto_backup::Outcome, String>),
     RecoveryPending(PathBuf),
     ImportPreview(pos_core::ImportPreview),
     ProductsImported(usize),
@@ -168,10 +177,63 @@ pub enum Event {
     Quiet,
     Failed(Error),
 }
-pub struct Worker {
-    pub tx: SyncSender<Command>,
-    pub rx: Receiver<Event>,
+struct CommandEnvelope {
+    generation: u64,
+    command: Command,
 }
+pub struct EventEnvelope {
+    pub generation: u64,
+    pub background: bool,
+    pub event: Event,
+}
+pub struct Worker {
+    tx: SyncSender<CommandEnvelope>,
+    pub rx: Receiver<EventEnvelope>,
+    epoch: Arc<AtomicU64>,
+}
+/// Revocation is observed before every command, independently of queue capacity.
+/// A command already executing may finish; its result keeps the old generation.
+fn execute(
+    pos: &mut Pos,
+    envelope: CommandEnvelope,
+    epoch: &AtomicU64,
+    observed: &mut u64,
+) -> EventEnvelope {
+    let current = epoch.load(Ordering::SeqCst);
+    if *observed != current {
+        pos.sign_out();
+        *observed = current;
+    }
+    let background = envelope.command.background();
+    let safe_draft = matches!(
+        &envelope.command,
+        Command::Autosave(_) | Command::Discard(_) | Command::Restore(_)
+    );
+    let event = if envelope.generation != current && !safe_draft {
+        if background {
+            Event::Quiet
+        } else {
+            Event::Failed(Error::SignInRequired)
+        }
+    } else {
+        match run(pos, envelope.command) {
+            Err(_) if background => Event::Quiet,
+            other => other.unwrap_or_else(Event::Failed),
+        }
+    };
+    // In-flight sign-in must never survive a revocation that arrived during it.
+    let after = epoch.load(Ordering::SeqCst);
+    if *observed != after {
+        pos.sign_out();
+        *observed = after;
+    }
+    EventEnvelope {
+        generation: envelope.generation,
+        background,
+        event,
+    }
+}
+
 fn now() -> i64 {
     time::OffsetDateTime::now_utc().unix_timestamp()
 }
@@ -181,20 +243,43 @@ pub fn today() -> time::Date {
         .date()
 }
 impl Worker {
+    pub fn generation(&self) -> u64 {
+        self.epoch.load(Ordering::SeqCst)
+    }
+    pub fn send(&self, command: Command) -> bool {
+        self.tx
+            .try_send(CommandEnvelope {
+                generation: self.generation(),
+                command,
+            })
+            .is_ok()
+    }
+    /// Always revokes immediately, even if the queue is full or a write is busy.
+    pub fn revoke(&self) {
+        self.epoch.fetch_add(1, Ordering::SeqCst);
+        let _ = self.send(Command::RevokeSession);
+    }
     pub fn start(path: PathBuf, context: egui::Context) -> std::io::Result<Self> {
-        let (tx, commands) = mpsc::sync_channel::<Command>(16);
+        let (tx, commands) = mpsc::sync_channel::<CommandEnvelope>(16);
         let (events, rx) = mpsc::channel();
+        let epoch = Arc::new(AtomicU64::new(0));
+        let worker_epoch = Arc::clone(&epoch);
         thread::Builder::new()
             .name("pos-database".into())
             .spawn(move || {
-                let send = |event: Event| {
-                    let _ = events.send(event);
+                let send = |envelope: EventEnvelope| {
+                    let _ = events.send(envelope);
                     context.request_repaint();
                 };
+                let data_dir = path.parent().map(Path::to_path_buf).unwrap_or_default();
                 let mut pos = match Pos::open(path) {
                     Ok(pos) => pos,
                     Err(e) => {
-                        send(Event::Failed(e));
+                        send(EventEnvelope {
+                            generation: 0,
+                            background: false,
+                            event: Event::Failed(e),
+                        });
                         return;
                     }
                 };
@@ -208,26 +293,90 @@ impl Worker {
                     movement_offset: 0,
                     stock_product: None,
                 };
-                send(match load(&mut pos, &initial) {
-                    Ok(data) => Event::Ready(Box::new(data)),
-                    Err(e) => Event::Failed(e),
+                send(EventEnvelope {
+                    generation: 0,
+                    background: false,
+                    event: match load(&mut pos, &initial) {
+                        Ok(data) => Event::Ready(Box::new(data)),
+                        Err(e) => Event::Failed(e),
+                    },
                 });
-                while let Ok(command) = commands.recv() {
-                    let background = command.background();
-                    let result = run(&mut pos, command);
-                    let stopping = matches!(&result, Ok(Event::RecoveryPending(_)));
-                    send(match result {
-                        Err(_) if background => Event::Quiet,
-                        other => other.unwrap_or_else(Event::Failed),
-                    });
+                let mut observed = 0;
+                let mut next_backup = std::time::Instant::now();
+                let mut last_backup_error = None;
+                loop {
+                    if std::time::Instant::now() >= next_backup {
+                        send_automatic(
+                            &mut pos,
+                            &data_dir,
+                            crate::auto_backup::Trigger::Daily,
+                            &worker_epoch,
+                            &mut last_backup_error,
+                            &send,
+                        );
+                        next_backup =
+                            std::time::Instant::now() + std::time::Duration::from_secs(60);
+                    }
+                    let wait = next_backup.saturating_duration_since(std::time::Instant::now());
+                    let envelope = match commands.recv_timeout(wait) {
+                        Ok(envelope) => envelope,
+                        Err(mpsc::RecvTimeoutError::Timeout) => continue,
+                        Err(mpsc::RecvTimeoutError::Disconnected) => break,
+                    };
+                    let result = execute(&mut pos, envelope, &worker_epoch, &mut observed);
+                    let stopping = matches!(&result.event, Event::RecoveryPending(_));
+                    let closed = match &result.event {
+                        Event::ShiftClosed(shift) => Some(shift.id),
+                        _ => None,
+                    };
+                    send(result);
                     if stopping {
                         break;
                     }
+                    if let Some(id) = closed {
+                        send_automatic(
+                            &mut pos,
+                            &data_dir,
+                            crate::auto_backup::Trigger::ShiftClosed(id),
+                            &worker_epoch,
+                            &mut last_backup_error,
+                            &send,
+                        );
+                    }
                 }
             })?;
-        Ok(Self { tx, rx })
+        Ok(Self { tx, rx, epoch })
     }
 }
+
+fn send_automatic(
+    pos: &mut Pos,
+    data: &Path,
+    trigger: crate::auto_backup::Trigger,
+    epoch: &AtomicU64,
+    last_error: &mut Option<String>,
+    send: &impl Fn(EventEnvelope),
+) {
+    let result = crate::auto_backup::run(pos, data, trigger, now()).map_err(|e| e.to_string());
+    let notify = match &result {
+        Err(error) => last_error.as_ref() != Some(error),
+        Ok(outcome) => {
+            outcome.latest.is_some()
+                || outcome.created.is_some()
+                || outcome.warning.is_some()
+                || last_error.is_some()
+        }
+    };
+    *last_error = result.as_ref().err().cloned();
+    if notify {
+        send(EventEnvelope {
+            generation: epoch.load(Ordering::SeqCst),
+            background: true,
+            event: Event::AutoBackupResult(result),
+        });
+    }
+}
+
 fn run(pos: &mut Pos, command: Command) -> pos_core::Result<Event> {
     Ok(match command {
         Command::Refresh(query) => Event::Ready(Box::new(load(pos, &query)?)),
@@ -308,6 +457,23 @@ fn run(pos: &mut Pos, command: Command) -> pos_core::Result<Event> {
             }
             Event::Backup(crate::backup::create(pos, &data, &path)?)
         }
+        Command::SaveAutoBackup(data, settings) => {
+            pos.authorize_recovery()?;
+            settings.save(&data)?;
+            Event::AutoBackupSaved(settings)
+        }
+        Command::RetryAutoBackup(data) => {
+            pos.authorize_recovery()?;
+            Event::AutoBackupResult(
+                crate::auto_backup::run(
+                    pos,
+                    &data,
+                    crate::auto_backup::Trigger::ManualRetry,
+                    now(),
+                )
+                .map_err(|e| e.to_string()),
+            )
+        }
         Command::InspectBackup(path) => {
             pos.authorize_recovery()?;
             Event::BackupInspected(crate::backup::inspect(&path)?)
@@ -346,7 +512,7 @@ fn run(pos: &mut Pos, command: Command) -> pos_core::Result<Event> {
             Event::Restored(cart, products)
         }
         Command::SignIn(id, pin) => Event::SignedIn(pos.sign_in(id, &pin)?),
-        Command::SignOut => {
+        Command::RevokeSession => {
             pos.sign_out();
             Event::SignedOut
         }
@@ -792,3 +958,7 @@ mod tests {
         Ok(())
     }
 }
+
+#[cfg(test)]
+#[path = "revocation_tests.rs"]
+mod revocation_tests;

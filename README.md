@@ -62,12 +62,14 @@ apps/pos-desktop/src/
   print/           printer.json settings, rendering to a bitmap, ESC/POS encoding, receipt/shift/check-bill/kitchen-ticket documents, template.rs (templates, logo import)
   shop.rs          versioned local profile with atomic replacement
   i18n.rs          Thai/English interface and error translations
-  worker.rs        bounded command channel; database work and CSV export off the UI thread
+  auto_backup.rs   opt-in maintenance, verified snapshot index and retention
+  auto_lock.rs     monotonic native-input idle timer and device policy
+  worker.rs        bounded command channel, session revocation; database work and CSV export off the UI thread
   preview.rs       debug-only `--preview` presets for screenshots
 apps/pos-desktop/examples/seed_screens.rs   sample data folder for layout captures
 crates/pos-domain/  money, product/options/cart/sale data, discounts, PromptPay payload and validation
 crates/pos-core/    Diesel catalog, checkout, held carts, voids, shifts and reports
-  migrations/      versioned SQLite schema (001–015)
+  migrations/      versioned SQLite schema (001–017)
 assets/fonts/      IBM Plex Sans / Sans Thai / Mono, Noto Sans Thai fallback, OFL licenses
 design/            POS Design System v0.1 (tokens, docs, reference screens)
 docs/architecture.md, docs/multi-device.md (proposal, not built)
@@ -101,7 +103,7 @@ Integer satang and checked arithmetic; no floating-point currency. Diesel handle
 
 ## Known limitations
 
-Single shop/register. Cash, manual transfer (optionally with a PromptPay QR) and manual card records; one method per bill, or a split payment across them. The app never checks that a transfer arrived; the cashier confirms it. Refunds go through the original method only (whole bill or selected items); no exchanges or store credit. Discounts are entered by the cashier per bill (no automatic promotions, coupons or member pricing). No VAT return filing, credit notes, other taxes, recipe stock, purchase orders or suppliers, online ordering, card terminal or other device integration (receipt printers aside) (the design system's tablet screens are marked Future and are not built; tables and the kitchen screen are built, see below). Barcodes are stored per product and looked up exactly on Enter; real scanner hardware has not been tested. Option groups: at most 10 per product, 20 choices each. Sell loads up to 500 products per category or search; Products pages 100, history 50 receipts, held list latest 100. No cloud sync or multi-device use (proposal for later: [docs/multi-device.md](docs/multi-device.md)). Database is not encrypted. Thai line breaking follows egui (spaces first), not dictionary segmentation. Before real use, verify refund procedures, backup/restore and field tests appropriate to the shop.
+Single shop/register. Cash, manual transfer (optionally with a PromptPay QR) and manual card records; one method per bill, or a split payment across them. The app never checks that a transfer arrived; the cashier confirms it. Refunds go through the original method only (whole bill or selected items); no exchanges or store credit. Manual discounts and automatic promotions/coupons are supported; member pricing and points are outside scope. Credit notes are issued for refunds/voids of full tax invoices; no VAT return filing, e-Tax or other taxes, recipe stock, purchase orders or suppliers, online ordering, card terminal or other device integration (receipt printers aside) (the design system's tablet screens are marked Future and are not built; tables and the kitchen screen are built, see below). Barcodes are stored per product and looked up exactly on Enter; real scanner hardware has not been tested. Option groups: at most 10 per product, 20 choices each. Sell loads up to 500 products per category or search; Products pages 100, history 50 receipts, held list latest 100. No cloud sync or multi-device use (proposal for later: [docs/multi-device.md](docs/multi-device.md)). Database is not encrypted. Thai line breaking follows egui (spaces first), not dictionary segmentation. Before real use, verify refund procedures, backup/restore and field tests appropriate to the shop.
 
 ## Guidance
 
@@ -192,7 +194,7 @@ While any active staff exist, the app opens on a lock screen: choose your name a
 
 Receipts, voids, refunds, cash records, stock changes and shifts record who acted (and who approved) as snapshots that are never rewritten; receipts and printed receipts show the staff name, and shifts show opened/closed by. Reports has a Staff tab: sales by who took payment, refunds by who processed them.
 
-A PIN identifies who is at the counter; it does not encrypt or protect the database file. Sign-in lasts until the app closes (a restart opens locked); there is no automatic lock timer and no PIN recovery other than an owner setting a new PIN. Schema 9 adds the staff tables and schema 12 the roles table; older app builds cannot open an upgraded database. Back up before upgrading production data.
+A PIN identifies who is at the counter; it does not encrypt or protect the database file. A restart opens locked. Settings can enable device-local idle locking (Off by default; 1, 5, 10, 15 or 30 minutes). Business drafts and bills survive locking; payment confirmations need a new review after sign-in. An owner can set a new PIN; there is no separate PIN recovery service. Schema 9 adds the staff tables and schema 12 the roles table; older app builds cannot open an upgraded database. Back up before upgrading production data.
 
 ## VAT and tax invoices
 
@@ -208,13 +210,13 @@ Settings → Pricing (roles with Settings allowed) sets an optional service char
 
 ## Recovery backups, CSV import, activity and costs (2026-10-13)
 
-- **Settings → Data & backup:** Create recovery backup writes a new `.posbackup` folder beside the database. Copy the whole folder off the device. It contains a consistent SQLite snapshot, optional `shop.json`, current-bill marker and drawer-count drafts, with a versioned SHA-256 manifest. Printer and display preferences stay device-local. This format is a folder, not a ZIP file; old standalone `.sqlite3` exports are database-only snapshots and are not accepted by the recovery-folder UI.
+- **Settings → Data & backup:** Create recovery backup writes a new `.posbackup` folder beside the database. Copy the whole folder off the device. It contains a consistent SQLite snapshot, optional `shop.json`, current-bill marker, receipt logo and drawer-count drafts, with a versioned SHA-256 manifest. Printer, display, automatic-backup and idle-lock preferences stay device-local. This format is a folder, not a ZIP file; old standalone `.sqlite3` exports are database-only snapshots and are not accepted by the recovery-folder UI.
 - **Restore:** paste the backup folder path, Inspect backup, then Review recovery. Review shows shop, backup time, schema and counts. Save/discard drafts and hold/clear the current bill first. Confirmation validates/stages data and stops the database worker; close and reopen to activate. A full safety backup of current data is created automatically, and the whole original directory is retained beside the data folder. The completion screen gives the safety backup path, which can be restored through the same UI. Activation resumes an interrupted directory swap. Keep a single POS Heart instance on a data folder; do not manipulate the pending stage/journal by hand. Windows power-loss behavior remains unverified.
 - **Products → Import CSV:** paste a UTF-8 CSV path, read/preview, fix every reported row, then Confirm import all. Creates new products only; SKU/barcode conflicts include archived products and are rechecked inside the write transaction. Required headers: `sku,name,price`; optional: `category,stock,barcode,on_sale,service_charge,cost`. Blank stock means untracked; blank cost means unknown; `0` is explicit zero. Booleans accept `1/0`, `true/false`, blank defaults true. Unknown/duplicate headers are refused. Limit: 2 MiB / 5,000 records. [Fictional import template](docs/products-import-example.csv). Configure options after import; CSV does not round-trip options.
 - **Activity log** (workspace / Settings, `Alt 8`): search, type filters and newest-first pages of 50; product/price/cost changes, discounts, refunds, voids, stock, staff and roles. Actor/approver snapshots never include PINs/hashes. Events start with schema 14; no fabricated historical log. Uses Reports permission.
 - **Products → Unit cost; Reports → Estimated gross profit:** optional standard per-unit cost is snapshotted at checkout. Profit excludes VAT, includes service and reverses original revenue/cost on refund day; unknown-cost lines appear separately. This estimates standard-cost gross profit before operating expenses, not inventory averaging. Enter an inclusive standard cost for products with options; option-specific costs are not modeled. CSV exports include cost and profit coverage. Legacy costs stay unknown and receipts are never rewritten.
 
-Schema 14 added these (the current schema is 15, see below). Back up with the previous build before upgrading a real shop.
+Schemas 13-14 added costs and activity; the current schema is 17, including tables, credit notes and promotions below. Back up with the previous build before upgrading a real shop.
 
 ## Tables and kitchen (2026-10-13)
 
@@ -229,3 +231,13 @@ Schema is now 15; older builds cannot open an upgraded database. Back up before 
 ## Promotions and coupons (2026-10-14)
 
 Settings → Promotions adds shop promotions: percent off, baht off each unit, buy X get Y free (within one bill line) and spend-over bill discounts, for everything, a category or one product, optionally only on some days, at some hours (Bangkok time, may run past midnight), between dates, with a coupon code and a maximum number of bills. They apply automatically while selling and again at payment; each line gets its single best promotion, and a cashier's own discount always comes first. More → Enter coupon adds a code to the bill. Receipts and history show promotion names; each promotion shows how many bills used it.
+
+## Automatic backups and idle lock (development round, 2026-10-14)
+
+Settings → Data & backup offers optional automatic recovery backups, off by default. Choose once per Bangkok day while the app is open, after a successful shift close, or both; keep 3–30 verified automatic snapshots (default 7). The daily check runs once per minute. Snapshots use the last autosaved, committed bill, not edits still waiting in the UI. Results show the latest verified backup and recoverable errors. Foreground configuration and Retry require Settings access; scheduled device maintenance continues when a cashier is signed in or the app is locked.
+
+The version-1 device policy is `auto-backup.json`; snapshots and their index live in `automatic-backups/`. Retention prunes only indexed, valid automatic snapshots after a new verified snapshot is saved. Manual backups, damaged/unindexed folders and the recovery safety bundle are preserved. Local backups share the computer's storage: copy recovery folders to separate storage for protection from device loss.
+
+Settings → Staff & permissions → Lock when idle is off by default and applies only with staff sign-in enabled. It uses a monotonic timer and native keyboard, mouse and touch input in both app windows; repaint and worker completion do not extend a session. Locking revokes queued actions/sign-ins from the old session, clears PIN drafts and requires a fresh sign-in. Already executing transactions may finish and their committed results remain valid. `auto-lock.json` is a version-1 device preference. Recovery bundles exclude both device policies and restoring retains the destination device's policies.
+
+This round remains development work with synthetic data and native macOS checks. Windows runtime, physical touch, scanners, printer hardware and production operations remain unverified; see [validation evidence](docs/validation.md) for the actual checks performed.
