@@ -253,3 +253,7 @@ In the product editor, Picture takes a PNG or JPG (paste its path or drop the fi
 ## Categories (2026-10-14)
 
 Products → Manage → Categories lists categories in the shop's order (also used in Sell and the Products sidebar) with their product counts. Add creates an empty category; the arrows reorder; Rename moves every product along, and renaming to an existing name merges the two after a warning; Delete moves the category's products to another category or leaves them uncategorised. A product saved or imported with a new category name adds it at the end.
+
+## Shared option sets (2026-10-14)
+
+Products → Manage → Option sets keeps option groups used by many products (sweetness, toppings, cup size). Edit a set once and every product using it changes; past receipts keep what was sold. Link sets in the product editor (Shared option sets chips, below the product's own options) or select products in the table and use Option set in the bulk bar to add or remove one on all of them. Deleting a set removes it from every product. Adding a required set, or removing a choice, makes open bills with those products choose again.

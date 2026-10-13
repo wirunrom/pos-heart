@@ -52,7 +52,10 @@ impl From<&pos_domain::OptionGroup> for GroupDraft {
     }
 }
 impl GroupDraft {
-    fn new() -> Self {
+    pub fn id(&self) -> Uuid {
+        self.id
+    }
+    pub fn new() -> Self {
         Self {
             id: Uuid::new_v4(),
             name: String::new(),
@@ -61,7 +64,7 @@ impl GroupDraft {
             choices: vec![ChoiceDraft::new()],
         }
     }
-    fn group(&self) -> Option<pos_domain::OptionGroup> {
+    pub fn group(&self) -> Option<pos_domain::OptionGroup> {
         Some(pos_domain::OptionGroup {
             id: self.id,
             name: self.name.trim().to_owned(),
@@ -117,6 +120,8 @@ pub struct Editor {
     pub recipe_search: String,
     /// Picture file path typed in the editor.
     pub picture_path: String,
+    /// Shared option sets used (their groups are not edited here).
+    pub option_sets: Vec<Uuid>,
     /// Option rows: choice, ingredient and signed amount per unit (typed).
     pub option_recipe: Vec<(Uuid, Uuid, String)>,
     /// Choice picked for the next option row.
@@ -145,6 +150,7 @@ impl Default for Editor {
             recipe: Vec::new(),
             recipe_search: String::new(),
             picture_path: String::new(),
+            option_sets: Vec::new(),
             option_recipe: Vec::new(),
             recipe_choice: None,
             scroll_to_recipe: false,
@@ -153,6 +159,7 @@ impl Default for Editor {
 }
 impl From<Product> for Editor {
     fn from(p: Product) -> Self {
+        let own = p.own_options();
         let mut e = Self {
             id: Some(p.id),
             sku: p.sku,
@@ -168,7 +175,8 @@ impl From<Product> for Editor {
             kitchen: p.kitchen,
             original: None,
             previous_price: Some(p.price),
-            options: p.options.iter().map(GroupDraft::from).collect(),
+            options: own.iter().map(GroupDraft::from).collect(),
+            option_sets: p.option_sets.clone(),
             recipe: p
                 .recipe
                 .iter()
@@ -208,6 +216,7 @@ impl Editor {
                     || o.options != self.options
                     || o.recipe != self.recipe
                     || o.option_recipe != self.option_recipe
+                    || o.option_sets != self.option_sets
                     || o.service_charge != self.service_charge
                     || o.kitchen != self.kitchen
                     || o.cost != self.cost
@@ -224,7 +233,8 @@ impl Editor {
             }
         }
     }
-    fn input(&self) -> Result<ProductInput, String> {
+    /// `sets`: the shop's option sets, for option recipe rows of linked sets.
+    fn input(&self, sets: &[pos_domain::OptionGroup]) -> Result<ProductInput, String> {
         let price = format::parse_money(&self.price).map_err(|_| "price".to_owned())?;
         let cost = if self.cost.trim().is_empty() {
             None
@@ -268,6 +278,7 @@ impl Editor {
                 })
                 .collect::<Option<Vec<_>>>()
                 .ok_or_else(|| "recipe".to_owned())?,
+            option_sets: self.option_sets.clone(),
             // Rows of choices removed from the options are dropped.
             option_recipe: self
                 .option_recipe
@@ -276,6 +287,10 @@ impl Editor {
                     self.options
                         .iter()
                         .any(|g| g.choices.iter().any(|c| c.id == *choice))
+                        || sets
+                            .iter()
+                            .filter(|s| self.option_sets.contains(&s.id))
+                            .any(|s| s.choices.iter().any(|c| c.id == *choice))
                 })
                 .map(|(choice, ingredient, amount)| {
                     format::parse_signed_qty(amount).map(|amount| pos_domain::OptionRecipe {
@@ -672,6 +687,13 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
     );
     keys(app, ui.ctx());
     panel(ui, &t, nav, space::S2, |ui| side_nav(app, ui));
+    if app.option_sets.open {
+        let main = Rect::from_min_max(main.min, pos2(full.right(), full.bottom()));
+        panel(ui, &t, main, space::S4, |ui| {
+            crate::option_sets_ui::panel(app, ui)
+        });
+        return;
+    }
     if app.categories.open {
         let main = Rect::from_min_max(main.min, pos2(full.right(), full.bottom()));
         panel(ui, &t, main, space::S4, |ui| {
@@ -778,10 +800,12 @@ fn side_nav(app: &mut App, ui: &mut egui::Ui) {
                 let active = app.catalog.category == value
                     && app.catalog.view == ProductView::All
                     && !app.ingredients.open
-                    && !app.categories.open;
+                    && !app.categories.open
+                    && !app.option_sets.open;
                 if nav_item(ui, &t, &label, n, active).clicked() {
                     app.ingredients.open = false;
                     app.categories.open = false;
+                    app.option_sets.open = false;
                     app.catalog.category = value;
                     app.catalog.view = ProductView::All;
                     refresh_from_start(app);
@@ -818,6 +842,7 @@ fn side_nav(app: &mut App, ui: &mut egui::Ui) {
                 if view_item(ui, &t, label, n, tone, active).clicked() {
                     app.ingredients.open = false;
                     app.categories.open = false;
+                    app.option_sets.open = false;
                     app.catalog.view = view;
                     app.catalog.category = None;
                     refresh_from_start(app);
@@ -849,6 +874,23 @@ fn side_nav(app: &mut App, ui: &mut egui::Ui) {
             {
                 app.categories.open = true;
                 app.ingredients.open = false;
+                app.option_sets.open = false;
+                app.catalog.editor = None;
+            }
+            if view_item(
+                ui,
+                &t,
+                lang.text("ชุดตัวเลือก", "Option sets"),
+                app.data.option_sets.len() as u64,
+                w::Tone::Neutral,
+                app.option_sets.open,
+            )
+            .clicked()
+                && !app.catalog.dirty()
+            {
+                app.option_sets.open = true;
+                app.categories.open = false;
+                app.ingredients.open = false;
                 app.catalog.editor = None;
             }
             let low = crate::ingredients_ui::low_count(app) as u64;
@@ -865,6 +907,7 @@ fn side_nav(app: &mut App, ui: &mut egui::Ui) {
             {
                 app.ingredients.open = true;
                 app.categories.open = false;
+                app.option_sets.open = false;
                 app.catalog.editor = None;
             }
         });
@@ -1164,6 +1207,11 @@ fn bulk_bar(app: &mut App, ui: &mut egui::Ui) {
             if inverse_button(ui, Icon::Tag, lang.text("เปลี่ยนหมวด", "Category")).clicked()
             {
                 app.catalog.bulk_category = Some(String::new());
+            }
+            if inverse_button(ui, Icon::Options, lang.text("ชุดตัวเลือก", "Option set")).clicked()
+            {
+                app.error = None;
+                app.option_sets.bulk = Some((None, true));
             }
         });
     });
@@ -1563,7 +1611,13 @@ fn save(app: &mut App) {
     let Some(editor) = &app.catalog.editor else {
         return;
     };
-    match editor.input() {
+    let sets: Vec<pos_domain::OptionGroup> = app
+        .data
+        .option_sets
+        .iter()
+        .map(|(s, _)| s.clone())
+        .collect();
+    match editor.input(&sets) {
         Ok(input) if !input.sku.is_empty() && !input.name.is_empty() => {
             app.catalog.show_errors = false;
             app.send(Command::Save(input));
@@ -1578,6 +1632,12 @@ fn inspector(app: &mut App, ui: &mut egui::Ui) {
     let service_on = app.data.pricing.service_bp > 0;
     let kitchen_on = !app.data.tables.is_empty();
     let ingredients = app.data.ingredients.clone();
+    let sets: Vec<pos_domain::OptionGroup> = app
+        .data
+        .option_sets
+        .iter()
+        .map(|(s, _)| s.clone())
+        .collect();
     // The saved product's picture (pictures save on their own, not with Save).
     let saved = app
         .catalog
@@ -1843,9 +1903,10 @@ fn inspector(app: &mut App, ui: &mut egui::Ui) {
                     },
                 );
                 ui.add_space(space::S2);
-                options_editor(ui, &t, lang, &mut editor.options, errors);
+                options_editor(ui, &t, lang, &mut editor.options, errors, false);
+                shared_sets(ui, &t, lang, editor, &sets);
                 ui.add_space(space::S2);
-                recipe_editor(ui, &t, lang, editor, &ingredients, errors);
+                recipe_editor(ui, &t, lang, editor, &ingredients, &sets, errors);
                 ui.add_space(space::S2);
                 ui.horizontal(|ui| {
                     ui.vertical(|ui| {
@@ -2342,6 +2403,7 @@ fn recipe_editor(
     lang: crate::i18n::Language,
     editor: &mut Editor,
     ingredients: &[pos_domain::Ingredient],
+    sets: &[pos_domain::OptionGroup],
     errors: bool,
 ) {
     if std::mem::take(&mut editor.scroll_to_recipe) {
@@ -2443,7 +2505,7 @@ fn recipe_editor(
             }
         });
     }
-    option_recipe_editor(ui, t, lang, editor, ingredients, errors);
+    option_recipe_editor(ui, t, lang, editor, ingredients, sets, errors);
     if let Some(cost) = cost.filter(|_| !editor.recipe.is_empty()) {
         ui.horizontal(|ui| {
             ui.label(t.muted(
@@ -2473,12 +2535,19 @@ fn option_recipe_editor(
     lang: crate::i18n::Language,
     editor: &mut Editor,
     ingredients: &[pos_domain::Ingredient],
+    sets: &[pos_domain::OptionGroup],
     errors: bool,
 ) {
+    let linked: Vec<(Uuid, String)> = sets
+        .iter()
+        .filter(|s| editor.option_sets.contains(&s.id))
+        .flat_map(|s| s.choices.iter().map(|c| (c.id, c.name.clone())))
+        .collect();
     let choices: Vec<(Uuid, String)> = editor
         .options
         .iter()
         .flat_map(|g| g.choices.iter().map(|c| (c.id, c.name.clone())))
+        .chain(linked)
         .filter(|(_, name)| !name.trim().is_empty())
         .collect();
     if choices.is_empty() {
@@ -2577,24 +2646,68 @@ fn option_recipe_editor(
         });
     }
 }
-fn options_editor(
+/// Shared option sets this product uses, as toggle chips.
+fn shared_sets(
+    ui: &mut egui::Ui,
+    t: &Theme,
+    lang: crate::i18n::Language,
+    editor: &mut Editor,
+    sets: &[pos_domain::OptionGroup],
+) {
+    if sets.is_empty() {
+        return;
+    }
+    ui.add_space(space::S1);
+    ui.label(t.text(
+        lang.text("ชุดตัวเลือกที่ใช้ร่วมกัน", "Shared option sets"),
+        type_scale::BODY_STRONG,
+    ));
+    ui.horizontal_wrapped(|ui| {
+        for s in sets {
+            let on = editor.option_sets.contains(&s.id);
+            if w::chip(ui, &s.name, on, false).clicked() {
+                if on {
+                    editor.option_sets.retain(|x| *x != s.id);
+                } else {
+                    editor.option_sets.push(s.id);
+                }
+            }
+        }
+    });
+    w::help_text(
+        ui,
+        lang.text(
+            "แก้ชุดได้ที่ สินค้า → จัดการ → ชุดตัวเลือก",
+            "Edit sets in Products → Manage → Option sets.",
+        ),
+    );
+}
+/// Option groups editor; `single` edits exactly one group (an option set):
+/// no header, no group removal and no "Add option group".
+pub(crate) fn options_editor(
     ui: &mut egui::Ui,
     t: &Theme,
     lang: crate::i18n::Language,
     groups: &mut Vec<GroupDraft>,
     errors: bool,
+    single: bool,
 ) {
-    ui.horizontal(|ui| {
-        ui.label(t.text(lang.text("ตัวเลือก", "Options"), type_scale::BODY_STRONG));
-        ui.label(t.muted(lang.text("(ไม่บังคับ)", "(optional)"), type_scale::LABEL));
-    });
-    w::help_text(
-        ui,
-        lang.text(
-            "เช่น ความหวาน หรือท็อปปิ้ง ราคาที่ใส่จะบวกเพิ่มต่อชิ้น",
-            "e.g. sweetness or toppings. A price adds to each unit.",
-        ),
-    );
+    if !single {
+        ui.horizontal(|ui| {
+            ui.label(t.text(
+                lang.text("ตัวเลือกเฉพาะสินค้านี้", "Options for this product"),
+                type_scale::BODY_STRONG,
+            ));
+            ui.label(t.muted(lang.text("(ไม่บังคับ)", "(optional)"), type_scale::LABEL));
+        });
+        w::help_text(
+            ui,
+            lang.text(
+                "เช่น ความหวาน หรือท็อปปิ้ง ราคาที่ใส่จะบวกเพิ่มต่อชิ้น",
+                "e.g. sweetness or toppings. A price adds to each unit.",
+            ),
+        );
+    }
     let mut remove_group = None;
     for (gi, group) in groups.iter_mut().enumerate() {
         ui.push_id(group.id, |ui| {
@@ -2614,14 +2727,15 @@ fn options_editor(
                             ..Default::default()
                         },
                     );
-                    if w::icon_button_sized(
-                        ui,
-                        Icon::Trash,
-                        lang.text("ลบกลุ่ม", "Remove group"),
-                        None,
-                        false,
-                    )
-                    .clicked()
+                    if !single
+                        && w::icon_button_sized(
+                            ui,
+                            Icon::Trash,
+                            lang.text("ลบกลุ่ม", "Remove group"),
+                            None,
+                            false,
+                        )
+                        .clicked()
                     {
                         remove_group = Some(gi);
                     }
@@ -2704,7 +2818,8 @@ fn options_editor(
     if let Some(gi) = remove_group {
         groups.remove(gi);
     }
-    if groups.len() < 10
+    if !single
+        && groups.len() < 10
         && w::button(lang.text("เพิ่มกลุ่มตัวเลือก", "Add option group"))
             .icon(Icon::Plus)
             .size(w::Size::Sm)

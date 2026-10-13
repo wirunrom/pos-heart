@@ -33,6 +33,7 @@ pub(crate) struct ProductRow {
     pub recipe_json: String,
     pub option_recipe_json: String,
     pub image_rev: Option<i64>,
+    pub option_sets_json: String,
 }
 impl TryFrom<ProductRow> for Product {
     type Error = Error;
@@ -57,19 +58,21 @@ impl TryFrom<ProductRow> for Product {
             recipe: serde_json::from_str(&row.recipe_json)?,
             option_recipe: serde_json::from_str(&row.option_recipe_json)?,
             image: row.image_rev,
+            option_sets: serde_json::from_str(&row.option_sets_json)?,
         })
     }
 }
 /// Active products only; checkout separately refuses products that are not for sale.
 pub(crate) fn find_product(conn: &mut SqliteConnection, id: Uuid) -> Result<Product> {
-    products::table
+    let product: Product = products::table
         .find(id.to_string())
         .filter(products::active.eq(true))
         .select(ProductRow::as_select())
         .first::<ProductRow>(conn)
         .optional()?
         .ok_or(Error::ProductUnavailable)?
-        .try_into()
+        .try_into()?;
+    crate::option_set::resolve_one(conn, product)
 }
 
 /// Saved views shown in the product side navigation.
@@ -196,7 +199,11 @@ impl Pos {
             .offset(i64::from(query.offset))
             .select(ProductRow::as_select())
             .load::<ProductRow>(&mut self.conn)?;
-        rows.into_iter().map(Product::try_from).collect()
+        let products = rows
+            .into_iter()
+            .map(Product::try_from)
+            .collect::<Result<Vec<_>>>()?;
+        crate::option_set::resolve(&mut self.conn, products)
     }
     pub fn catalog_counts(&mut self) -> Result<CatalogCounts> {
         self.conn.transaction(|conn| {
@@ -266,6 +273,8 @@ impl Pos {
             .first::<ProductRow>(&mut self.conn)
             .optional()?
             .map(Product::try_from)
+            .transpose()?
+            .map(|p| crate::option_set::resolve_one(&mut self.conn, p))
             .transpose()
     }
     pub fn save_product(&mut self, input: ProductInput) -> Result<Product> {
@@ -321,6 +330,27 @@ impl Pos {
             before.extend(previous.as_ref().map_or_else(Vec::new, |p| as_items(&p.option_recipe)));
             crate::ingredient::check_recipe(conn, &input.recipe, &before)?;
             crate::category::ensure(conn, &input.category)?;
+            // Shared sets must exist; the product's groups (own + sets) and
+            // its option recipe are checked together.
+            let sets = crate::option_set::load(conn)?;
+            let mut own: Vec<pos_domain::OptionGroup> = input
+                .options
+                .iter()
+                .filter(|g| !input.option_sets.contains(&g.id))
+                .cloned()
+                .collect();
+            let mut groups = own.clone();
+            for id in &input.option_sets {
+                groups.push(
+                    sets.iter()
+                        .find(|s| s.id == *id)
+                        .cloned()
+                        .ok_or(Error::OptionSetNotFound)?,
+                );
+            }
+            pos_domain::validate_groups(&groups)?;
+            pos_domain::validate_option_recipe(&input.option_recipe, &groups)?;
+            own.retain(|g| !sets.iter().any(|s| s.id == g.id));
             crate::ingredient::check_recipe(conn, &as_items(&input.option_recipe), &before)?;
             let was_tracked = previous.as_ref().and_then(|p| p.stock);
             let stock = match (was_tracked, input.stock) {
@@ -339,13 +369,14 @@ impl Pos {
                 active: true,
                 barcode: barcode.clone(),
                 on_sale: input.on_sale,
-                options_json: serde_json::to_string(&input.options)?,
+                options_json: serde_json::to_string(&own)?,
                 service_charge: input.service_charge,
                 kitchen: input.kitchen,
                 recipe_json: serde_json::to_string(&input.recipe)?,
                 option_recipe_json: serde_json::to_string(&input.option_recipe)?,
                 // Pictures change only through set_product_image.
                 image_rev: previous.as_ref().and_then(|p| p.image),
+                option_sets_json: serde_json::to_string(&input.option_sets)?,
             };
             diesel::insert_into(products::table)
                 .values(&row)
@@ -368,7 +399,7 @@ impl Pos {
                     },
                 )?;
             }
-            let saved: Product = row.try_into()?;
+            let saved: Product = crate::option_set::resolve_one(conn, row.try_into()?)?;
             crate::audit::record(conn, crate::ActivityKind::Product, &saved.id.to_string(), now, &staff,
                 &serde_json::json!({"action": "save", "name": saved.name, "before": previous, "after": saved}))?;
             Ok(saved)
@@ -586,6 +617,7 @@ impl Pos {
                 kitchen: category.starts_with("อาหาร") || category.starts_with("เครื่องดื่ม"),
                 recipe: Vec::new(),
                 option_recipe: Vec::new(),
+                option_sets: Vec::new(),
                 keep_tracked_stock: false,
             })?;
         }

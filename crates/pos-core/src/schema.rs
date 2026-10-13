@@ -17,6 +17,7 @@ diesel::table! {
         recipe_json -> Text,
         option_recipe_json -> Text,
         image_rev -> Nullable<BigInt>,
+        option_sets_json -> Text,
     }
 }
 diesel::table! {
@@ -191,7 +192,16 @@ diesel::table! {
         position -> BigInt,
     }
 }
+diesel::table! {
+    option_sets (id) {
+        id -> Text,
+        set_json -> Text,
+        position -> BigInt,
+        updated_at -> BigInt,
+    }
+}
 diesel::allow_tables_to_appear_in_same_query!(
+    option_sets,
     categories,
     product_images,
     ingredients,

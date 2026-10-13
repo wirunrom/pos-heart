@@ -37,6 +37,10 @@ pub struct Product {
     /// Recipe changes by option choice ("+ egg", "no egg").
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub option_recipe: Vec<crate::OptionRecipe>,
+    /// Shared option sets this product uses. Loaded products already list
+    /// their groups in `options` (after the product's own groups).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub option_sets: Vec<Uuid>,
     /// Revision of the product's picture (None = no picture); pictures are
     /// loaded separately.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -50,6 +54,14 @@ pub const LOW_STOCK: u32 = 5;
 impl Product {
     pub fn is_low_stock(&self) -> bool {
         self.stock.is_some_and(|n| n > 0 && n <= LOW_STOCK)
+    }
+    /// The product's own option groups, without its shared sets.
+    pub fn own_options(&self) -> Vec<crate::OptionGroup> {
+        self.options
+            .iter()
+            .filter(|g| !self.option_sets.contains(&g.id))
+            .cloned()
+            .collect()
     }
     pub fn is_out_of_stock(&self) -> bool {
         self.stock == Some(0)
@@ -75,6 +87,8 @@ pub struct ProductInput {
     pub kitchen: bool,
     pub recipe: Vec<crate::RecipeItem>,
     pub option_recipe: Vec<crate::OptionRecipe>,
+    /// Shared option sets to use (their groups come from the sets).
+    pub option_sets: Vec<Uuid>,
     /// When the product already tracks stock and keeps tracking it, leave the
     /// stored count alone (changes go through stock movements). The desktop
     /// sets this so saving an edit never overwrites sales made meanwhile.
@@ -97,6 +111,7 @@ impl Default for ProductInput {
             kitchen: true,
             recipe: Vec::new(),
             option_recipe: Vec::new(),
+            option_sets: Vec::new(),
             keep_tracked_stock: false,
         }
     }
@@ -117,7 +132,8 @@ impl ProductInput {
             return Err(DomainError::TextTooLong);
         }
         crate::validate_recipe(&self.recipe)?;
-        crate::validate_option_recipe(&self.option_recipe, &self.options)?;
+        // Option recipe rows may name shared-set choices, so they are
+        // checked against the resolved groups where the product is saved.
         crate::validate_groups(&self.options)
     }
 }

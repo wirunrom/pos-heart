@@ -17,6 +17,7 @@ mod images;
 mod import_ui;
 mod ingredients_ui;
 mod kitchen_ui;
+mod option_sets_ui;
 #[cfg(debug_assertions)]
 mod preview;
 mod print;

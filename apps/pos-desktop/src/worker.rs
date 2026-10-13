@@ -44,6 +44,7 @@ pub struct Data {
     pub tables: Vec<pos_domain::DiningTable>,
     pub promotions: Vec<pos_domain::Promotion>,
     pub ingredients: Vec<pos_domain::Ingredient>,
+    pub option_sets: Vec<(pos_domain::OptionGroup, u64)>,
     /// Open kitchen tickets oldest first, then recently bumped ones.
     pub kitchen: Vec<pos_domain::KitchenTicket>,
 }
@@ -108,6 +109,9 @@ pub enum Command {
     SavePromotion(pos_domain::Promotion),
     SaveIngredient(pos_domain::Ingredient),
     AddCategory(String),
+    SaveOptionSet(pos_domain::OptionGroup),
+    DeleteOptionSet(Uuid),
+    LinkOptionSet(Uuid, Vec<Uuid>, bool),
     RenameCategory(String, String),
     ReorderCategories(Vec<String>),
     DeleteCategory(String, Option<String>),
@@ -183,6 +187,7 @@ pub enum Event {
     PromotionSaved,
     IngredientSaved,
     CategoriesSaved,
+    OptionSetsSaved,
     ProductImage(Uuid, Option<(i64, Vec<u8>)>),
     ImageSaved,
     IngredientHistory(Uuid, Vec<pos_domain::IngredientMovement>),
@@ -538,6 +543,18 @@ fn run(pos: &mut Pos, command: Command) -> pos_core::Result<Event> {
             pos.set_product_image(id, png.as_deref(), now())?;
             Event::ImageSaved
         }
+        Command::SaveOptionSet(set) => {
+            pos.save_option_set(&set, now())?;
+            Event::OptionSetsSaved
+        }
+        Command::DeleteOptionSet(id) => {
+            pos.delete_option_set(id, now())?;
+            Event::OptionSetsSaved
+        }
+        Command::LinkOptionSet(id, products, link) => {
+            pos.link_option_set(id, &products, link, now())?;
+            Event::OptionSetsSaved
+        }
         Command::AddCategory(name) => {
             pos.add_category(&name, now())?;
             Event::CategoriesSaved
@@ -662,6 +679,7 @@ fn load(pos: &mut Pos, q: &Query) -> pos_core::Result<Data> {
         tables: pos.dining_tables()?,
         promotions: pos.promotions()?,
         ingredients: pos.ingredients()?,
+        option_sets: pos.option_sets()?,
         kitchen: pos.kitchen_tickets()?,
         stock_history,
         shift,

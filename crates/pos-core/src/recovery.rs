@@ -122,6 +122,7 @@ impl crate::Pos {
             let count = rows.len();
             for row in rows {
                 let p: Product = row.try_into()?;
+                let own = p.own_options();
                 ProductInput {
                     id: Some(p.id),
                     sku: p.sku,
@@ -132,7 +133,8 @@ impl crate::Pos {
                     stock: p.stock,
                     barcode: p.barcode,
                     on_sale: p.on_sale,
-                    options: p.options,
+                    options: own,
+                    option_sets: p.option_sets.clone(),
                     service_charge: p.service_charge,
                     kitchen: p.kitchen,
                     recipe: p.recipe,

@@ -359,6 +359,20 @@ pub fn apply(app: &mut App, ctx: &egui::Context) {
                 app.send(crate::worker::Command::IngredientHistory(id));
             }
         }
+        "option-sets" | "option-set-editor" => {
+            app.page = crate::app::Page::Products;
+            app.option_sets.open = true;
+            if name == "option-set-editor"
+                && let Some((set, _)) = app.data.option_sets.first()
+            {
+                app.option_sets.editor = Some(vec![crate::catalog_ui::GroupDraft::from(set)]);
+            }
+        }
+        "option-set-bulk" => {
+            app.page = crate::app::Page::Products;
+            app.catalog.selected = app.data.products.iter().take(3).map(|p| p.id).collect();
+            app.option_sets.bulk = Some((app.data.option_sets.first().map(|(s, _)| s.id), true));
+        }
         "categories" | "category-rename" => {
             app.page = crate::app::Page::Products;
             app.categories.open = true;

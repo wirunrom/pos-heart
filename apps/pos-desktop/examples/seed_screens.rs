@@ -497,6 +497,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 keep_tracked_stock: true,
                 recipe: Vec::new(),
                 option_recipe: Vec::new(),
+                option_sets: p.option_sets.clone(),
             };
             // An egg option: "+ fried egg" uses one more, "no egg" one less.
             let (extra, none) = (uuid::Uuid::new_v4(), uuid::Uuid::new_v4());
@@ -595,6 +596,36 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             img.write_to(&mut png, image::ImageFormat::Png)?;
             pos.set_product_image(p.id, Some(&png.into_inner()), real_now - 100)?;
         }
+    }
+    // `--sets`: a shared cup-size set used by every drink.
+    if std::env::args().any(|a| a == "--sets") {
+        let real_now = time::OffsetDateTime::now_utc().unix_timestamp();
+        let size = pos_domain::OptionGroup {
+            id: uuid::Uuid::new_v4(),
+            name: "ขนาดแก้ว / Cup size".into(),
+            required: true,
+            multiple: false,
+            choices: vec![
+                pos_domain::OptionChoice {
+                    id: uuid::Uuid::new_v4(),
+                    name: "ปกติ / Regular".into(),
+                    price: pos_domain::Money::ZERO,
+                },
+                pos_domain::OptionChoice {
+                    id: uuid::Uuid::new_v4(),
+                    name: "ใหญ่ / Large".into(),
+                    price: "10".parse()?,
+                },
+            ],
+        };
+        pos.save_option_set(&size, real_now - 900)?;
+        let drinks: Vec<uuid::Uuid> = pos
+            .products("", 0)?
+            .into_iter()
+            .filter(|p| p.category.contains("Drinks") && p.stock.is_none())
+            .map(|p| p.id)
+            .collect();
+        pos.link_option_set(size.id, &drinks, true, real_now - 800)?;
     }
     // `--promos`: a buy-2-get-1 tea, 10% off drinks 14:00–17:00, spend 500
     // save 50, and a WELCOME coupon (10%, 100 bills).

@@ -189,6 +189,10 @@ impl Language {
             },
             Error::PaymentTotalChanged => self.text("ยอดสินค้าเปลี่ยนแล้ว ตรวจยอดใหม่และตรวจรับชำระอีกครั้ง", "The total changed. Review the refreshed amount and verify payment again."),
             Error::InvalidRefundMethod => self.text("ต้องคืนเงินตามช่องทางที่ชำระในบิลเดิม", "Refund using the original payment method."),
+            Error::OptionSetNotFound => self.text(
+                "ไม่พบชุดตัวเลือกนี้ (อาจถูกลบไปแล้ว)",
+                "Option set not found (it may have been deleted).",
+            ),
             Error::InvalidCategory => self.text("ชื่อหมวดต้องมี 1–80 ตัวอักษร", "Category names need 1–80 characters."),
             Error::DuplicateCategory => self.text("มีหมวดนี้อยู่แล้ว", "This category already exists."),
             Error::CategoryNotFound => self.text(

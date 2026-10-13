@@ -7,6 +7,7 @@ mod database;
 mod dining;
 mod import;
 mod ingredient;
+mod option_set;
 mod promotion;
 mod recovery;
 mod refund;
@@ -77,6 +78,8 @@ pub enum Error {
     RefundExceedsMethod,
     #[error("Another promotion already uses this coupon code")]
     DuplicateCoupon,
+    #[error("Option set not found")]
+    OptionSetNotFound,
     #[error("Category names need 1–80 characters")]
     InvalidCategory,
     #[error("This category already exists")]
