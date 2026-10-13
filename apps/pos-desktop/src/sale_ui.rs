@@ -706,6 +706,7 @@ fn paid_state(app: &mut App, ui: &mut egui::Ui, sale: &pos_domain::Sale) {
                 sale: sale.clone(),
                 cancellation: None,
                 refunds: Vec::new(),
+                credit_notes: Vec::new(),
                 tax_invoice: None,
             });
         }
@@ -714,6 +715,7 @@ fn paid_state(app: &mut App, ui: &mut egui::Ui, sale: &pos_domain::Sale) {
                 sale: sale.clone(),
                 cancellation: None,
                 refunds: Vec::new(),
+                credit_notes: Vec::new(),
                 tax_invoice: None,
             };
             crate::print_ui::receipt_button(app, ui, &record, false);

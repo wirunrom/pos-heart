@@ -36,8 +36,8 @@ pub use staff::{
 };
 pub use stock::{StockKind, StockMovement, StockRequest};
 pub use tax::{
-    Buyer, DEFAULT_VAT_BP, SaleTax, TaxInvoice, TaxSettings, valid_branch, valid_tax_id,
-    vat_included,
+    Buyer, CreditLine, CreditNote, DEFAULT_VAT_BP, SaleTax, TaxInvoice, TaxSettings, valid_branch,
+    valid_tax_id, vat_included,
 };
 pub use void::{
     RefundLine, RefundRequest, RefundedLine, SaleRecord, SaleRefund, SaleVoid, StockReturn,

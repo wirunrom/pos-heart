@@ -286,7 +286,7 @@ fn version_seven_databases_gain_the_refund_table() -> Result {
     }
     let mut db = SqliteConnection::establish(path.to_str().ok_or("path")?)?;
     db.batch_execute(
-        "DROP TABLE kitchen_tickets; DROP TABLE dining_tables; ALTER TABLE products DROP COLUMN kitchen;
+        "DROP TABLE credit_notes; DROP TABLE kitchen_tickets; DROP TABLE dining_tables; ALTER TABLE products DROP COLUMN kitchen;
          DROP TABLE activity_events; DROP TABLE roles; DROP TABLE tax_invoices; DROP TABLE sale_refunds; DROP TABLE staff; DROP TABLE app_settings;
          ALTER TABLE stock_movements DROP COLUMN staff_json;
          ALTER TABLE products DROP COLUMN cost_satang; ALTER TABLE products DROP COLUMN service_charge; PRAGMA user_version=7;",

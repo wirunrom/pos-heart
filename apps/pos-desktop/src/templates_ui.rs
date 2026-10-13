@@ -47,6 +47,7 @@ fn sample_receipt(app: &App) -> Option<SaleRecord> {
         sale: serde_json::from_value(sale).ok()?,
         cancellation: None,
         refunds: Vec::new(),
+        credit_notes: Vec::new(),
         tax_invoice: None,
     })
 }

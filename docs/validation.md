@@ -201,3 +201,12 @@ Automated on macOS: three new integration tests in `crates/pos-core/tests/split.
 Native captures on macOS (debug build, `seed_screens` sample data, `--page sell --preview sell-split | sell-split-review | bill-split`) at 1280×820 in Dark Thai: the Sell footer in split mode; the split review dialog with a PromptPay QR for exactly the transfer part; the split-bill dialog. These are preview states, not a clicked-through payment.
 
 Not verified: Windows; receipt printer and cash drawer hardware for split receipts and the drawer kick; scanning the transfer-part QR with a banking app; other palettes, languages, densities and 1000×700 for these surfaces.
+
+## Credit notes — 2026-10-14
+
+Automated on macOS: `crates/pos-core/tests/tax.rs::refunds_of_invoiced_sales_issue_numbered_credit_notes` (no note without a full invoice; a partial refund's note values 200 / 100 / 100 + VAT 7 = 107; a retried refund adds no second note; a second refund continues to a correct value of zero; a void's note numbers on; buyer and invoice references). The schema-version test now expects 16 and refuses 17; older fixtures drop `credit_notes`.
+
+Native capture on macOS (debug build, `seed_screens DIR --vat`, which now refunds one item of the invoiced sale): `--page history --preview credit-note` (print preview of CN-000001, 80 mm, Dark Thai 1280×820; values 62.62 / 29.91 / 32.71 + VAT 2.29 = 35.00) and `--preview history-invoiced` (history detail with the TI and CN lines and the Credit note button).
+
+Not verified: the layout against the Revenue Department's requirements by an accountant; printing on hardware; Windows; other palettes, languages and sizes.
+

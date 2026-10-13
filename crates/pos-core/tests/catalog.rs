@@ -66,10 +66,10 @@ fn version_four_products_migrate_on_sale_without_barcodes() -> Result {
     drop(pos);
     // Reopening a current database is a no-op; a future version is refused.
     let mut db = SqliteConnection::establish(path.to_str().ok_or("path")?)?;
-    db.batch_execute("PRAGMA user_version=16")?;
+    db.batch_execute("PRAGMA user_version=17")?;
     assert!(matches!(
         Pos::open(&path),
-        Err(Error::UnsupportedSchema(16))
+        Err(Error::UnsupportedSchema(17))
     ));
     Ok(())
 }

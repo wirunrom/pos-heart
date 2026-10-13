@@ -151,6 +151,27 @@ impl Pos {
                 })
                 .collect();
             crate::shifts::record_all(conn, shift.clone(), movements)?;
+            crate::tax::credit_note(
+                conn,
+                &sale,
+                crate::tax::Credit {
+                    source_id: cancellation.id,
+                    reason: &cancellation.reason,
+                    lines: sale
+                        .lines
+                        .iter()
+                        .map(|l| pos_domain::CreditLine {
+                            name: l.name.clone(),
+                            quantity: l.quantity,
+                            amount: l.net(),
+                        })
+                        .collect(),
+                    total: cancellation.refund,
+                    vat: sale.tax.as_ref().map_or(pos_domain::Money::ZERO, |t| t.vat),
+                    staff: &cancellation.staff,
+                },
+                now,
+            )?;
             crate::audit::record(
                 conn, crate::ActivityKind::Void, &sale.id.to_string(), now,
                 &cancellation.staff, &serde_json::json!({"receipt": sale.number, "amount_satang": cancellation.refund.satang(), "reason": cancellation.reason}),

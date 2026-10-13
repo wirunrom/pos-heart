@@ -218,6 +218,7 @@ impl App {
                 sale: sale.clone(),
                 cancellation: None,
                 refunds: Vec::new(),
+                credit_notes: Vec::new(),
                 tax_invoice: None,
             };
             let doc = self.receipt_doc(&self.shop.templates.receipt, &record, false);
@@ -827,6 +828,18 @@ impl App {
                 record: None,
             });
         }
+    }
+    /// Opens the preview of a credit note; Print in the dialog prints it.
+    pub fn preview_credit_note(&mut self, note: &pos_domain::CreditNote) {
+        self.print.preview = Some(Preview {
+            title: format!(
+                "{} CN-{:06}",
+                self.lang.text("ใบลดหนี้", "Credit note"),
+                note.number
+            ),
+            doc: docs::credit_note(note, self.lang, false),
+            record: None,
+        });
     }
     /// Opens the preview of a receipt as it would print.
     pub fn preview_receipt(&mut self, record: &SaleRecord) {

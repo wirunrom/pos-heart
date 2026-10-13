@@ -213,6 +213,35 @@ impl Pos {
                     staff: staff.clone(),
                 },
             )?;
+            let vat = if sale.tax.is_some() {
+                record.lines.iter().try_fold(Money::ZERO, |sum, l| {
+                    let revenue = l.revenue_ex_vat.unwrap_or(l.amount);
+                    sum.checked_add(Money::from_satang(l.amount.satang() - revenue.satang())?)
+                })?
+            } else {
+                Money::ZERO
+            };
+            crate::tax::credit_note(
+                conn,
+                &sale,
+                crate::tax::Credit {
+                    source_id: record.id,
+                    reason: &record.reason,
+                    lines: record
+                        .lines
+                        .iter()
+                        .map(|l| pos_domain::CreditLine {
+                            name: l.name.clone(),
+                            quantity: l.quantity,
+                            amount: l.amount,
+                        })
+                        .collect(),
+                    total: record.refund,
+                    vat,
+                    staff: &record.staff,
+                },
+                now,
+            )?;
             crate::audit::record(
                 conn, crate::ActivityKind::Refund, &sale.id.to_string(), now,
                 &record.staff, &serde_json::json!({"receipt": sale.number, "amount_satang": record.refund.satang(), "reason": record.reason}),

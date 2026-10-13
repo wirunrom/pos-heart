@@ -335,6 +335,17 @@ pub fn apply(app: &mut App, ctx: &egui::Context) {
             t.receipt.logo = app.logo.is_some();
             app.templates.draft = Some(t);
         }
+        "credit-note" => {
+            if let Some(note) = app
+                .data
+                .sales
+                .iter()
+                .find_map(|r| r.credit_notes.first())
+                .cloned()
+            {
+                app.preview_credit_note(&note);
+            }
+        }
         "receipt-preview" => {
             if let Some(r) = app.data.sales.first().cloned() {
                 app.preview_receipt(&r);

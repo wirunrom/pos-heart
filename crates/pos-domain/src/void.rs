@@ -70,6 +70,8 @@ pub struct SaleRecord {
     pub tax_invoice: Option<crate::TaxInvoice>,
     /// Partial refunds, oldest first. Empty when the sale was voided whole.
     pub refunds: Vec<SaleRefund>,
+    /// Credit notes for refunds of a sale with a full tax invoice, oldest first.
+    pub credit_notes: Vec<crate::CreditNote>,
 }
 
 /// One receipt line to return: index into `Sale::lines` and units returned.

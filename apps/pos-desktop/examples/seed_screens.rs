@@ -431,6 +431,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 },
                 record.sale.created_at + 60,
             )?;
+            // One item returned afterwards: its credit note (ใบลดหนี้).
+            if let Some(shift) = pos.active_shift()? {
+                pos.refund_items(
+                    &pos_domain::RefundRequest {
+                        id: uuid::Uuid::new_v4(),
+                        sale_id: record.sale.id,
+                        refund_method: record.sale.paid_by()[0].method,
+                        reason: "สินค้าชำรุด".into(),
+                        lines: vec![pos_domain::RefundLine {
+                            line: 0,
+                            quantity: 1,
+                        }],
+                        legacy_restock: Some(Vec::new()),
+                    },
+                    Some(shift.id),
+                    record.sale.created_at + 120,
+                )?;
+            }
         }
     }
     std::fs::write(

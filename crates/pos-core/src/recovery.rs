@@ -179,6 +179,12 @@ impl crate::Pos {
             Ok(())
         })?;
         validate_json::<TaxInvoice>(&mut self.conn, "tax_invoices", "invoice_json", |_| Ok(()))?;
+        validate_json::<pos_domain::CreditNote>(
+            &mut self.conn,
+            "credit_notes",
+            "note_json",
+            |_| Ok(()),
+        )?;
         validate_json::<RoleDef>(&mut self.conn, "roles", "role_json", |r| {
             r.validate()?;
             Ok(())

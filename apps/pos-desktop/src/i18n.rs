@@ -232,8 +232,8 @@ impl Language {
                 "This receipt was paid before VAT was set up, so it cannot get a tax invoice.",
             ),
             Error::SaleRefunded => self.text(
-                "บิลนี้มีการคืนเงินแล้ว ต้องออกใบลดหนี้แทน (แอปยังไม่ออกใบลดหนี้)",
-                "This sale was refunded; a credit note is needed instead (not produced by this app).",
+                "บิลนี้มีการคืนเงินแล้ว จึงออกใบกำกับภาษีเต็มรูปย้อนหลังไม่ได้",
+                "This sale was refunded, so a full tax invoice can no longer be issued.",
             ),
             Error::Forbidden(p) => {
                 return format!(

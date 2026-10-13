@@ -631,6 +631,19 @@ pub fn receipt(ui: &mut egui::Ui, record: &SaleRecord, lang: Language) {
             ),
         );
     }
+    for note in &record.credit_notes {
+        w::help_text(
+            ui,
+            &format!(
+                "{} CN-{:06} · {} {} · {}",
+                lang.text("ใบลดหนี้", "Credit note"),
+                note.number,
+                lang.text("ลด", "credited"),
+                format::money(note.total),
+                format::date_time(lang, note.created_at)
+            ),
+        );
+    }
     w::help_text(
         ui,
         if sale.tax.is_some() {
@@ -658,6 +671,20 @@ fn detail(app: &mut App, ui: &mut egui::Ui, record: &SaleRecord) {
     ui.horizontal_wrapped(|ui| {
         crate::print_ui::receipt_button(app, ui, record, true);
         crate::tax_ui::invoice_button(app, ui, record);
+        for note in &record.credit_notes {
+            if w::button(format!(
+                "{} CN-{:06}",
+                lang.text("ใบลดหนี้", "Credit note"),
+                note.number
+            ))
+            .icon(Icon::Printer)
+            .ghost()
+            .show(ui)
+            .clicked()
+            {
+                app.preview_credit_note(note);
+            }
+        }
         if !record.fully_refunded() {
             refund_actions(app, ui, record);
         }
@@ -1184,10 +1211,10 @@ pub fn refund_dialog(app: &mut App, ctx: &egui::Context) {
         if editor.record.tax_invoice.is_some() {
             w::banner(
                 ui,
-                w::Tone::Warning,
+                w::Tone::Info,
                 lang.text(
-                    "บิลนี้ออกใบกำกับภาษีเต็มรูปแล้ว การคืนเงินต้องออกใบลดหนี้ให้ลูกค้า ซึ่งแอปยังไม่ออกให้",
-                    "A full tax invoice was issued for this sale. Refunding needs a credit note, which this app does not produce.",
+                    "บิลนี้มีใบกำกับภาษีเต็มรูป เมื่อยืนยันระบบจะออกใบลดหนี้ให้อัตโนมัติ พิมพ์ได้จากรายละเอียดบิล",
+                    "This sale has a full tax invoice. Confirming issues a credit note, which you can print from the receipt details.",
                 ),
                 None,
             );

@@ -265,7 +265,7 @@ pub fn invoice_button(app: &mut App, ui: &mut egui::Ui, record: &SaleRecord) {
         }
         return;
     }
-    // Refunded sales need a credit note instead.
+    // Invoices come before refunds; refunds of an invoiced sale get credit notes.
     if record.cancellation.is_some() || !record.refunds.is_empty() {
         return;
     }

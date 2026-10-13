@@ -175,3 +175,70 @@ fn refunded_sales_need_a_credit_note_and_reports_net_vat() -> Result {
     assert_eq!((r.vat_sales, r.vat_refunds), ("14".parse()?, "7".parse()?));
     Ok(())
 }
+
+#[test]
+fn refunds_of_invoiced_sales_issue_numbered_credit_notes() -> Result {
+    let mut s = shop()?;
+    s.pos.set_tax_settings(&settings())?;
+    let plain = pay(&mut s, 1, 10)?;
+    let a = pay(&mut s, 2, 11)?;
+    let b = pay(&mut s, 1, 12)?;
+    let invoice = s.pos.issue_tax_invoice(a.id, &buyer(), 13)?;
+    s.pos.issue_tax_invoice(b.id, &buyer(), 14)?;
+    let refund = |sale: &Sale| RefundRequest {
+        id: Uuid::new_v4(),
+        sale_id: sale.id,
+        refund_method: PaymentMethod::Card,
+        reason: "ชำรุด".into(),
+        lines: vec![RefundLine {
+            line: 0,
+            quantity: 1,
+        }],
+        legacy_restock: None,
+    };
+    // A receipt without a full tax invoice gets no credit note.
+    s.pos.refund_items(&refund(&plain), Some(s.shift), 20)?;
+    // One of two bottles back: 107 refunded = 100 + VAT 7.
+    let request = refund(&a);
+    s.pos.refund_items(&request, Some(s.shift), 21)?;
+    // A retry returns the same refund without a second note.
+    s.pos.refund_items(&request, Some(s.shift), 22)?;
+    s.pos.refund_items(&refund(&a), Some(s.shift), 23)?;
+    s.pos.void_sale_for_shift(
+        &pos_domain::VoidRequest {
+            sale_id: b.id,
+            refund_method: PaymentMethod::Card,
+            reason: "ยกเลิก".into(),
+            legacy_restock: None,
+        },
+        Some(s.shift),
+        24,
+    )?;
+    let records = s.pos.history(0)?;
+    let find = |id| records.iter().find(|r| r.sale.id == id).ok_or("record");
+    assert!(find(plain.id)?.credit_notes.is_empty());
+    let notes = &find(a.id)?.credit_notes;
+    assert_eq!(notes.len(), 2);
+    let first = &notes[0];
+    assert_eq!((first.number, first.invoice_number), (1, invoice.number));
+    assert_eq!(first.source_id, request.id);
+    assert_eq!(first.buyer, invoice.buyer);
+    let m = |s: &str| s.parse::<Money>();
+    assert_eq!(
+        (
+            first.original_value,
+            first.correct_value,
+            first.difference,
+            first.vat,
+            first.total
+        ),
+        (m("200")?, m("100")?, m("100")?, m("7")?, m("107")?)
+    );
+    // The second note continues from the first: nothing is left.
+    assert_eq!((notes[1].number, notes[1].correct_value), (2, Money::ZERO));
+    let void_note = &find(b.id)?.credit_notes[0];
+    assert_eq!(void_note.number, 3);
+    assert_eq!((void_note.difference, void_note.vat), (m("100")?, m("7")?));
+    assert_eq!(void_note.lines[0].quantity, 1);
+    Ok(())
+}
