@@ -1,6 +1,7 @@
 //! Transactional application interface. Only this crate knows SQLite.
 mod audit;
 mod catalog;
+mod category;
 mod checkout;
 mod database;
 mod dining;
@@ -76,6 +77,12 @@ pub enum Error {
     RefundExceedsMethod,
     #[error("Another promotion already uses this coupon code")]
     DuplicateCoupon,
+    #[error("Category names need 1–80 characters")]
+    InvalidCategory,
+    #[error("This category already exists")]
+    DuplicateCategory,
+    #[error("Category not found")]
+    CategoryNotFound,
     #[error("The picture must be a PNG of at most 512 KB")]
     InvalidImage,
     #[error("Ingredient not found or switched off")]

@@ -202,14 +202,28 @@ impl Pos {
         self.conn.transaction(|conn| {
             let active = || products::table.filter(products::active.eq(true));
             let count = |n: i64| u64::try_from(n).map_err(|_| Error::CorruptData);
-            let categories = active()
+            let mut counted: std::collections::HashMap<String, u64> = active()
                 .group_by(products::category)
                 .select((products::category, diesel::dsl::count_star()))
-                .order(products::category)
                 .load::<(String, i64)>(conn)?
                 .into_iter()
                 .map(|(c, n)| Ok((c, count(n)?)))
-                .collect::<Result<Vec<_>>>()?;
+                .collect::<Result<_>>()?;
+            // The shop's order, empty categories included; uncategorised last.
+            let mut categories: Vec<(String, u64)> = crate::category::ordered(conn)?
+                .into_iter()
+                .map(|c| {
+                    let n = counted.remove(&c).unwrap_or(0);
+                    (c, n)
+                })
+                .collect();
+            let uncategorised = counted.remove("");
+            let mut rest: Vec<(String, u64)> = counted.into_iter().collect();
+            rest.sort();
+            categories.extend(rest);
+            if let Some(n) = uncategorised {
+                categories.push((String::new(), n));
+            }
             let low = i64::from(pos_domain::LOW_STOCK);
             Ok(CatalogCounts {
                 total: count(active().count().get_result(conn)?)?,
@@ -306,6 +320,7 @@ impl Pos {
             let mut before: Vec<pos_domain::RecipeItem> = previous.as_ref().map_or_else(Vec::new, |p| p.recipe.clone());
             before.extend(previous.as_ref().map_or_else(Vec::new, |p| as_items(&p.option_recipe)));
             crate::ingredient::check_recipe(conn, &input.recipe, &before)?;
+            crate::category::ensure(conn, &input.category)?;
             crate::ingredient::check_recipe(conn, &as_items(&input.option_recipe), &before)?;
             let was_tracked = previous.as_ref().and_then(|p| p.stock);
             let stock = match (was_tracked, input.stock) {

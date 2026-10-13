@@ -66,10 +66,10 @@ fn version_four_products_migrate_on_sale_without_barcodes() -> Result {
     drop(pos);
     // Reopening a current database is a no-op; a future version is refused.
     let mut db = SqliteConnection::establish(path.to_str().ok_or("path")?)?;
-    db.batch_execute("PRAGMA user_version=21")?;
+    db.batch_execute("PRAGMA user_version=22")?;
     assert!(matches!(
         Pos::open(&path),
-        Err(Error::UnsupportedSchema(21))
+        Err(Error::UnsupportedSchema(22))
     ));
     Ok(())
 }
@@ -122,12 +122,13 @@ fn queries_filter_by_category_view_and_barcode_with_counts() -> Result {
 
     let counts = pos.catalog_counts()?;
     assert_eq!(counts.total, 4);
+    // In the order categories were first used (shops can reorder them).
     assert_eq!(
         counts.categories,
         vec![
             ("Drinks".to_owned(), 2),
-            ("Food".to_owned(), 1),
-            ("Household".to_owned(), 1)
+            ("Household".to_owned(), 1),
+            ("Food".to_owned(), 1)
         ]
     );
     assert_eq!(
@@ -511,5 +512,50 @@ fn product_pictures_are_stored_apart_and_survive_edits() -> Result {
     pos.set_product_image(p.id, None, 12)?;
     assert_eq!(pos.product(p.id)?.image, None);
     assert_eq!(pos.product_image(p.id)?, None);
+    Ok(())
+}
+
+#[test]
+fn categories_keep_an_order_rename_merge_and_delete_with_their_products() -> Result {
+    let dir = tempfile::tempdir()?;
+    let mut pos = Pos::open(dir.path().join("db"))?;
+    product(&mut pos, "A1", "Drinks", None, None)?;
+    product(&mut pos, "A2", "Drinks", None, None)?;
+    product(&mut pos, "B1", "Food", None, None)?;
+    product(&mut pos, "C1", "", None, None)?;
+    pos.add_category("Desserts", 1)?;
+    assert!(matches!(
+        pos.add_category("Food", 1),
+        Err(Error::DuplicateCategory)
+    ));
+    let names =
+        |pos: &mut Pos| -> Result<Vec<(String, u64)>> { Ok(pos.catalog_counts()?.categories) };
+    // New categories go last; empty ones are listed; uncategorised at the end.
+    assert_eq!(
+        names(&mut pos)?,
+        vec![
+            ("Drinks".into(), 2),
+            ("Food".into(), 1),
+            ("Desserts".into(), 0),
+            (String::new(), 1)
+        ]
+    );
+    pos.reorder_categories(&["Food".into(), "Desserts".into(), "Drinks".into()])?;
+    assert_eq!(names(&mut pos)?[0].0, "Food");
+    assert!(pos.reorder_categories(&["Food".into()]).is_err());
+    // Rename moves the products; renaming into an existing name merges.
+    assert_eq!(pos.rename_category("Drinks", "Beverages", 2)?, 2);
+    assert_eq!(pos.rename_category("Beverages", "Food", 3)?, 2);
+    assert_eq!(names(&mut pos)?[0], ("Food".into(), 3));
+    // Deleting moves products into another category or uncategorised.
+    assert_eq!(pos.delete_category("Food", Some("Desserts"), 4)?, 3);
+    assert_eq!(
+        names(&mut pos)?,
+        vec![("Desserts".into(), 3), (String::new(), 1)]
+    );
+    assert!(matches!(
+        pos.delete_category("Nope", None, 5),
+        Err(Error::CategoryNotFound)
+    ));
     Ok(())
 }

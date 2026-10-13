@@ -12,6 +12,7 @@ pub enum Icon {
     Reports,
     Settings,
     ChevronDown,
+    ChevronUp,
     ChevronLeft,
     ChevronRight,
     Search,
@@ -165,6 +166,7 @@ pub fn paint(painter: &egui::Painter, icon: Icon, rect: Rect, color: Color32) {
             pen.closed(&teeth);
         }
         Icon::ChevronDown => pen.line(&[(6., 9.), (12., 15.), (18., 9.)]),
+        Icon::ChevronUp => pen.line(&[(6., 15.), (12., 9.), (18., 15.)]),
         Icon::ChevronLeft => pen.line(&[(15., 6.), (9., 12.), (15., 18.)]),
         Icon::ChevronRight => pen.line(&[(9., 6.), (15., 12.), (9., 18.)]),
         Icon::Search => {

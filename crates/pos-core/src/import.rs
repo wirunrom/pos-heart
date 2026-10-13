@@ -285,6 +285,7 @@ impl Pos {
                     option_recipe_json: "[]".into(),
                     image_rev: None,
                 };
+                crate::category::ensure(conn, &row.category)?;
                 diesel::insert_into(products::table)
                     .values(&row)
                     .execute(conn)?;

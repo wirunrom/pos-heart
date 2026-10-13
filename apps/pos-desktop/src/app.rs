@@ -87,6 +87,7 @@ pub struct App {
     pub settings_section: crate::settings_ui::Section,
     pub promotions: crate::promo_ui::PromoState,
     pub ingredients: crate::ingredients_ui::IngredientsState,
+    pub categories: crate::categories_ui::CategoriesState,
     pub images: crate::images::ImageCache,
     /// Pictures on Sell tiles (device preference, `product-images.txt`).
     pub tile_images: bool,
@@ -252,6 +253,7 @@ impl App {
             settings_section: crate::settings_ui::Section::default(),
             promotions: crate::promo_ui::PromoState::default(),
             ingredients: crate::ingredients_ui::IngredientsState::default(),
+            categories: crate::categories_ui::CategoriesState::default(),
             images: crate::images::ImageCache::default(),
             tile_images: read("product-images.txt").trim() != "off",
             kitchen: crate::kitchen_ui::KitchenState::default(),
@@ -1008,6 +1010,11 @@ impl App {
                     self.toast(self.lang.text("บันทึกรูปแล้ว", "Picture saved."));
                     self.refresh();
                 }
+                Event::CategoriesSaved => {
+                    self.categories.rename = None;
+                    self.categories.delete = None;
+                    self.refresh();
+                }
                 Event::IngredientSaved => {
                     self.ingredients.editor = None;
                     self.ingredients.adjust = None;
@@ -1693,6 +1700,7 @@ impl eframe::App for App {
         if crate::staff_ui::may(self, pos_domain::Permission::Settings) {
             crate::promo_ui::editor_dialog(self, &ctx);
             crate::ingredients_ui::dialogs(self, &ctx);
+            crate::categories_ui::dialogs(self, &ctx);
         }
         crate::promo_ui::coupon_dialog(self, &ctx);
         sale_ui::options_sheet(self, &ctx);

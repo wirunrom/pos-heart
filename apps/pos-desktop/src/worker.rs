@@ -107,6 +107,10 @@ pub enum Command {
     SaveTable(pos_domain::DiningTable),
     SavePromotion(pos_domain::Promotion),
     SaveIngredient(pos_domain::Ingredient),
+    AddCategory(String),
+    RenameCategory(String, String),
+    ReorderCategories(Vec<String>),
+    DeleteCategory(String, Option<String>),
     /// Background: a product picture for the cache.
     ProductImage(Uuid),
     SetProductImage(Uuid, Option<Vec<u8>>),
@@ -178,6 +182,7 @@ pub enum Event {
     TableSaved,
     PromotionSaved,
     IngredientSaved,
+    CategoriesSaved,
     ProductImage(Uuid, Option<(i64, Vec<u8>)>),
     ImageSaved,
     IngredientHistory(Uuid, Vec<pos_domain::IngredientMovement>),
@@ -532,6 +537,22 @@ fn run(pos: &mut Pos, command: Command) -> pos_core::Result<Event> {
         Command::SetProductImage(id, png) => {
             pos.set_product_image(id, png.as_deref(), now())?;
             Event::ImageSaved
+        }
+        Command::AddCategory(name) => {
+            pos.add_category(&name, now())?;
+            Event::CategoriesSaved
+        }
+        Command::RenameCategory(old, new) => {
+            pos.rename_category(&old, &new, now())?;
+            Event::CategoriesSaved
+        }
+        Command::ReorderCategories(names) => {
+            pos.reorder_categories(&names)?;
+            Event::CategoriesSaved
+        }
+        Command::DeleteCategory(name, into) => {
+            pos.delete_category(&name, into.as_deref(), now())?;
+            Event::CategoriesSaved
         }
         Command::SaveIngredient(i) => {
             pos.save_ingredient(&i, now())?;

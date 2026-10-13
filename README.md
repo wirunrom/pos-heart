@@ -249,3 +249,7 @@ Products → Ingredients lists each ingredient with its stock in its own unit, a
 ## Product pictures (2026-10-14)
 
 In the product editor, Picture takes a PNG or JPG (paste its path or drop the file on the window) for a saved product; it is shrunk to 256 px and saved immediately, and Remove deletes it. Sell tiles show the picture above the name and price; Settings → Language & display → Product pictures turns them off on this device for smaller tiles. Pictures load only for products on screen.
+
+## Categories (2026-10-14)
+
+Products → Manage → Categories lists categories in the shop's order (also used in Sell and the Products sidebar) with their product counts. Add creates an empty category; the arrows reorder; Rename moves every product along, and renaming to an existing name merges the two after a warning; Delete moves the category's products to another category or leaves them uncategorised. A product saved or imported with a new category name adds it at the end.

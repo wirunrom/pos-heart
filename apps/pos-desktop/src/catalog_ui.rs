@@ -672,6 +672,13 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
     );
     keys(app, ui.ctx());
     panel(ui, &t, nav, space::S2, |ui| side_nav(app, ui));
+    if app.categories.open {
+        let main = Rect::from_min_max(main.min, pos2(full.right(), full.bottom()));
+        panel(ui, &t, main, space::S4, |ui| {
+            crate::categories_ui::panel(app, ui)
+        });
+        return;
+    }
     if app.ingredients.open {
         // Ingredients replace the product table; the product editor stays closed.
         let main = Rect::from_min_max(main.min, pos2(full.right(), full.bottom()));
@@ -770,9 +777,11 @@ fn side_nav(app: &mut App, ui: &mut egui::Ui) {
             for (value, label, n) in entries {
                 let active = app.catalog.category == value
                     && app.catalog.view == ProductView::All
-                    && !app.ingredients.open;
+                    && !app.ingredients.open
+                    && !app.categories.open;
                 if nav_item(ui, &t, &label, n, active).clicked() {
                     app.ingredients.open = false;
+                    app.categories.open = false;
                     app.catalog.category = value;
                     app.catalog.view = ProductView::All;
                     refresh_from_start(app);
@@ -804,9 +813,11 @@ fn side_nav(app: &mut App, ui: &mut egui::Ui) {
                     w::Tone::Neutral,
                 ),
             ] {
-                let active = app.catalog.view == view && !app.ingredients.open;
+                let active =
+                    app.catalog.view == view && !app.ingredients.open && !app.categories.open;
                 if view_item(ui, &t, label, n, tone, active).clicked() {
                     app.ingredients.open = false;
+                    app.categories.open = false;
                     app.catalog.view = view;
                     app.catalog.category = None;
                     refresh_from_start(app);
@@ -815,9 +826,31 @@ fn side_nav(app: &mut App, ui: &mut egui::Ui) {
             ui.add_space(space::S4);
             ui.horizontal(|ui| {
                 ui.add_space(space::S3);
-                w::eyebrow(ui, lang.text("ครัว", "Kitchen"));
+                w::eyebrow(ui, lang.text("จัดการ", "Manage"));
             });
             ui.add_space(space::S1);
+            let named = app
+                .data
+                .counts
+                .categories
+                .iter()
+                .filter(|(c, _)| !c.is_empty())
+                .count() as u64;
+            if view_item(
+                ui,
+                &t,
+                lang.text("หมวดหมู่", "Categories"),
+                named,
+                w::Tone::Neutral,
+                app.categories.open,
+            )
+            .clicked()
+                && !app.catalog.dirty()
+            {
+                app.categories.open = true;
+                app.ingredients.open = false;
+                app.catalog.editor = None;
+            }
             let low = crate::ingredients_ui::low_count(app) as u64;
             if view_item(
                 ui,
@@ -831,6 +864,7 @@ fn side_nav(app: &mut App, ui: &mut egui::Ui) {
                 && !app.catalog.dirty()
             {
                 app.ingredients.open = true;
+                app.categories.open = false;
                 app.catalog.editor = None;
             }
         });

@@ -185,7 +185,14 @@ diesel::table! {
         updated_at -> BigInt,
     }
 }
+diesel::table! {
+    categories (name) {
+        name -> Text,
+        position -> BigInt,
+    }
+}
 diesel::allow_tables_to_appear_in_same_query!(
+    categories,
     product_images,
     ingredients,
     ingredient_movements,

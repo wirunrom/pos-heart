@@ -261,3 +261,11 @@ Automated on macOS: `tests/catalog.rs::product_pictures_are_stored_apart_and_sur
 Native captures on macOS (debug build, `seed_screens DIR --restaurant --pictures`, generated coloured samples): Sell at 1280×820 Dark Thai and 1000×700 Light English Touch (picture bands, placeholders, unavailable tiles dimmed, count badge on the corner), and the product editor's Picture field.
 
 Not verified: importing real photos from disk and drag-and-drop on Windows; memory use with thousands of pictures (the cache bound is by design, not measured).
+
+## Categories — 2026-10-14
+
+Automated on macOS: `tests/catalog.rs::categories_keep_an_order_rename_merge_and_delete_with_their_products` (empty categories listed, uncategorised last, reorder, rename, merge, delete into another category, unknown names refused); the existing counts test now expects first-use order. Full workspace: 181 tests; the schema-version test expects 21 and refuses 22.
+
+Native captures on macOS: `--preview categories` (Dark Thai 1280×820) and `--preview category-rename` with the merge warning (Light English Touch 1000×700).
+
+Not verified: Windows; clicked-through reorder/rename/delete.

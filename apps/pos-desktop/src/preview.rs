@@ -359,6 +359,18 @@ pub fn apply(app: &mut App, ctx: &egui::Context) {
                 app.send(crate::worker::Command::IngredientHistory(id));
             }
         }
+        "categories" | "category-rename" => {
+            app.page = crate::app::Page::Products;
+            app.categories.open = true;
+            if name == "category-rename"
+                && let Some((c, _)) = app.data.counts.categories.first().cloned()
+            {
+                app.categories.rename = Some((
+                    c.clone(),
+                    app.data.counts.categories.get(1).map_or(c, |x| x.0.clone()),
+                ));
+            }
+        }
         "product-recipe" => {
             app.page = crate::app::Page::Products;
             if let Some(p) = app
