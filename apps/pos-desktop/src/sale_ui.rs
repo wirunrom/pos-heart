@@ -1231,40 +1231,62 @@ fn split_rows(app: &mut App, ui: &mut egui::Ui, compact: bool) {
     let busy = app.busy;
     let label_w = if compact { 72.0 } else { 96.0 };
     let field_w = (ui.available_width() - label_w - space::S2).clamp(120.0, 220.0);
-    for (method, id) in [
-        (PaymentMethod::Transfer, "split-transfer"),
-        (PaymentMethod::Card, "split-card"),
-    ] {
-        ui.horizontal(|ui| {
-            ui.add_sized(
-                vec2(label_w, t.m.control_md),
-                egui::Label::new(t.muted(lang.payment_method(method), type_scale::BODY)),
+    // Short windows put transfer and card side by side.
+    let half = ((ui.available_width() - space::S2) / 2.0).floor();
+    let mut changed = false;
+    let mut field = |ui: &mut egui::Ui, method: PaymentMethod, width: f32| {
+        if let Some(draft) = app.sell.split_pay.as_mut() {
+            let (value, id) = if method == PaymentMethod::Transfer {
+                (&mut draft.transfer, "split-transfer")
+            } else {
+                (&mut draft.card, "split-card")
+            };
+            let r = w::money_input(
+                ui,
+                value,
+                w::MoneyOpts {
+                    id: Id::new(id),
+                    primary: false,
+                    width: Some(width),
+                    large: false,
+                    invalid: false,
+                    enabled: !busy,
+                },
             );
-            ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
-                if let Some(draft) = app.sell.split_pay.as_mut() {
-                    let value = if method == PaymentMethod::Transfer {
-                        &mut draft.transfer
-                    } else {
-                        &mut draft.card
-                    };
-                    let r = w::money_input(
-                        ui,
-                        value,
-                        w::MoneyOpts {
-                            id: Id::new(id),
-                            primary: false,
-                            width: Some(field_w),
-                            large: false,
-                            invalid: false,
-                            enabled: !busy,
-                        },
-                    );
-                    if r.changed() {
-                        app.payment_review = None;
-                    }
-                }
-            });
+            changed |= r.changed();
+        }
+    };
+    if compact {
+        ui.horizontal_top(|ui| {
+            ui.spacing_mut().item_spacing.x = space::S2;
+            for method in [PaymentMethod::Transfer, PaymentMethod::Card] {
+                ui.allocate_ui_with_layout(
+                    vec2(half, 0.0),
+                    egui::Layout::top_down(Align::Min),
+                    |ui| {
+                        ui.set_width(half);
+                        ui.spacing_mut().item_spacing.y = 2.0;
+                        ui.label(t.muted(lang.payment_method(method), type_scale::LABEL));
+                        field(ui, method, half);
+                    },
+                );
+            }
         });
+    } else {
+        for method in [PaymentMethod::Transfer, PaymentMethod::Card] {
+            ui.horizontal(|ui| {
+                ui.add_sized(
+                    vec2(label_w, t.m.control_md),
+                    egui::Label::new(t.muted(lang.payment_method(method), type_scale::BODY)),
+                );
+                ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
+                    field(ui, method, field_w);
+                });
+            });
+        }
+    }
+    if changed {
+        app.payment_review = None;
     }
     match split_parts(app) {
         Ok(parts) => {
@@ -1299,8 +1321,8 @@ fn split_rows(app: &mut App, ui: &mut egui::Ui, compact: bool) {
             ),
         ),
     }
-    // A quick guide for groups paying equal shares.
-    if let Ok(total) = app.total() {
+    // A quick guide for groups paying equal shares (not on short windows).
+    if !compact && let Ok(total) = app.total() {
         let shares: Vec<String> = (2..=4)
             .filter_map(|n: i64| {
                 let each = (total.satang() + n - 1) / n;

@@ -239,3 +239,10 @@ Automated on macOS: domain unit tests in `ingredient.rs` (recipe use per ingredi
 Native captures on macOS (debug build, `seed_screens DIR --restaurant --ingredients`) in Dark Thai: Products → Ingredients at 1280×820 (low badge, SideNav count), the open history row, and the product editor's recipe section at 1280×1500.
 
 Not verified: a clicked-through sale and void updating the list; other palettes, languages, densities and 1000×700; Windows.
+
+## New surfaces in Light English Touch 1000×700 — 2026-10-14
+
+Native captures on macOS (debug build, `seed_screens DIR --restaurant --tables --promos --vat --ingredients`, Light, English, Touch, 1000×700): `sell-split`, `bill-split`, `sell-split-review`, `settings-promotions`, `promo-editor`, `sell-coupon`, `ingredients` and `credit-note`. Found and fixed: on this short window the split footer pushed the cash part below the scrollable payment details; compact windows now put Transfer and Card side by side and drop the equal-shares caption, so the cash part shows without scrolling (the cash-received field may still need a short scroll inside the bounded footer). Also seen: the Ingredients item sits at the bottom of the Products SideNav and needs a scroll at this size.
+
+Not verified: Windows; hardware; clicked-through flows.
+
