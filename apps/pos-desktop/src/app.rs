@@ -393,7 +393,8 @@ impl App {
             &self.data.pricing,
             &self.data.tax,
             cart.service_charge,
-            self.payment_method == pos_domain::PaymentMethod::Cash,
+            // Split payments are exact: no cash rounding.
+            self.payment_method == pos_domain::PaymentMethod::Cash && self.sell.split_pay.is_none(),
         );
         pos_domain::price_sale(&lines, cart.discount, &options)
     }
@@ -469,6 +470,7 @@ impl App {
     pub fn reset_payment(&mut self) {
         self.cash.clear();
         self.payment_method = pos_domain::PaymentMethod::Cash;
+        self.sell.split_pay = None;
         self.payment_review = None;
     }
     pub fn clear_cart(&mut self) {
@@ -660,6 +662,40 @@ impl App {
                         self.lang.text("คืนสินค้าแล้ว บันทึกคืนเงิน", "Items refunded:"),
                         self.lang.payment_method(refund.refund_method),
                         format::baht(refund.refund)
+                    ));
+                    self.refresh();
+                }
+                Event::Split(rest, moved) => {
+                    let lang = self.lang;
+                    let place = match rest
+                        .table
+                        .and_then(|id| self.data.tables.iter().find(|t| t.id == id))
+                    {
+                        Some(t) => format!(
+                            "{} {}",
+                            lang.text("บิลเดิมยังอยู่ที่โต๊ะ", "the rest stays on"),
+                            t.name
+                        ),
+                        None => lang
+                            .text("บิลเดิมอยู่ในแท็บพักไว้", "the rest is in Held")
+                            .to_owned(),
+                    };
+                    self.autosave.saved = Some(moved.id);
+                    self.autosave.snapshot = Some(moved.clone());
+                    self.cart = moved;
+                    self.write_marker();
+                    self.sell.tab = sale_ui::CartTab::Current;
+                    self.sell.pane = sale_ui::Pane::Products;
+                    self.sell.current = None;
+                    self.sell.bill_split = None;
+                    self.reset_payment();
+                    self.last_sale = None;
+                    self.toast(format!(
+                        "{} · {place}",
+                        lang.text(
+                            "แยกบิลแล้ว รับเงินบิลนี้ได้เลย",
+                            "Bill split. Take payment for this one;"
+                        )
                     ));
                     self.refresh();
                 }
@@ -1425,6 +1461,7 @@ impl eframe::App for App {
             return;
         }
         sale_ui::payment_dialog(self, &ctx);
+        sale_ui::bill_split_dialog(self, &ctx);
         sale_ui::options_sheet(self, &ctx);
         crate::discount_ui::dialog(self, &ctx);
         crate::history_ui::void_dialog(self, &ctx);

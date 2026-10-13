@@ -73,6 +73,46 @@ pub fn apply(app: &mut App, ctx: &egui::Context) {
                 ));
             }
         }
+        "sell-split" | "sell-split-review" => {
+            app.sell.split_pay = Some(sale_ui::SplitDraft {
+                transfer: "100.00".into(),
+                card: String::new(),
+            });
+            app.cash = "500.00".into();
+            if name == "sell-split-review"
+                && let (Some(total), Some(shift)) = (app.total().ok(), app.data.shift.as_ref())
+                && let Ok(cash) = format::parse_money("500.00")
+                && let Ok(hundred) = format::parse_money("100.00")
+            {
+                let rest = pos_domain::Money::from_satang(total.satang() - hundred.satang())
+                    .unwrap_or_default();
+                let cash = sale_ui::quick_cash(rest)
+                    .get(1)
+                    .copied()
+                    .unwrap_or(cash)
+                    .max(rest);
+                app.cash = format::money(cash);
+                app.payment_review = Some(sale_ui::PaymentReview::split(
+                    app.cart.clone(),
+                    total,
+                    pos_domain::SplitPayment {
+                        tenders: vec![
+                            pos_domain::Tender {
+                                method: PaymentMethod::Cash,
+                                amount: rest,
+                            },
+                            pos_domain::Tender {
+                                method: PaymentMethod::Transfer,
+                                amount: hundred,
+                            },
+                        ],
+                        cash_given: cash,
+                    },
+                    shift.id,
+                ));
+            }
+        }
+        "bill-split" => app.sell.bill_split = Some(sale_ui::BillSplit::preview(&app.cart)),
         "sell-large" => {
             app.cash = "99999.00".into();
             app.sell.confirm_large_cash = true;

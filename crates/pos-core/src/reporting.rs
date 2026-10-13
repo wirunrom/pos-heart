@@ -130,7 +130,9 @@ impl Pos {
                 if let Some(json) = row.refund_json {
                     // Partial refund: only the returned units of the listed lines.
                     let refund: pos_domain::SaleRefund = serde_json::from_str(&json)?;
-                    if refund.sale_id != sale.id || refund.refund_method != sale.payment_method {
+                    if refund.sale_id != sale.id
+                        || !sale.paid_by().iter().any(|t| t.method == refund.refund_method)
+                    {
                         return Err(Error::CorruptData);
                     }
                     add(&mut summary.refund_count, 1)?;
@@ -200,11 +202,9 @@ impl Pos {
                     if let Some(tax) = &sale.tax {
                         summary.vat_refunds = summary.vat_refunds.checked_add(tax.vat)?;
                     }
-                    summary.payments.record(
-                        cancellation.refund_method,
-                        cancellation.refund,
-                        true,
-                    )?;
+                    summary
+                        .payments
+                        .record_all(&cancellation.refunded_by(), true)?;
                     summary.refunds = summary.refunds.checked_add(cancellation.refund)?;
                     bucket.refunds = bucket.refunds.checked_add(cancellation.refund)?;
                     for r in &cancellation.restocked {
@@ -217,9 +217,7 @@ impl Pos {
                     if let Some(tax) = &sale.tax {
                         summary.vat_sales = summary.vat_sales.checked_add(tax.vat)?;
                     }
-                    summary
-                        .payments
-                        .record(sale.payment_method, sale.total, false)?;
+                    summary.payments.record_all(&sale.paid_by(), false)?;
                     summary.gross_sales = summary.gross_sales.checked_add(sale.total)?;
                     summary.discounts = summary.discounts.checked_add(sale.discounts())?;
                     summary.service_charges =

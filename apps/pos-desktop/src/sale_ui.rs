@@ -36,6 +36,10 @@ pub struct SellState {
     /// Table bill whose payment section is open; table bills otherwise show
     /// a short ordering footer so more dishes fit.
     pub paying: Option<uuid::Uuid>,
+    /// Paying this bill with several methods.
+    pub split_pay: Option<SplitDraft>,
+    /// Choosing items to move to a separate bill.
+    pub bill_split: Option<BillSplit>,
     pub category: Option<String>,
     pub current: Option<usize>,
     pub flash: Option<(usize, Instant)>,
@@ -215,6 +219,7 @@ fn pane_tabs(app: &mut App, ui: &mut egui::Ui) {
 
 fn keys(app: &mut App, ctx: &egui::Context) {
     let overlay = app.payment_review.is_some()
+        || app.sell.bill_split.is_some()
         || app.sell.sheet.is_some()
         || app.sell.discount.is_some()
         || app.palette.visible
@@ -448,6 +453,19 @@ fn current_bill(app: &mut App, ui: &mut egui::Ui) {
                                 app.sell.moving = true;
                                 app.sell.pane = Pane::Tables;
                             }
+                        }
+                        let units: u32 = app.cart.lines.iter().map(|l| l.quantity).sum();
+                        if units > 1
+                            && menu_row(
+                                ui,
+                                Icon::Options,
+                                lang.text("แยกบิล (จ่ายแยก)", "Split the bill"),
+                                "",
+                                false,
+                            )
+                            .clicked()
+                        {
+                            app.sell.bill_split = Some(BillSplit::new(&app.cart));
                         }
                         if menu_row(
                             ui,
@@ -1083,9 +1101,164 @@ fn line_editor(app: &mut App, ui: &mut egui::Ui, index: usize) {
 }
 
 fn cash_short(app: &App) -> Option<Money> {
-    let total = app.total().ok()?;
+    let total = cash_due(app)?;
     let cash = format::parse_money(&app.cash).ok()?;
     (cash < total).then(|| Money::from_satang(total.satang() - cash.satang()).ok())?
+}
+/// Cash the customer must hand over: the whole bill, or a split's cash part.
+fn cash_due(app: &App) -> Option<Money> {
+    match &app.sell.split_pay {
+        Some(_) => split_parts(app).ok().map(|p| p.cash),
+        None => app.total().ok(),
+    }
+}
+/// Amounts typed for a split payment; cash pays whatever is left.
+#[derive(Default, Clone)]
+pub struct SplitDraft {
+    pub transfer: String,
+    pub card: String,
+}
+struct SplitParts {
+    transfer: Money,
+    card: Money,
+    cash: Money,
+}
+fn split_parts(app: &App) -> Result<SplitParts, ()> {
+    let draft = app.sell.split_pay.as_ref().ok_or(())?;
+    let parse = |s: &str| {
+        if s.trim().is_empty() {
+            Ok(Money::ZERO)
+        } else {
+            format::parse_money(s).map_err(|_| ())
+        }
+    };
+    let (transfer, card) = (parse(&draft.transfer)?, parse(&draft.card)?);
+    let total = app.total().map_err(|_| ())?;
+    let noncash = transfer.checked_add(card).map_err(|_| ())?;
+    let cash = Money::from_satang(total.satang() - noncash.satang()).map_err(|_| ())?;
+    Ok(SplitParts {
+        transfer,
+        card,
+        cash,
+    })
+}
+/// The request for the typed split, if it is complete and valid.
+fn split_request(app: &App) -> Option<pos_domain::SplitPayment> {
+    let parts = split_parts(app).ok()?;
+    let given = if parts.cash > Money::ZERO {
+        format::parse_money(&app.cash).ok()?
+    } else {
+        Money::ZERO
+    };
+    let split = pos_domain::SplitPayment {
+        tenders: [
+            (PaymentMethod::Cash, parts.cash),
+            (PaymentMethod::Transfer, parts.transfer),
+            (PaymentMethod::Card, parts.card),
+        ]
+        .into_iter()
+        .map(|(method, amount)| pos_domain::Tender { method, amount })
+        .collect(),
+        cash_given: given,
+    };
+    split.normalized().ok()?;
+    Some(split)
+}
+/// Split rows inside the payment box: transfer and card amounts, the cash
+/// part that is left, then cash handed over and change.
+fn split_rows(app: &mut App, ui: &mut egui::Ui, compact: bool) {
+    let t = Theme::of(ui);
+    let lang = app.lang;
+    let busy = app.busy;
+    let label_w = if compact { 72.0 } else { 96.0 };
+    let field_w = (ui.available_width() - label_w - space::S2).clamp(120.0, 220.0);
+    for (method, id) in [
+        (PaymentMethod::Transfer, "split-transfer"),
+        (PaymentMethod::Card, "split-card"),
+    ] {
+        ui.horizontal(|ui| {
+            ui.add_sized(
+                vec2(label_w, t.m.control_md),
+                egui::Label::new(t.muted(lang.payment_method(method), type_scale::BODY)),
+            );
+            ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
+                if let Some(draft) = app.sell.split_pay.as_mut() {
+                    let value = if method == PaymentMethod::Transfer {
+                        &mut draft.transfer
+                    } else {
+                        &mut draft.card
+                    };
+                    let r = w::money_input(
+                        ui,
+                        value,
+                        w::MoneyOpts {
+                            id: Id::new(id),
+                            primary: false,
+                            width: Some(field_w),
+                            large: false,
+                            invalid: false,
+                            enabled: !busy,
+                        },
+                    );
+                    if r.changed() {
+                        app.payment_review = None;
+                    }
+                }
+            });
+        });
+    }
+    match split_parts(app) {
+        Ok(parts) => {
+            w::kv(
+                ui,
+                lang.text("เงินสด (ส่วนที่เหลือ)", "Cash (the rest)"),
+                &format::money(parts.cash),
+                w::Value::Plain,
+            );
+            if parts.cash > Money::ZERO {
+                ui.horizontal(|ui| {
+                    let field_w = (ui.available_width() * 0.52).clamp(120.0, 220.0);
+                    cash_input(app, ui, field_w);
+                    let change = format::parse_money(&app.cash)
+                        .ok()
+                        .and_then(|c| parts.cash.change_from(c).ok());
+                    ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
+                        ui.label(
+                            RichText::new(change.map_or("—".into(), format::money))
+                                .font(t.strong_font(type_scale::MONEY_LG)),
+                        );
+                        ui.label(t.muted(lang.text("ทอน", "Change"), type_scale::LABEL));
+                    });
+                });
+            }
+        }
+        Err(()) => w::inline_error(
+            ui,
+            lang.text(
+                "ยอดโอนและบัตรรวมกันต้องไม่เกินยอดชำระ",
+                "Transfer and card together cannot exceed the amount due.",
+            ),
+        ),
+    }
+    // A quick guide for groups paying equal shares.
+    if let Ok(total) = app.total() {
+        let shares: Vec<String> = (2..=4)
+            .filter_map(|n: i64| {
+                let each = (total.satang() + n - 1) / n;
+                Money::from_satang(each)
+                    .ok()
+                    .map(|m| format!("{n} {} {}", lang.text("คน", "people"), format::money(m)))
+            })
+            .collect();
+        ui.label(t.muted(
+            format!(
+                "{} {}",
+                lang.text("หารเท่ากัน:", "Equal shares:"),
+                shares.join(" · ")
+            ),
+            type_scale::CAPTION,
+        ));
+    }
 }
 /// "Exact" plus notes rounded up from the total (1,323.50 → 1,400 / 1,500 / 2,000).
 pub fn quick_cash(total: Money) -> Vec<Money> {
@@ -1317,24 +1490,47 @@ fn footer(app: &mut App, ui: &mut egui::Ui) {
                 );
             });
         });
-        let cash_method = app.payment_method == PaymentMethod::Cash;
         ui.horizontal(|ui| {
             ui.add_enabled_ui(!app.busy, |ui| {
-                let before = app.payment_method;
+                // None is "split between methods".
+                let before = if app.sell.split_pay.is_some() {
+                    None
+                } else {
+                    Some(app.payment_method)
+                };
+                let mut choice = before;
                 w::segmented(
                     ui,
-                    &mut app.payment_method,
+                    &mut choice,
                     &[
-                        (PaymentMethod::Cash, lang.payment_method(PaymentMethod::Cash)),
-                        (PaymentMethod::Transfer, lang.payment_method(PaymentMethod::Transfer)),
-                        (PaymentMethod::Card, lang.payment_method(PaymentMethod::Card)),
+                        (Some(PaymentMethod::Cash), lang.payment_method(PaymentMethod::Cash)),
+                        (Some(PaymentMethod::Transfer), lang.payment_method(PaymentMethod::Transfer)),
+                        (Some(PaymentMethod::Card), lang.payment_method(PaymentMethod::Card)),
+                        (None, lang.text("แบ่งจ่าย", "Split")),
                     ],
                 );
-                if before != app.payment_method {
+                if choice != before {
                     app.payment_review = None;
+                    match choice {
+                        Some(method) => {
+                            app.payment_method = method;
+                            app.sell.split_pay = None;
+                        }
+                        None => {
+                            // Cash pays the rest; its field is the notes handed over.
+                            app.payment_method = PaymentMethod::Cash;
+                            app.sell.split_pay = Some(SplitDraft::default());
+                            app.cash.clear();
+                        }
+                    }
                 }
             });
         });
+        let splitting = app.sell.split_pay.is_some();
+        if splitting {
+            split_rows(app, ui, compact);
+        }
+        let cash_method = app.payment_method == PaymentMethod::Cash && !splitting;
         if compact && cash_method {
             // Cash received and change share one row in compact mode.
             ui.horizontal(|ui| {
@@ -1358,7 +1554,7 @@ fn footer(app: &mut App, ui: &mut egui::Ui) {
                 });
             });
         }
-        if cash_method {
+        if cash_method || splitting {
             if let Some(short) = cash_short(app) {
                 w::inline_error(
                     ui,
@@ -1369,7 +1565,7 @@ fn footer(app: &mut App, ui: &mut egui::Ui) {
                     ),
                 );
             }
-            if !compact {
+            if !compact && !splitting {
                 w::kv_styled(
                     ui,
                     lang.text("เงินทอน", "Change"),
@@ -1389,7 +1585,7 @@ fn footer(app: &mut App, ui: &mut egui::Ui) {
         }
     });
     if app.payment_method == PaymentMethod::Cash
-        && let Ok(total) = total
+        && let Some(total) = cash_due(app).filter(|m| *m > Money::ZERO)
     {
         let options = quick_cash(total);
         let mut labels = vec![(lang.text("พอดี", "Exact").to_owned(), cash == Some(total))];
@@ -1414,10 +1610,16 @@ fn footer(app: &mut App, ui: &mut egui::Ui) {
         app.sell.pay_requested = false;
         return;
     }
+    let splitting = app.sell.split_pay.is_some();
     let ready = !app.busy
         && total.is_ok()
-        && (app.payment_method != PaymentMethod::Cash || change.is_some());
+        && if splitting {
+            split_request(app).is_some()
+        } else {
+            app.payment_method != PaymentMethod::Cash || change.is_some()
+        };
     let label = match app.payment_method {
+        _ if splitting => lang.text("ตรวจรับเงินแบ่งจ่าย", "Review split payment"),
         PaymentMethod::Cash => lang.text("รับเงินสด", "Take cash"),
         PaymentMethod::Transfer if !app.shop.promptpay.is_empty() => {
             lang.text("แสดง QR รับโอน", "Show transfer QR")
@@ -1436,7 +1638,7 @@ fn footer(app: &mut App, ui: &mut egui::Ui) {
         .show(ui)
         .clicked();
     let requested = std::mem::take(&mut app.sell.pay_requested);
-    if requested && app.payment_method == PaymentMethod::Cash && !ready {
+    if requested && app.payment_method == PaymentMethod::Cash && !ready && !splitting {
         // F9 first moves focus to the cash field (OrderSummary.md).
         app.sell.focus_cash = true;
     } else if clicked || (requested && ready) {
@@ -1573,6 +1775,22 @@ fn take_payment(app: &mut App) {
     let Ok(total) = app.total() else {
         return;
     };
+    if app.sell.split_pay.is_some() {
+        let Some(split) = split_request(app) else {
+            return;
+        };
+        app.error = None;
+        app.payment_review = Some(PaymentReview {
+            cart: app.cart.clone(),
+            payment: PaymentRequest {
+                method: PaymentMethod::Transfer,
+                amount: total,
+            },
+            split: Some(split),
+            shift_id: shift,
+        });
+        return;
+    }
     if app.payment_method == PaymentMethod::Cash {
         let Ok(cash) = format::parse_money(&app.cash) else {
             app.sell.focus_cash = true;
@@ -1603,6 +1821,7 @@ fn take_payment(app: &mut App) {
                 method: app.payment_method,
                 amount: total,
             },
+            split: None,
             shift_id: shift,
         });
     }
@@ -2152,6 +2371,8 @@ fn product_tile(
 pub struct PaymentReview {
     cart: Cart,
     payment: PaymentRequest,
+    /// Several methods; `payment` then only carries the reviewed total.
+    split: Option<pos_domain::SplitPayment>,
     shift_id: uuid::Uuid,
 }
 impl PaymentReview {
@@ -2160,6 +2381,25 @@ impl PaymentReview {
         Self {
             cart,
             payment,
+            split: None,
+            shift_id,
+        }
+    }
+    /// Debug previews: the split-payment confirmation.
+    #[cfg(debug_assertions)]
+    pub fn split(
+        cart: Cart,
+        total: Money,
+        split: pos_domain::SplitPayment,
+        shift_id: uuid::Uuid,
+    ) -> Self {
+        Self {
+            cart,
+            payment: PaymentRequest {
+                method: PaymentMethod::Transfer,
+                amount: total,
+            },
+            split: Some(split),
             shift_id,
         }
     }
@@ -2169,6 +2409,10 @@ pub fn payment_dialog(app: &mut App, ctx: &egui::Context) {
     let Some(review) = app.payment_review.take() else {
         return;
     };
+    if review.split.is_some() {
+        split_dialog(app, ctx, review);
+        return;
+    }
     let lang = app.lang;
     let t = Theme::current(ctx);
     let promptpay = (review.payment.method == PaymentMethod::Transfer)
@@ -2302,6 +2546,299 @@ pub fn payment_dialog(app: &mut App, ctx: &egui::Context) {
         Some(true) => app.send(Command::Pay(
             review.cart.clone(),
             review.payment,
+            review.shift_id,
+        )),
+        None => {}
+    }
+    app.payment_review = Some(review);
+}
+/// Units of each line chosen to move to a separate bill.
+pub struct BillSplit {
+    cart_id: uuid::Uuid,
+    take: Vec<u32>,
+}
+impl BillSplit {
+    pub fn new(cart: &Cart) -> Self {
+        Self {
+            cart_id: cart.id,
+            take: vec![0; cart.lines.len()],
+        }
+    }
+    /// Debug previews: the first line's units already chosen.
+    #[cfg(debug_assertions)]
+    pub fn preview(cart: &Cart) -> Self {
+        let mut s = Self::new(cart);
+        if let (Some(t), Some(l)) = (s.take.first_mut(), cart.lines.first()) {
+            *t = l.quantity.min(2);
+        }
+        s
+    }
+}
+/// "Pay separately": choose dishes to move to a new bill, which opens for
+/// payment while the rest stays held (on its table).
+pub fn bill_split_dialog(app: &mut App, ctx: &egui::Context) {
+    let Some(mut split) = app.sell.bill_split.take() else {
+        return;
+    };
+    if split.cart_id != app.cart.id || split.take.len() != app.cart.lines.len() {
+        return;
+    }
+    let lang = app.lang;
+    let t = Theme::current(ctx);
+    let lines = app.cart.lines.clone();
+    let mut moving = Money::ZERO;
+    for (line, n) in lines.iter().zip(&split.take) {
+        if let Some(price) = app.price(line)
+            && line.quantity > 0
+        {
+            let each =
+                Money::from_satang(price.satang() / i64::from(line.quantity)).unwrap_or_default();
+            moving = moving
+                .checked_add(each.checked_mul(*n).unwrap_or_default())
+                .unwrap_or_default();
+        }
+    }
+    let units: u32 = split.take.iter().sum();
+    let left: u32 = lines.iter().map(|l| l.quantity).sum::<u32>() - units;
+    let response = w::dialog(ctx, "bill-split", 520.0, |ui| {
+        w::dialog_title(ui, lang.text("แยกบิล", "Split the bill"), false);
+        w::help_text(
+            ui,
+            lang.text(
+                "เลือกรายการของคนที่จะจ่ายแยก รายการที่เลือกจะไปเป็นบิลใหม่ให้รับเงินได้ทันที ที่เหลืออยู่ในบิลเดิม ครัวไม่ได้รับรายการซ้ำหรือยกเลิกเพราะการแยก",
+                "Choose what one person pays for. Those items become a new bill to pay now; the rest stays on this bill. The kitchen gets no repeats or cancellations from splitting.",
+            ),
+        );
+        egui::ScrollArea::vertical()
+            .max_height((ctx.content_rect().height() - 320.0).clamp(160.0, 420.0))
+            .show(ui, |ui| {
+                for (i, line) in lines.iter().enumerate() {
+                    let name = app
+                        .known
+                        .get(&line.product_id)
+                        .map_or_else(String::new, |p| p.name.clone());
+                    ui.horizontal(|ui| {
+                        let name_w = (ui.available_width() - 150.0).max(120.0);
+                        ui.allocate_ui_with_layout(
+                            vec2(name_w, 0.0),
+                            egui::Layout::top_down(Align::Min),
+                            |ui| {
+                                ui.set_width(name_w);
+                                w::name_label(ui, &name, type_scale::BODY, t.p.fg_default);
+                                let mut sub = format!("× {}", line.quantity);
+                                if !line.note.is_empty() {
+                                    sub = format!("{sub} · {}", line.note);
+                                }
+                                ui.label(t.muted(sub, type_scale::CAPTION));
+                            },
+                        );
+                        ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
+                            ui.spacing_mut().item_spacing.x = space::S1;
+                            let q = &mut split.take[i];
+                            ui.add_enabled_ui(*q < line.quantity && !app.busy, |ui| {
+                                if w::icon_button(ui, Icon::Plus, lang.text("แยกเพิ่ม", "More"))
+                                    .clicked()
+                                {
+                                    *q += 1;
+                                }
+                            });
+                            let (r, _) =
+                                ui.allocate_exact_size(vec2(44.0, t.m.control_md), Sense::hover());
+                            ui.painter().text(
+                                r.center(),
+                                Align2::CENTER_CENTER,
+                                q.to_string(),
+                                t.strong_font(type_scale::MONEY),
+                                if *q > 0 {
+                                    t.p.fg_default
+                                } else {
+                                    t.p.fg_subtle
+                                },
+                            );
+                            ui.add_enabled_ui(*q > 0 && !app.busy, |ui| {
+                                if w::icon_button(ui, Icon::Minus, lang.text("แยกน้อยลง", "Fewer"))
+                                    .clicked()
+                                {
+                                    *q -= 1;
+                                }
+                            });
+                        });
+                    });
+                    w::divider(ui);
+                }
+            });
+        w::kv_styled(
+            ui,
+            &format!(
+                "{} · {units} {}",
+                lang.text("บิลใหม่", "New bill"),
+                lang.text("ชิ้น", "items")
+            ),
+            &format::baht(moving),
+            w::Value::Strong,
+            type_scale::MONEY_LG,
+        );
+        ui.label(t.muted(
+            lang.text(
+                "ยอดก่อนส่วนลดทั้งบิลและ service charge ซึ่งจะคิดให้แต่ละบิล",
+                "Before bill discount and service charge, which each bill gets.",
+            ),
+            type_scale::CAPTION,
+        ));
+        if let Some(error) = &app.error {
+            w::inline_error(ui, error);
+        }
+        let mut out = None;
+        w::dialog_actions(ui, |ui| {
+            if w::button(lang.text("แยกเป็นบิลใหม่", "Move to a new bill"))
+                .enabled(units > 0 && left > 0)
+                .loading(app.busy)
+                .show(ui)
+                .clicked()
+            {
+                out = Some(true);
+            }
+            if w::button(lang.text("ยกเลิก", "Cancel"))
+                .ghost()
+                .enabled(!app.busy)
+                .show(ui)
+                .clicked()
+            {
+                out = Some(false);
+            }
+        });
+        out
+    });
+    match response.inner {
+        Some(false) => return,
+        None if !app.busy && response.should_close() => return,
+        Some(true) => {
+            let take: Vec<(usize, u32)> = split
+                .take
+                .iter()
+                .enumerate()
+                .filter(|(_, n)| **n > 0)
+                .map(|(i, n)| (i, *n))
+                .collect();
+            app.error = None;
+            app.send(Command::SplitBill(
+                app.cart.clone(),
+                take,
+                uuid::Uuid::new_v4(),
+            ));
+        }
+        None => {}
+    }
+    app.sell.bill_split = Some(split);
+}
+/// Confirms every part of a split payment: the transfer part (with a
+/// PromptPay QR for exactly that amount), the card part and the cash part.
+fn split_dialog(app: &mut App, ctx: &egui::Context, review: PaymentReview) {
+    let Some(split) = review.split.clone() else {
+        return;
+    };
+    let lang = app.lang;
+    let t = Theme::current(ctx);
+    let Ok(parts) = split.normalized() else {
+        return;
+    };
+    let transfer = parts
+        .iter()
+        .find(|p| p.method == PaymentMethod::Transfer)
+        .map(|p| p.amount);
+    let promptpay = transfer.and_then(|amount| app.shop.promptpay_id().map(|id| (id, amount)));
+    let width = if promptpay.is_some() { 600.0 } else { 480.0 };
+    let response = w::dialog(ctx, "review-split", width, |ui| {
+        w::dialog_title(
+            ui,
+            lang.text("ตรวจรับเงินแบบแบ่งจ่าย", "Check each part of the split payment"),
+            false,
+        );
+        ui.add_space(space::S2);
+        ui.horizontal_top(|ui| {
+            if let Some((id, amount)) = &promptpay {
+                let side = if t.touch() { 208.0 } else { 184.0 };
+                if let Some(r) = crate::ui::qr::show(ui, &id.payload(Some(*amount)), side) {
+                    r.on_hover_text(
+                        lang.text("QR พร้อมเพย์ยอดส่วนโอน", "PromptPay QR for the transfer part"),
+                    );
+                }
+                ui.add_space(space::S4);
+            }
+            ui.vertical(|ui| {
+                ui.spacing_mut().item_spacing.y = space::S2;
+                for part in &parts {
+                    w::kv_styled(
+                        ui,
+                        lang.payment_method(part.method),
+                        &format::money(part.amount),
+                        w::Value::Strong,
+                        type_scale::MONEY_LG,
+                    );
+                    if part.method == PaymentMethod::Cash {
+                        let change = part
+                            .amount
+                            .change_from(split.cash_given)
+                            .unwrap_or_default();
+                        ui.label(t.muted(
+                            format!(
+                                "{} {} · {} {}",
+                                lang.text("รับมา", "Received"),
+                                format::money(split.cash_given),
+                                lang.text("ทอน", "change"),
+                                format::money(change)
+                            ),
+                            type_scale::LABEL,
+                        ));
+                    }
+                }
+                ui.separator();
+                w::kv_styled(
+                    ui,
+                    lang.text("ยอดชำระ", "Amount due"),
+                    &format::baht(review.payment.amount),
+                    w::Value::Strong,
+                    type_scale::MONEY_LG,
+                );
+            });
+        });
+        w::help_text(
+            ui,
+            lang.text(
+                "ตรวจยอดโอนในแอปธนาคารและยอดบัตรที่เครื่องรับบัตรก่อนยืนยัน แอปไม่เชื่อมธนาคารหรือเครื่องรับบัตร เฉพาะส่วนเงินสดเข้าลิ้นชัก",
+                "Check the transfer in the banking app and the card part on the terminal before confirming. Only the cash part goes in the drawer.",
+            ),
+        );
+        if let Some(error) = &app.error {
+            w::inline_error(ui, error);
+        }
+        let mut out = None;
+        w::dialog_actions(ui, |ui| {
+            if w::button(lang.text("ได้รับครบแล้ว ยืนยัน", "All received, confirm"))
+                .primary()
+                .loading(app.busy)
+                .show(ui)
+                .clicked()
+            {
+                out = Some(true);
+            }
+            if w::button(lang.text("กลับไปแก้", "Back to bill"))
+                .ghost()
+                .enabled(!app.busy)
+                .show(ui)
+                .clicked()
+            {
+                out = Some(false);
+            }
+        });
+        out
+    });
+    match response.inner {
+        Some(false) => return,
+        None if !app.busy && response.should_close() => return,
+        Some(true) => app.send(Command::PaySplit(
+            review.cart.clone(),
+            split,
             review.shift_id,
         )),
         None => {}

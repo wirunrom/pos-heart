@@ -25,6 +25,7 @@ cargo run -p pos-desktop --bin pos-heart -- --data-dir /tmp/shots --page sell --
 # Printing: --page settings --preview settings-printer (card + failure banner); --preview print-preview writes 58/80 mm receipt, shift-summary, tax-invoice and kitchen-ticket PNGs to DIR/print-preview
 # Settings sections: --page settings --preview settings-shop | settings-pricing | settings-tables | settings-printing | settings-staff | settings-display | settings-data (other Settings presets select their section)
 # Templates/preview: --preview templates | templates-bill | templates-kitchen (Settings → Printed documents with sample header/footer) | receipt-preview (latest sale) | check-bill (open bill)
+# Split payment / split bill (Sell with a filled cart): --preview sell-split (split footer) | sell-split-review (review dialog, PromptPay QR for the transfer part when an ID is set) | bill-split (split-bill dialog)
 # Tables (seed with --tables): --page tables (Sell with the floor tab); --preview kitchen (kitchen window embedded for capture) | table-bill | table-move (move mode) | table-pay (payment section open) | table-editor
 
 # Required before finishing (same as CI on macOS + Windows, which adds --locked):
@@ -37,7 +38,7 @@ cargo test -p pos-core --test checkout insufficient_cash_rolls_back_stock_and_pr
 cargo test -p pos-domain money
 ```
 
-Integration tests live in `crates/pos-core/tests/` (activity, catalog, checkout, dining, discounts, import, payments, pricing, profit, refunds, reports, shifts, staff, stock, tax, void_reporting); unit tests are inline in `pos-domain` (money, options, sale, stock, discount, promptpay, pricing, staff, tax, dining) and `pos-desktop` (format, text, qr, window, worker/CSV, shop, quick cash, report, print settings/ESC-POS/render). Workspace lints forbid `unsafe` and deny `unwrap`/`expect`.
+Integration tests live in `crates/pos-core/tests/` (activity, catalog, checkout, dining, discounts, import, payments, pricing, profit, refunds, reports, shifts, split, staff, stock, tax, void_reporting); unit tests are inline in `pos-domain` (money, options, sale, stock, discount, promptpay, pricing, staff, tax, dining) and `pos-desktop` (format, text, qr, window, worker/CSV, shop, quick cash, report, print settings/ESC-POS/render). Workspace lints forbid `unsafe` and deny `unwrap`/`expect`.
 
 ## Design system
 - UI follows `design/` (POS Design System v0.1). Read `design/docs/07-egui-handoff.md` before UI work, and the matching `design/docs/components/<Name>.md` before building or changing a widget. `design/reference/` is a visual reference only — do not port its HTML/CSS/JS.
@@ -60,6 +61,8 @@ Integration tests live in `crates/pos-core/tests/` (activity, catalog, checkout,
 - The open bill autosaves through the held-cart store (background worker commands that never set `busy`); `current-bill.txt` marks it for restore. Checkout's existing held-row delete keeps paid bills consistent.
 - Product options (schema 006, `options_json`) are priced only inside checkout via `pos_domain::price_with_options`; the desktop cart total and noncash review use the same function.
 - Discounts (line/bill, baht/percent) live only in cart/receipt JSON (no migration) and are priced only by `pos_domain::price_sale` (checkout transaction, desktop cart, noncash review) in the fixed order line discounts → bill discount → service charge → VAT on top (++ prices) → cash rounding (cash only); `price_bill` is the discounts-only wrapper. Pricing settings are JSON in `app_settings` key `pricing` (schema 11). Partial refunds use `refund_share(line.net(), …)`; `SaleLine.total` stays gross. PromptPay ID is an optional `shop.json` field; its QR is still a manually confirmed Transfer.
+- Split payment (no migration): `Pos::checkout_split` takes `SplitPayment { tenders, cash_given }`; `normalized()` merges parts per method (cash, transfer, card), drops zeros, needs ≥2 methods and cash given ≥ the cash part. Split bills are never cash-rounded and the parts must equal the exact total. The `sales` row keeps the first noncash part as `payment_method` with zero cash/change columns; the receipt JSON (`Sale.tenders`, serde default empty; `paid_by()`) is authoritative. One ledger row per part (`shifts::record_all`, sale counted once), only the cash part moves drawer expected; reports record each part by method. A split void refunds each part to its own method (`SaleVoid.tenders`, `refunded_by()`); partial refunds pick one of the sale's methods, capped at what it paid (`InvalidRefundMethod` / `RefundExceedsMethod`).
+- Split bill: `Pos::split_bill` (one IMMEDIATE transaction, `pos_domain::split_cart` on the stored `sent` state) moves units and their kitchen-sent units to a new held bill without a table or guests, so nothing fires or cancels; a percent bill discount stays on both, a baht one on the original only; retry by the new bill ID returns the stored pair.
 
 ## Invariants and surface specs
 
@@ -71,7 +74,7 @@ Home, first-run setup and shop/device settings follow .impeccable/surfaces/start
 
 Shift opening/closing and drawer cash follow .impeccable/surfaces/shifts.md. Preserve the transactional ledger, active-shift gate, retry identity, current-shift refund attribution and immutable reconciliation snapshot rules in AGENTS.md / docs/architecture.md. Drawer cash and daily sales reports are separate values.
 
-Payments: .impeccable/surfaces/payments.md and the payment-method invariants in AGENTS.md / docs/architecture.md. Cash, manual transfer and manual card are distinct; only cash affects drawer expected. Preserve exact reviewed totals, original-method full refunds, legacy snapshots and atomic ledger writes. Note the `cash_movements` table also holds noncash payment audit rows (legacy name) — never sum it as physical cash.
+Payments: .impeccable/surfaces/payments.md and the payment-method invariants in AGENTS.md / docs/architecture.md. Cash, manual transfer and manual card are distinct; only cash affects drawer expected. Preserve exact reviewed totals, original-method full refunds (each split part to its own method), legacy snapshots and atomic ledger writes. Note the `cash_movements` table also holds noncash payment audit rows (legacy name) — never sum it as physical cash.
 
 ## Recovery, imports, activity and cost
 

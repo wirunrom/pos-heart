@@ -213,7 +213,28 @@ pub fn receipt(
             format::money(tax.vat),
         );
     }
+    for part in &sale.tenders {
+        d.row(
+            lang.payment_method(part.method),
+            format::money(part.amount),
+            Style::Body,
+        );
+    }
     match sale.payment_method {
+        _ if sale.is_split() => {
+            if t.show_cash && sale.cash > pos_domain::Money::ZERO {
+                d.row(
+                    lang.text("รับเงินสด", "Cash"),
+                    format::money(sale.cash),
+                    Style::Body,
+                );
+                d.row(
+                    lang.text("เงินทอน", "Change"),
+                    format::money(sale.change),
+                    Style::Body,
+                );
+            }
+        }
         PaymentMethod::Cash if t.show_cash => {
             d.row(
                 lang.text("รับเงินสด", "Cash"),

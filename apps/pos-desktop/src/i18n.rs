@@ -35,6 +35,18 @@ impl Language {
             pos_domain::PaymentMethod::Card => self.text("บัตร", "Card"),
         }
     }
+    /// How a sale was paid: one method, or "Split · cash + transfer".
+    pub fn sale_method(self, sale: &pos_domain::Sale) -> String {
+        if !sale.is_split() {
+            return self.payment_method(sale.payment_method).to_owned();
+        }
+        let parts: Vec<&str> = sale
+            .tenders
+            .iter()
+            .map(|t| self.payment_method(t.method))
+            .collect();
+        format!("{} · {}", self.text("แบ่งจ่าย", "Split"), parts.join(" + "))
+    }
     /// Built-in roles in the current language; custom roles by their name.
     pub fn role_name(self, id: &str, stored: &str) -> String {
         match id {
@@ -146,6 +158,14 @@ impl Language {
                     "ชื่อบทบาท 1–40 ตัวอักษร เพดานส่วนลด 0–100% และจัดการพนักงานได้เฉพาะเจ้าของร้าน",
                     "Role names are 1–40 characters, limits 0–100%, and only owners manage staff.",
                 ),
+                DomainError::InvalidSplit => self.text(
+                    "แบ่งจ่ายต้องใช้อย่างน้อย 2 วิธี และยอดรวมต้องเท่ายอดชำระพอดี",
+                    "A split needs at least two methods that add up to the exact amount due.",
+                ),
+                DomainError::InvalidBillSplit => self.text(
+                    "เลือกรายการที่จะแยกอย่างน้อยหนึ่งรายการ และต้องเหลือในบิลเดิมอย่างน้อยหนึ่งรายการ",
+                    "Choose at least one item to move and leave at least one on the bill.",
+                ),
                 DomainError::InvalidTable => self.text(
                     "ชื่อโต๊ะ 1–20 ตัวอักษร โซนไม่เกิน 40 ตัวอักษร ที่นั่ง 0–99",
                     "Table names are 1–20 characters, zones up to 40, seats 0–99.",
@@ -161,6 +181,10 @@ impl Language {
             },
             Error::PaymentTotalChanged => self.text("ยอดสินค้าเปลี่ยนแล้ว ตรวจยอดใหม่และตรวจรับชำระอีกครั้ง", "The total changed. Review the refreshed amount and verify payment again."),
             Error::InvalidRefundMethod => self.text("ต้องคืนเงินตามช่องทางที่ชำระในบิลเดิม", "Refund using the original payment method."),
+            Error::RefundExceedsMethod => self.text(
+                "ยอดคืนผ่านช่องทางนี้เกินที่ลูกค้าจ่ายด้วยช่องทางนี้ เลือกช่องทางอื่น",
+                "That is more than this method paid. Choose another method.",
+            ),
             Error::DuplicateSku => self.text(
                 "รหัสสินค้านี้มีอยู่แล้ว กรุณาใช้รหัสอื่น",
                 "This product code already exists. Choose another code.",

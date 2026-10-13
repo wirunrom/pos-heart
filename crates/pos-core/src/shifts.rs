@@ -40,9 +40,38 @@ fn save(conn: &mut SqliteConnection, shift: &Shift) -> Result<()> {
 /// Caller owns the IMMEDIATE transaction, including sale/refund/stock writes.
 pub(crate) fn record(
     conn: &mut SqliteConnection,
-    mut shift: Shift,
+    shift: Shift,
     movement: CashMovement,
 ) -> Result<()> {
+    record_all(conn, shift, vec![movement])
+}
+/// Several ledger rows of one sale or refund (the parts of a split payment):
+/// each method's total moves, the sale/refund count only once.
+pub(crate) fn record_all(
+    conn: &mut SqliteConnection,
+    mut shift: Shift,
+    movements: Vec<CashMovement>,
+) -> Result<()> {
+    for (i, movement) in movements.iter().enumerate() {
+        apply(&mut shift, movement, i == 0)?;
+    }
+    shift.expected()?;
+    shift.revision = shift.revision.checked_add(1).ok_or(DomainError::Overflow)?;
+    for movement in &movements {
+        shift.last_activity_at = shift.last_activity_at.max(movement.created_at);
+        diesel::insert_into(cash_movements::table)
+            .values((
+                cash_movements::id.eq(movement.id.to_string()),
+                cash_movements::payment_method.eq(movement.payment_method.key()),
+                cash_movements::shift_id.eq(shift.id.to_string()),
+                cash_movements::created_at.eq(movement.created_at),
+                cash_movements::movement_json.eq(serde_json::to_string(movement)?),
+            ))
+            .execute(conn)?;
+    }
+    save(conn, &shift)
+}
+fn apply(shift: &mut Shift, movement: &CashMovement, count: bool) -> Result<()> {
     match movement.kind {
         CashKind::Sale => {
             let total = match movement.payment_method {
@@ -51,10 +80,12 @@ pub(crate) fn record(
                 pos_domain::PaymentMethod::Card => &mut shift.card_sales,
             };
             *total = total.checked_add(movement.amount)?;
-            shift.sale_count = shift
-                .sale_count
-                .checked_add(1)
-                .ok_or(DomainError::Overflow)?;
+            if count {
+                shift.sale_count = shift
+                    .sale_count
+                    .checked_add(1)
+                    .ok_or(DomainError::Overflow)?;
+            }
         }
         CashKind::Refund => {
             let total = match movement.payment_method {
@@ -63,27 +94,17 @@ pub(crate) fn record(
                 pos_domain::PaymentMethod::Card => &mut shift.card_refunds,
             };
             *total = total.checked_add(movement.amount)?;
-            shift.refund_count = shift
-                .refund_count
-                .checked_add(1)
-                .ok_or(DomainError::Overflow)?;
+            if count {
+                shift.refund_count = shift
+                    .refund_count
+                    .checked_add(1)
+                    .ok_or(DomainError::Overflow)?;
+            }
         }
         CashKind::CashIn => shift.cash_in = shift.cash_in.checked_add(movement.amount)?,
         CashKind::CashOut => shift.cash_out = shift.cash_out.checked_add(movement.amount)?,
     }
-    shift.expected()?;
-    shift.revision = shift.revision.checked_add(1).ok_or(DomainError::Overflow)?;
-    shift.last_activity_at = shift.last_activity_at.max(movement.created_at);
-    diesel::insert_into(cash_movements::table)
-        .values((
-            cash_movements::id.eq(movement.id.to_string()),
-            cash_movements::payment_method.eq(movement.payment_method.key()),
-            cash_movements::shift_id.eq(shift.id.to_string()),
-            cash_movements::created_at.eq(movement.created_at),
-            cash_movements::movement_json.eq(serde_json::to_string(&movement)?),
-        ))
-        .execute(conn)?;
-    save(conn, &shift)
+    Ok(())
 }
 impl Pos {
     pub fn active_shift(&mut self) -> Result<Option<Shift>> {

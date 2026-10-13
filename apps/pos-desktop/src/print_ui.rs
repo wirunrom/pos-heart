@@ -210,7 +210,8 @@ impl App {
             return;
         }
         let s = &self.print.settings;
-        let drawer = s.open_drawer && sale.payment_method == PaymentMethod::Cash;
+        let drawer = s.open_drawer
+            && (sale.payment_method == PaymentMethod::Cash || sale.cash > pos_domain::Money::ZERO);
         let label = crate::ui::format::receipt_number(sale.number);
         if s.auto_print {
             let record = SaleRecord {

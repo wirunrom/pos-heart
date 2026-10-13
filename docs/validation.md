@@ -193,3 +193,11 @@ Automated on macOS: fmt, warnings-denied Clippy and `cargo test --workspace` (**
 Native captures on macOS (debug build, `seed_screens` sample data, presets `templates`, `templates-bill`, `templates-kitchen`, `receipt-preview`, `check-bill`): Printed documents card in Light Thai Compact at 1280×820 and the kitchen tab at 1000×700; Dark English Touch at 1280×820 (after fixing a collapsed preview column and an over-wide card); check bill preview with a PromptPay QR from Sell; receipt preview dialog in Dark English Touch at 1000×700; a receipt preview with an imported logo.
 
 Not verified: printed output (logo, QR scanning, text sizes) on real printer hardware; drag-and-drop of image files on Windows; Windows generally.
+
+## Split payment and split bill — 2026-10-14
+
+Automated on macOS: three new integration tests in `crates/pos-core/tests/split.rs`: split payments reach each method while only the cash part reaches drawer expected (per-method report and shift buckets, cart-ID retry); split sales refund through their own methods (whole void per part, item refunds limited to a sale's method and its paid amount); splitting a table bill keeps the kitchen state and the table (nothing re-fires or cancels, retry returns the stored pair). Two domain unit tests cover `SplitPayment::normalized()` (merging, zero parts, fewer than two methods, cash given) and `split_cart` (units with their sent units, discounts, at least one unit moved and one left). No migration; receipts and voids without `tenders` read unchanged.
+
+Native captures on macOS (debug build, `seed_screens` sample data, `--page sell --preview sell-split | sell-split-review | bill-split`) at 1280×820 in Dark Thai: the Sell footer in split mode; the split review dialog with a PromptPay QR for exactly the transfer part; the split-bill dialog. These are preview states, not a clicked-through payment.
+
+Not verified: Windows; receipt printer and cash drawer hardware for split receipts and the drawer kick; scanning the transfer-part QR with a banking app; other palettes, languages, densities and 1000×700 for these surfaces.

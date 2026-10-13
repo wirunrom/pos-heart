@@ -69,6 +69,8 @@ pub enum Error {
     PaymentTotalChanged,
     #[error("Refund must use the original payment method")]
     InvalidRefundMethod,
+    #[error("Refunds by this method would exceed what it paid")]
+    RefundExceedsMethod,
     #[error("Open a shift before taking or refunding payment")]
     NoOpenShift,
     #[error("A shift is already open")]

@@ -36,6 +36,9 @@ pub struct SaleVoid {
     pub sale_id: Uuid,
     #[serde(default)]
     pub refund_method: crate::PaymentMethod,
+    /// Split sales: each part returned to its own method. Empty otherwise.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub tenders: Vec<crate::Tender>,
     pub created_at: i64,
     pub reason: String,
     pub refund: Money,
@@ -46,6 +49,19 @@ pub struct SaleVoid {
     pub staff: crate::Attribution,
 }
 
+impl SaleVoid {
+    /// What went back to each method.
+    pub fn refunded_by(&self) -> Vec<crate::Tender> {
+        if self.tenders.is_empty() {
+            vec![crate::Tender {
+                method: self.refund_method,
+                amount: self.refund,
+            }]
+        } else {
+            self.tenders.clone()
+        }
+    }
+}
 #[derive(Debug, Clone)]
 pub struct SaleRecord {
     pub sale: Sale,

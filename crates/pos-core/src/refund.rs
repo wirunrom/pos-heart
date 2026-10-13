@@ -66,9 +66,14 @@ impl Pos {
             if sale.id != request.sale_id {
                 return Err(Error::CorruptData);
             }
-            if request.refund_method != sale.payment_method {
-                return Err(Error::InvalidRefundMethod);
-            }
+            // Back through a method the customer paid with; a split sale's
+            // refunds by one method never exceed what that method paid.
+            let paid = sale
+                .paid_by()
+                .into_iter()
+                .find(|t| t.method == request.refund_method)
+                .ok_or(Error::InvalidRefundMethod)?
+                .amount;
             if now < sale.created_at {
                 return Err(Error::InvalidVoidTime);
             }
@@ -81,12 +86,16 @@ impl Pos {
             }
             // Units already returned per receipt line.
             let mut returned = vec![0_u32; sale.lines.len()];
+            let mut by_method = Money::ZERO;
             for json in sale_refunds::table
                 .filter(sale_refunds::sale_id.eq(sale.id.to_string()))
                 .select(sale_refunds::refund_json)
                 .load::<String>(conn)?
             {
                 let earlier: SaleRefund = serde_json::from_str(&json)?;
+                if earlier.refund_method == request.refund_method {
+                    by_method = by_method.checked_add(earlier.refund)?;
+                }
                 for l in earlier.lines {
                     let slot = returned.get_mut(l.line).ok_or(Error::CorruptData)?;
                     *slot = slot.checked_add(l.quantity).ok_or(DomainError::Overflow)?;
@@ -166,10 +175,13 @@ impl Pos {
                     .execute(conn)?;
             }
             lines.sort_by_key(|l| l.line);
+            if by_method.checked_add(refund)? > paid {
+                return Err(Error::RefundExceedsMethod);
+            }
             let record = SaleRefund {
                 id: request.id,
                 sale_id: sale.id,
-                refund_method: sale.payment_method,
+                refund_method: request.refund_method,
                 created_at: now,
                 reason: request.reason.trim().into(),
                 refund,
@@ -183,7 +195,7 @@ impl Pos {
                     sale_refunds::created_at.eq(now),
                     sale_refunds::reason.eq(&record.reason),
                     sale_refunds::refund_satang.eq(record.refund.satang()),
-                    sale_refunds::refund_method.eq(sale.payment_method.key()),
+                    sale_refunds::refund_method.eq(request.refund_method.key()),
                     sale_refunds::refund_json.eq(serde_json::to_string(&record)?),
                 ))
                 .execute(conn)?;
@@ -197,7 +209,7 @@ impl Pos {
                     kind: pos_domain::CashKind::Refund,
                     amount: record.refund,
                     reason: format!("#{} · {}", sale.number, record.reason),
-                    payment_method: sale.payment_method,
+                    payment_method: request.refund_method,
                     staff: staff.clone(),
                 },
             )?;

@@ -20,13 +20,15 @@ pub use money::{Money, SignedMoney};
 pub use options::{
     LineOption, OptionChoice, OptionGroup, SaleOption, price_with_options, validate_groups,
 };
-pub use payment::{MethodSummary, PaymentMethod, PaymentRequest, PaymentSummary};
+pub use payment::{
+    MethodSummary, PaymentMethod, PaymentRequest, PaymentSummary, SplitPayment, Tender,
+};
 pub use pricing::{CashRounding, PriceOptions, PricingSettings, RoundMode, percent_of};
 pub use promptpay::{PromptPayId, PromptPayKind};
 pub use reporting::{
     CategorySales, DailySummary, DaySales, ProductMovement, ProfitSummary, StaffSales,
 };
-pub use sale::{Cart, CartLine, LOW_STOCK, Product, ProductInput, Sale, SaleLine};
+pub use sale::{Cart, CartLine, LOW_STOCK, Product, ProductInput, Sale, SaleLine, split_cart};
 pub use shift::{CashCount, CashKind, CashMovement, Shift, ShiftClosing, ShiftCount};
 pub use staff::{
     Access, Attribution, CASHIER, MANAGER, OWNER, Permission, RoleDef, Staff, StaffInput, StaffRef,
@@ -88,4 +90,8 @@ pub enum DomainError {
     InvalidRole,
     #[error("โต๊ะต้องมีชื่อ 1–20 ตัวอักษร โซนไม่เกิน 40 ตัวอักษร และที่นั่งไม่เกิน 99")]
     InvalidTable,
+    #[error("แบ่งจ่ายต้องใช้อย่างน้อย 2 วิธี และยอดรวมต้องเท่ากับยอดชำระพอดี")]
+    InvalidSplit,
+    #[error("แยกบิลต้องเลือกอย่างน้อยหนึ่งรายการ และเหลือในบิลเดิมอย่างน้อยหนึ่งรายการ")]
+    InvalidBillSplit,
 }

@@ -3,8 +3,14 @@ use crate::{
     schema::{held_carts, products, sales},
 };
 use diesel::prelude::*;
-use pos_domain::{Cart, Money, Sale, SaleLine};
+use pos_domain::{Cart, Money, PaymentMethod, PaymentRequest, Sale, SaleLine, SplitPayment};
 use std::collections::HashMap;
+
+/// How the bill is paid: one method, or parts by several methods.
+enum Paying<'a> {
+    Single(PaymentRequest),
+    Split(&'a SplitPayment),
+}
 
 impl Pos {
     /// Same cart ID returns its original receipt. All writes share one IMMEDIATE transaction.
@@ -31,11 +37,36 @@ impl Pos {
     pub fn checkout_with_payment(
         &mut self,
         cart: &Cart,
-        payment: pos_domain::PaymentRequest,
+        payment: PaymentRequest,
+        shift_id: Option<uuid::Uuid>,
+        now: i64,
+    ) -> Result<Sale> {
+        self.pay(cart, Paying::Single(payment), shift_id, now)
+    }
+    /// Pays one bill with several methods (e.g. part cash, part transfer).
+    /// Priced without cash rounding; the parts must equal the exact total.
+    /// Each part is its own ledger row, so only the cash part reaches the drawer.
+    pub fn checkout_split(
+        &mut self,
+        cart: &Cart,
+        split: &SplitPayment,
+        shift_id: Option<uuid::Uuid>,
+        now: i64,
+    ) -> Result<Sale> {
+        self.pay(cart, Paying::Split(split), shift_id, now)
+    }
+    fn pay(
+        &mut self,
+        cart: &Cart,
+        paying: Paying<'_>,
         shift_id: Option<uuid::Uuid>,
         now: i64,
     ) -> Result<Sale> {
         cart.validate()?;
+        let tenders = match &paying {
+            Paying::Split(split) => Some(split.normalized()?),
+            Paying::Single(_) => None,
+        };
         let session = self.session.clone();
         self.conn.immediate_transaction(|conn| {
             if let Some(json) = sales::table
@@ -114,7 +145,7 @@ impl Pos {
                 &pricing,
                 &tax_settings,
                 cart.service_charge,
-                payment.method == pos_domain::PaymentMethod::Cash,
+                matches!(paying, Paying::Single(p) if p.method == PaymentMethod::Cash),
             );
             let price = pos_domain::price_sale(&grosses, cart.discount, &options)?;
             for (line, priced) in lines.iter_mut().zip(&price.lines) {
@@ -142,13 +173,37 @@ impl Pos {
             let tax = tax_settings
                 .enabled
                 .then(|| pos_domain::SaleTax::for_total(&tax_settings, total));
-            let (cash, change) = if payment.method == pos_domain::PaymentMethod::Cash {
-                (payment.amount, total.change_from(payment.amount)?)
-            } else {
-                if payment.amount != total {
-                    return Err(Error::PaymentTotalChanged);
+            // `method` is what the sales row records: the single method, or the
+            // first non-cash part of a split (its row keeps no cash, the
+            // receipt JSON holds the parts, cash handed over and change).
+            let (method, cash, change, row_cash, row_change, tenders) = match (&paying, tenders) {
+                (Paying::Single(p), _) if p.method == PaymentMethod::Cash => {
+                    let change = total.change_from(p.amount)?;
+                    (p.method, p.amount, change, p.amount, change, Vec::new())
                 }
-                (Money::ZERO, Money::ZERO)
+                (Paying::Single(p), _) => {
+                    if p.amount != total {
+                        return Err(Error::PaymentTotalChanged);
+                    }
+                    (p.method, Money::ZERO, Money::ZERO, Money::ZERO, Money::ZERO, Vec::new())
+                }
+                (Paying::Split(split), Some(parts)) => {
+                    if SplitPayment::total(&parts)? != total {
+                        return Err(Error::PaymentTotalChanged);
+                    }
+                    let cash_part = parts
+                        .iter()
+                        .find(|t| t.method == PaymentMethod::Cash)
+                        .map_or(Money::ZERO, |t| t.amount);
+                    let change = cash_part.change_from(split.cash_given)?;
+                    let method = parts
+                        .iter()
+                        .find(|t| t.method != PaymentMethod::Cash)
+                        .map(|t| t.method)
+                        .ok_or(pos_domain::DomainError::InvalidSplit)?;
+                    (method, split.cash_given, change, Money::ZERO, Money::ZERO, parts)
+                }
+                (Paying::Split(_), None) => return Err(pos_domain::DomainError::InvalidSplit.into()),
             };
             let number = diesel::insert_into(sales::table)
                 .values((
@@ -156,10 +211,10 @@ impl Pos {
                     sales::created_at.eq(now),
                     sales::label.eq(&cart.label),
                     sales::total_satang.eq(total.satang()),
-                    sales::cash_satang.eq(cash.satang()),
-                    sales::change_satang.eq(change.satang()),
+                    sales::cash_satang.eq(row_cash.satang()),
+                    sales::change_satang.eq(row_change.satang()),
                     sales::receipt_json.eq("{}"),
-                    sales::payment_method.eq(payment.method.key()),
+                    sales::payment_method.eq(method.key()),
                 ))
                 .returning(sales::number)
                 .get_result::<i64>(conn)?;
@@ -170,7 +225,8 @@ impl Pos {
                 label: cart.label.clone(),
                 lines,
                 total,
-                payment_method: payment.method,
+                payment_method: method,
+                tenders,
                 cash,
                 change,
                 discount_rule: cart.discount,
@@ -196,20 +252,23 @@ impl Pos {
                 .set(sales::receipt_json.eq(serde_json::to_string(&sale)?))
                 .execute(conn)?;
             diesel::delete(held_carts::table.find(cart.id.to_string())).execute(conn)?;
-            crate::shifts::record(
-                conn,
-                shift.clone(),
-                pos_domain::CashMovement {
-                    id: sale.id,
+            // One ledger row per method; the first keeps the sale's ID.
+            let movements = sale
+                .paid_by()
+                .into_iter()
+                .enumerate()
+                .map(|(i, part)| pos_domain::CashMovement {
+                    id: if i == 0 { sale.id } else { uuid::Uuid::new_v4() },
                     shift_id: shift.id,
                     created_at: now,
                     kind: pos_domain::CashKind::Sale,
-                    amount: sale.total,
+                    amount: part.amount,
                     reason: format!("#{}", sale.number),
-                    payment_method: sale.payment_method,
-                    staff,
-                },
-            )?;
+                    payment_method: part.method,
+                    staff: staff.clone(),
+                })
+                .collect();
+            crate::shifts::record_all(conn, shift.clone(), movements)?;
             if price.discounts().satang() > 0 {
                 crate::audit::record(conn, crate::ActivityKind::Discount, &sale.id.to_string(), now, &sale.staff,
                     &serde_json::json!({"receipt": sale.number, "amount_satang": price.discounts().satang(),

@@ -194,6 +194,80 @@ impl Cart {
         Ok(())
     }
 }
+/// Moves `take` (line index, units) of `cart` to a new bill. The kitchen
+/// state moves with the units (sent units first), so neither bill fires or
+/// cancels anything by being split. A percentage bill discount applies to
+/// both bills; a baht bill discount stays on the original. The new bill has
+/// no table. At least one unit must move and one must stay.
+pub fn split_cart(
+    cart: &Cart,
+    take: &[(usize, u32)],
+    new_id: Uuid,
+) -> Result<(Cart, Cart), DomainError> {
+    let mut rest = cart.clone();
+    let mut moved = Cart {
+        id: new_id,
+        label: cart.label.clone(),
+        lines: Vec::new(),
+        discount: match cart.discount {
+            Some(d @ crate::Discount::Percent(_)) => Some(d),
+            _ => None,
+        },
+        discount_reason: String::new(),
+        service_charge: cart.service_charge,
+        table: None,
+        guests: 0,
+        sent: Vec::new(),
+    };
+    let mut seen = std::collections::HashSet::new();
+    for &(index, quantity) in take {
+        let line = rest
+            .lines
+            .get_mut(index)
+            .ok_or(DomainError::InvalidBillSplit)?;
+        if quantity == 0 || quantity > line.quantity || !seen.insert(index) {
+            return Err(DomainError::InvalidBillSplit);
+        }
+        line.quantity -= quantity;
+        let mut part = line.clone();
+        part.quantity = quantity;
+        moved.lines.push(part);
+    }
+    rest.lines.retain(|l| l.quantity > 0);
+    if moved.lines.is_empty() || rest.lines.is_empty() {
+        return Err(DomainError::InvalidBillSplit);
+    }
+    // Sent units go with the moved units first.
+    for part in &moved.lines {
+        let Some(sent) = rest.sent.iter_mut().find(|s| {
+            s.product_id == part.product_id && s.options == part.options && s.note == part.note
+        }) else {
+            continue;
+        };
+        let units = sent.quantity.min(part.quantity);
+        if units == 0 {
+            continue;
+        }
+        sent.quantity -= units;
+        match moved.sent.iter_mut().find(|s| {
+            s.product_id == part.product_id && s.options == part.options && s.note == part.note
+        }) {
+            Some(s) => s.quantity += units,
+            None => moved.sent.push(crate::SentItem {
+                product_id: part.product_id,
+                options: part.options.clone(),
+                note: part.note.clone(),
+                quantity: units,
+            }),
+        }
+    }
+    rest.sent.retain(|s| s.quantity > 0);
+    if moved.has_discount() {
+        moved.discount_reason = cart.discount_reason.clone();
+    }
+    Ok((rest, moved))
+}
+
 /// Immutable snapshots preserve sold names, SKUs and prices after catalog edits.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SaleLine {
@@ -284,7 +358,12 @@ pub struct Sale {
     pub total: Money,
     #[serde(default)]
     pub payment_method: crate::PaymentMethod,
-    /// Cash tender only; zero for non-cash receipts.
+    /// Split payments only: the part paid by each method. `payment_method` is
+    /// then the first non-cash part. Empty for single-method receipts.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub tenders: Vec<crate::Tender>,
+    /// Cash handed over (whole bill, or the cash part of a split); zero
+    /// without cash. `change` is returned from it.
     pub cash: Money,
     pub change: Money,
     /// Bill discount rule and amount (spread over lines as `bill_discount`).
@@ -312,6 +391,20 @@ pub struct Sale {
     pub staff: crate::Attribution,
 }
 impl Sale {
+    /// What each method paid: the split parts, or the whole total.
+    pub fn paid_by(&self) -> Vec<crate::Tender> {
+        if self.tenders.is_empty() {
+            vec![crate::Tender {
+                method: self.payment_method,
+                amount: self.total,
+            }]
+        } else {
+            self.tenders.clone()
+        }
+    }
+    pub fn is_split(&self) -> bool {
+        !self.tenders.is_empty()
+    }
     /// Distribute VAT exactly by paid line amounts (largest remainder).
     /// Used once at checkout; each resulting share is an immutable snapshot.
     pub fn allocate_vat(&mut self) -> Result<(), DomainError> {
@@ -353,6 +446,116 @@ mod tests {
             ..Default::default()
         });
         assert_eq!(cart.validate(), Err(DomainError::InvalidQuantity));
+    }
+    #[test]
+    fn splitting_a_bill_moves_units_and_their_kitchen_state() -> Result<(), DomainError> {
+        let (a, b) = (Uuid::from_u128(1), Uuid::from_u128(2));
+        let line = |p, q| CartLine {
+            product_id: p,
+            quantity: q,
+            ..Default::default()
+        };
+        let mut cart = Cart::new();
+        cart.table = Some(Uuid::from_u128(9));
+        cart.guests = 4;
+        cart.lines = vec![line(a, 3), line(b, 1)];
+        cart.discount = Some(crate::Discount::Percent(1000));
+        // Two of the three A are with the kitchen, B is not sent yet.
+        cart.sent = vec![crate::SentItem {
+            product_id: a,
+            options: vec![],
+            note: String::new(),
+            quantity: 2,
+        }];
+        let kitchen = |_| true;
+        let before: i64 = crate::kitchen_changes(&cart, kitchen)
+            .0
+            .iter()
+            .map(|c| c.1)
+            .sum();
+        let (rest, moved) = split_cart(&cart, &[(0, 2)], Uuid::from_u128(5))?;
+        assert_eq!(rest.lines, vec![line(a, 1), line(b, 1)]);
+        assert_eq!(moved.lines, vec![line(a, 2)]);
+        assert_eq!((moved.table, moved.guests), (None, 0));
+        assert_eq!(moved.discount, cart.discount);
+        // Nothing fires or cancels because of the split.
+        let after: i64 = [&rest, &moved]
+            .iter()
+            .map(|c| {
+                crate::kitchen_changes(c, kitchen)
+                    .0
+                    .iter()
+                    .map(|c| c.1)
+                    .sum::<i64>()
+            })
+            .sum();
+        assert_eq!(before, after);
+        assert!(crate::kitchen_changes(&moved, kitchen).0.is_empty());
+        // Everything or nothing cannot be split off.
+        assert_eq!(
+            split_cart(&cart, &[(0, 3), (1, 1)], Uuid::nil()).err(),
+            Some(DomainError::InvalidBillSplit)
+        );
+        assert_eq!(
+            split_cart(&cart, &[(0, 4)], Uuid::nil()).err(),
+            Some(DomainError::InvalidBillSplit)
+        );
+        Ok(())
+    }
+    #[test]
+    fn split_payments_merge_per_method_and_need_two_methods() -> Result<(), DomainError> {
+        use crate::{PaymentMethod as M, SplitPayment, Tender};
+        let baht = |b: i64| Money::from_satang(b * 100);
+        let split = SplitPayment {
+            tenders: vec![
+                Tender {
+                    method: M::Transfer,
+                    amount: baht(100)?,
+                },
+                Tender {
+                    method: M::Cash,
+                    amount: baht(50)?,
+                },
+                Tender {
+                    method: M::Transfer,
+                    amount: baht(20)?,
+                },
+            ],
+            cash_given: baht(100)?,
+        };
+        let parts = split.normalized()?;
+        assert_eq!(
+            parts[0],
+            Tender {
+                method: M::Cash,
+                amount: baht(50)?
+            }
+        );
+        assert_eq!(
+            parts[1],
+            Tender {
+                method: M::Transfer,
+                amount: baht(120)?
+            }
+        );
+        assert_eq!(SplitPayment::total(&parts)?, baht(170)?);
+        let one = SplitPayment {
+            tenders: vec![Tender {
+                method: M::Card,
+                amount: baht(10)?,
+            }],
+            cash_given: Money::ZERO,
+        };
+        assert_eq!(one.normalized().err(), Some(DomainError::InvalidSplit));
+        let short = SplitPayment {
+            cash_given: baht(10)?,
+            ..split
+        };
+        assert_eq!(
+            short.normalized().err(),
+            Some(DomainError::InsufficientPayment)
+        );
+        Ok(())
     }
     #[test]
     fn separate_lines_allow_different_food_notes() {

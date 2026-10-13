@@ -61,6 +61,10 @@ pub enum Command {
     SetCategory(Vec<Uuid>, String),
     AdjustStock(pos_domain::StockRequest),
     Pay(Cart, PaymentRequest, Uuid),
+    /// One bill paid by several methods.
+    PaySplit(Cart, pos_domain::SplitPayment, Uuid),
+    /// Move (line, units) of a bill to a new bill with this ID.
+    SplitBill(Cart, Vec<(usize, u32)>, Uuid),
     Void(VoidRequest, Uuid),
     RefundItems(pos_domain::RefundRequest, Uuid),
     OpenShift(Uuid, Money),
@@ -129,6 +133,8 @@ pub enum Event {
     StockAdjusted(pos_domain::StockMovement),
     Archived,
     Paid(Sale),
+    /// The rest of the bill and the split-off bill.
+    Split(Cart, Cart),
     Voided(SaleVoid),
     Refunded(pos_domain::SaleRefund),
     Resumed(Cart, Vec<Product>),
@@ -231,6 +237,13 @@ fn run(pos: &mut Pos, command: Command) -> pos_core::Result<Event> {
         Command::AdjustStock(request) => Event::StockAdjusted(pos.adjust_stock(&request, now())?),
         Command::Pay(cart, payment, shift) => {
             Event::Paid(pos.checkout_with_payment(&cart, payment, Some(shift), now())?)
+        }
+        Command::PaySplit(cart, split, shift) => {
+            Event::Paid(pos.checkout_split(&cart, &split, Some(shift), now())?)
+        }
+        Command::SplitBill(cart, take, id) => {
+            let (rest, moved) = pos.split_bill(&cart, &take, id, now())?;
+            Event::Split(rest, moved)
         }
         Command::Void(request, shift) => {
             Event::Voided(pos.void_sale_for_shift(&request, Some(shift), now())?)
