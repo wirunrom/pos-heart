@@ -210,3 +210,10 @@ Native capture on macOS (debug build, `seed_screens DIR --vat`, which now refund
 
 Not verified: the layout against the Revenue Department's requirements by an accountant; printing on hardware; Windows; other palettes, languages and sizes.
 
+## Promotions — 2026-10-14
+
+Automated on macOS: three domain unit tests in `promotion.rs` (Bangkok date/weekday/minute incl. a leap day; best promotion per line, happy hour, manual discounts win; bill threshold, manual bill discount, coupons, max uses, end dates, days, midnight-wrapping hours, validation) and `crates/pos-core/tests/promotions.rs` (buy-2-get-1 plus spend-over at checkout with snapshots and use counts; outside the hours nothing applies; coupons need their code, are unique and stop when used up). The schema-version test expects 17 and refuses 18.
+
+Native captures on macOS (debug build, `seed_screens DIR --restaurant --tables --promos`) at 1280×820 Dark Thai: Settings → Promotions list, the promotion editor (percent off a category, 14:00–17:00), Sell with the spend-over promotion in the discount row, and the coupon dialog.
+
+Not verified: other palettes, languages, densities and 1000×700; a clicked-through checkout with a coupon; Windows.

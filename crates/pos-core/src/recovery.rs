@@ -201,6 +201,9 @@ impl crate::Pos {
             "ticket_json",
             |_| Ok(()),
         )?;
+        for promo in self.promotions()? {
+            promo.validate()?;
+        }
         for table in self.dining_tables()? {
             table.validate()?;
         }

@@ -478,10 +478,13 @@ pub fn receipt(ui: &mut egui::Ui, record: &SaleRecord, lang: Language) {
                 }
                 ui.label(t.muted(sub, type_scale::CAPTION));
                 if line.discount.satang() > 0 {
-                    let rule = line.discount_rule.map_or(
-                        lang.text("ส่วนลด", "Discount").to_owned(),
-                        |r| crate::discount_ui::label(lang, r),
-                    );
+                    let rule = match &line.promotion {
+                        Some(name) => format!("{} {name}", lang.text("โปร", "Promo")),
+                        None => line.discount_rule.map_or(
+                            lang.text("ส่วนลด", "Discount").to_owned(),
+                            |r| crate::discount_ui::label(lang, r),
+                        ),
+                    };
                     ui.label(
                         RichText::new(format!("{rule} {}", format::minus(line.discount)))
                             .font(t.font(type_scale::CAPTION))
@@ -516,13 +519,14 @@ pub fn receipt(ui: &mut egui::Ui, record: &SaleRecord, lang: Language) {
             );
         }
         if sale.discount.satang() > 0 {
-            let label = match sale.discount_rule {
-                Some(rule) => format!(
+            let label = match (bill_promo(sale), sale.discount_rule) {
+                (Some(name), _) => format!("{} {name}", lang.text("โปร", "Promo")),
+                (None, Some(rule)) => format!(
                     "{} {}",
                     lang.text("ส่วนลดทั้งบิล", "Bill discount"),
                     format::discount_rule(rule)
                 ),
-                None => lang.text("ส่วนลดทั้งบิล", "Bill discount").to_owned(),
+                (None, None) => lang.text("ส่วนลดทั้งบิล", "Bill discount").to_owned(),
             };
             w::kv(ui, &label, &format::minus(sale.discount), w::Value::Danger);
         }
@@ -1407,4 +1411,17 @@ pub fn pricing_rows(lang: Language, sale: &Sale) -> Vec<(String, String)> {
         ));
     }
     rows
+}
+/// The promotion behind a sale's bill discount: one used on the bill that
+/// no line names.
+pub fn bill_promo(sale: &Sale) -> Option<&str> {
+    sale.promotions
+        .iter()
+        .find(|p| {
+            !sale
+                .lines
+                .iter()
+                .any(|l| l.promotion.as_deref() == Some(p.name.as_str()))
+        })
+        .map(|p| p.name.as_str())
 }

@@ -5,6 +5,7 @@ mod money;
 mod options;
 mod payment;
 mod pricing;
+mod promotion;
 mod promptpay;
 mod reporting;
 mod sale;
@@ -24,6 +25,10 @@ pub use payment::{
     MethodSummary, PaymentMethod, PaymentRequest, PaymentSummary, SplitPayment, Tender,
 };
 pub use pricing::{CashRounding, PriceOptions, PricingSettings, RoundMode, percent_of};
+pub use promotion::{
+    ALL_DAYS, LocalTime, PromoLine, PromoRule, PromoTarget, PromoUse, Promoted, Promotion,
+    apply_promotions, same_code,
+};
 pub use promptpay::{PromptPayId, PromptPayKind};
 pub use reporting::{
     CategorySales, DailySummary, DaySales, ProductMovement, ProfitSummary, StaffSales,
@@ -94,4 +99,6 @@ pub enum DomainError {
     InvalidSplit,
     #[error("แยกบิลต้องเลือกอย่างน้อยหนึ่งรายการ และเหลือในบิลเดิมอย่างน้อยหนึ่งรายการ")]
     InvalidBillSplit,
+    #[error("โปรโมชันไม่ถูกต้อง: ตรวจชื่อ เงื่อนไข วัน เวลา และคูปอง")]
+    InvalidPromotion,
 }

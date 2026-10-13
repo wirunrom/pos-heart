@@ -148,6 +148,7 @@ pub enum Section {
     #[default]
     Shop,
     Pricing,
+    Promotions,
     Tables,
     Printing,
     Staff,
@@ -155,9 +156,10 @@ pub enum Section {
     Data,
 }
 impl Section {
-    pub const ALL: [Self; 7] = [
+    pub const ALL: [Self; 8] = [
         Self::Shop,
         Self::Pricing,
+        Self::Promotions,
         Self::Tables,
         Self::Printing,
         Self::Staff,
@@ -168,6 +170,7 @@ impl Section {
         match self {
             Self::Shop => lang.text("ร้านและหน้าเริ่มต้น", "Shop & startup"),
             Self::Pricing => lang.text("ราคาและภาษี", "Pricing & tax"),
+            Self::Promotions => lang.text("โปรโมชัน", "Promotions"),
             Self::Tables => lang.text("โต๊ะและโซน", "Tables & zones"),
             Self::Printing => lang.text("การพิมพ์", "Printing"),
             Self::Staff => lang.text("พนักงานและสิทธิ์", "Staff & permissions"),
@@ -180,6 +183,7 @@ impl Section {
         Some(match name {
             "shop" => Self::Shop,
             "pricing" => Self::Pricing,
+            "promotions" => Self::Promotions,
             "tables" => Self::Tables,
             "printing" => Self::Printing,
             "staff" => Self::Staff,
@@ -203,7 +207,11 @@ fn unsaved(app: &App, section: Section) -> bool {
                     .as_ref()
                     .is_some_and(|d| *d != app.shop.templates)
         }
-        Section::Tables | Section::Staff | Section::Display | Section::Data => false,
+        Section::Promotions
+        | Section::Tables
+        | Section::Staff
+        | Section::Display
+        | Section::Data => false,
     }
 }
 /// One SideNav row; `unsaved` is the tooltip of the warning dot.
@@ -301,6 +309,9 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
                         Section::Pricing => {
                             card(ui, &t, |ui| crate::tax_ui::pricing_card(app, ui));
                             card(ui, &t, |ui| crate::tax_ui::settings_card(app, ui));
+                        }
+                        Section::Promotions => {
+                            card(ui, &t, |ui| crate::promo_ui::settings_card(app, ui))
                         }
                         Section::Tables => {
                             card(ui, &t, |ui| crate::tables_ui::settings_card(app, ui))

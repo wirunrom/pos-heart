@@ -149,7 +149,16 @@ diesel::table! {
         note_json -> Text,
     }
 }
+diesel::table! {
+    promotions (id) {
+        id -> Text,
+        promo_json -> Text,
+        uses -> BigInt,
+        updated_at -> BigInt,
+    }
+}
 diesel::allow_tables_to_appear_in_same_query!(
+    promotions,
     credit_notes,
     products,
     sales,

@@ -167,10 +167,13 @@ pub fn receipt(
             d.detail(format!("@ {}", format::money(line.unit_price)), "");
         }
         if line.discount.satang() > 0 {
-            let rule = line.discount_rule.map_or_else(
-                || lang.text("ส่วนลด", "Discount").to_owned(),
-                |r| crate::discount_ui::label(lang, r),
-            );
+            let rule = match &line.promotion {
+                Some(name) => format!("{} {name}", lang.text("โปร", "Promo")),
+                None => line.discount_rule.map_or_else(
+                    || lang.text("ส่วนลด", "Discount").to_owned(),
+                    |r| crate::discount_ui::label(lang, r),
+                ),
+            };
             d.detail(rule, format::minus(line.discount));
         }
     }
@@ -185,13 +188,14 @@ pub fn receipt(
         );
     }
     if sale.discount.satang() > 0 {
-        let label = match sale.discount_rule {
-            Some(rule) => format!(
+        let label = match (crate::history_ui::bill_promo(sale), sale.discount_rule) {
+            (Some(name), _) => format!("{} {name}", lang.text("โปร", "Promo")),
+            (None, Some(rule)) => format!(
                 "{} {}",
                 lang.text("ส่วนลดทั้งบิล", "Bill discount"),
                 format::discount_rule(rule)
             ),
-            None => lang.text("ส่วนลดทั้งบิล", "Bill discount").to_owned(),
+            (None, None) => lang.text("ส่วนลดทั้งบิล", "Bill discount").to_owned(),
         };
         d.row(label, format::minus(sale.discount), Style::Body);
     }

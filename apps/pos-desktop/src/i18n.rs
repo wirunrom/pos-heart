@@ -162,6 +162,10 @@ impl Language {
                     "แบ่งจ่ายต้องใช้อย่างน้อย 2 วิธี และยอดรวมต้องเท่ายอดชำระพอดี",
                     "A split needs at least two methods that add up to the exact amount due.",
                 ),
+                DomainError::InvalidPromotion => self.text(
+                    "โปรโมชันไม่ถูกต้อง: ตรวจชื่อ เงื่อนไข วัน เวลา วันที่ และคูปอง",
+                    "Check the promotion's name, rule, days, hours, dates and coupon.",
+                ),
                 DomainError::InvalidBillSplit => self.text(
                     "เลือกรายการที่จะแยกอย่างน้อยหนึ่งรายการ และต้องเหลือในบิลเดิมอย่างน้อยหนึ่งรายการ",
                     "Choose at least one item to move and leave at least one on the bill.",
@@ -181,6 +185,10 @@ impl Language {
             },
             Error::PaymentTotalChanged => self.text("ยอดสินค้าเปลี่ยนแล้ว ตรวจยอดใหม่และตรวจรับชำระอีกครั้ง", "The total changed. Review the refreshed amount and verify payment again."),
             Error::InvalidRefundMethod => self.text("ต้องคืนเงินตามช่องทางที่ชำระในบิลเดิม", "Refund using the original payment method."),
+            Error::DuplicateCoupon => self.text(
+                "มีโปรโมชันอื่นใช้รหัสคูปองนี้แล้ว",
+                "Another promotion already uses this coupon code.",
+            ),
             Error::RefundExceedsMethod => self.text(
                 "ยอดคืนผ่านช่องทางนี้เกินที่ลูกค้าจ่ายด้วยช่องทางนี้ เลือกช่องทางอื่น",
                 "That is more than this method paid. Choose another method.",

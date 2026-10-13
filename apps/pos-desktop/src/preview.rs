@@ -335,6 +335,20 @@ pub fn apply(app: &mut App, ctx: &egui::Context) {
             t.receipt.logo = app.logo.is_some();
             app.templates.draft = Some(t);
         }
+        "promo-editor" => {
+            app.page = crate::app::Page::Settings;
+            app.settings_section = crate::settings_ui::Section::Promotions;
+            if let Some(p) = app
+                .data
+                .promotions
+                .iter()
+                .find(|p| p.from_minute != p.to_minute)
+                .cloned()
+            {
+                app.promotions.editor = Some(crate::promo_ui::Editor::new(p));
+            }
+        }
+        "sell-coupon" => app.promotions.coupon = Some("welcome".into()),
         "credit-note" => {
             if let Some(note) = app
                 .data

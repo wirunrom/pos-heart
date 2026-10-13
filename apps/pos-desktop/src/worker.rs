@@ -38,6 +38,7 @@ pub struct Data {
     pub tax: pos_domain::TaxSettings,
     pub pricing: pos_domain::PricingSettings,
     pub tables: Vec<pos_domain::DiningTable>,
+    pub promotions: Vec<pos_domain::Promotion>,
     /// Open kitchen tickets oldest first, then recently bumped ones.
     pub kitchen: Vec<pos_domain::KitchenTicket>,
 }
@@ -97,6 +98,8 @@ pub enum Command {
     SetTax(pos_domain::TaxSettings),
     SetPricing(pos_domain::PricingSettings),
     SaveTable(pos_domain::DiningTable),
+    SavePromotion(pos_domain::Promotion),
+    DeletePromotion(Uuid),
     SendKitchen(Cart),
     /// Kitchen screen: bump (Some time) or recall (None) a ticket.
     BumpTicket(Uuid, Option<i64>),
@@ -157,6 +160,7 @@ pub enum Event {
     TaxSaved,
     PricingSaved,
     TableSaved,
+    PromotionSaved,
     KitchenSent(Cart, Option<Box<pos_domain::KitchenTicket>>),
     Kitchen(Vec<pos_domain::KitchenTicket>),
     InvoiceIssued(pos_domain::TaxInvoice),
@@ -347,6 +351,14 @@ fn run(pos: &mut Pos, command: Command) -> pos_core::Result<Event> {
             Event::SignedOut
         }
         Command::SaveStaff(input) => Event::StaffSaved(pos.save_staff(&input, now())?),
+        Command::SavePromotion(p) => {
+            pos.save_promotion(&p, now())?;
+            Event::PromotionSaved
+        }
+        Command::DeletePromotion(id) => {
+            pos.delete_promotion(id)?;
+            Event::PromotionSaved
+        }
         Command::SaveTable(t) => {
             pos.save_table(&t)?;
             Event::TableSaved
@@ -434,6 +446,7 @@ fn load(pos: &mut Pos, q: &Query) -> pos_core::Result<Data> {
         tax: pos.tax_settings()?,
         pricing: pos.pricing_settings()?,
         tables: pos.dining_tables()?,
+        promotions: pos.promotions()?,
         kitchen: pos.kitchen_tickets()?,
         stock_history,
         shift,

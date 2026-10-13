@@ -220,6 +220,8 @@ fn pane_tabs(app: &mut App, ui: &mut egui::Ui) {
 fn keys(app: &mut App, ctx: &egui::Context) {
     let overlay = app.payment_review.is_some()
         || app.sell.bill_split.is_some()
+        || app.promotions.coupon.is_some()
+        || app.promotions.editor.is_some()
         || app.sell.sheet.is_some()
         || app.sell.discount.is_some()
         || app.palette.visible
@@ -453,6 +455,26 @@ fn current_bill(app: &mut App, ui: &mut egui::Ui) {
                                 app.sell.moving = true;
                                 app.sell.pane = Pane::Tables;
                             }
+                        }
+                        if app.data.promotions.iter().any(|p| p.is_coupon())
+                            && menu_row(
+                                ui,
+                                Icon::Tag,
+                                &if app.cart.coupons.is_empty() {
+                                    lang.text("ใส่คูปอง", "Enter coupon").to_owned()
+                                } else {
+                                    format!(
+                                        "{} · {}",
+                                        lang.text("คูปอง", "Coupons"),
+                                        app.cart.coupons.join(", ")
+                                    )
+                                },
+                                "",
+                                false,
+                            )
+                            .clicked()
+                        {
+                            app.promotions.coupon = Some(String::new());
                         }
                         let units: u32 = app.cart.lines.iter().map(|l| l.quantity).sum();
                         if units > 1
@@ -742,7 +764,19 @@ fn cart_line(app: &mut App, ui: &mut egui::Ui, index: usize) {
         |p| p.name.clone(),
     );
     let gross = app.price(&line);
-    let line_off = line.discount.zip(gross).and_then(|(d, g)| d.off(g).ok());
+    // The cashier's discount, or the promotion this line gets right now.
+    let promoted = app.promoted(&app.cart).ok();
+    let promo = promoted
+        .as_ref()
+        .and_then(|p| p.line_promos.get(index).copied().flatten())
+        .and_then(|id| app.data.promotions.iter().find(|p| p.id == id))
+        .map(|p| p.name.clone());
+    let effective = line.discount.or_else(|| {
+        promoted
+            .as_ref()
+            .and_then(|p| p.line_discounts.get(index).copied().flatten())
+    });
+    let line_off = effective.zip(gross).and_then(|(d, g)| d.off(g).ok());
     let amount = gross
         .map(|g| Money::from_satang(g.satang() - line_off.map_or(0, |o| o.satang())).unwrap_or(g))
         .map_or("—".into(), format::money);
@@ -822,6 +856,17 @@ fn cart_line(app: &mut App, ui: &mut egui::Ui, index: usize) {
             },
             t.p.danger_fg,
             t.font(type_scale::CAPTION),
+        );
+    }
+    if let (Some(name), Some(off), None) = (&promo, line_off, line.discount) {
+        push(
+            format!(
+                "{} {name}\u{a0}{}",
+                lang.text("โปร", "Promo"),
+                format::minus(off)
+            ),
+            t.p.success_fg,
+            t.strong_font(type_scale::CAPTION),
         );
     }
     if let Some(p) = &product
@@ -1405,8 +1450,19 @@ fn footer(app: &mut App, ui: &mut egui::Ui) {
                 w::Value::Plain,
             );
         }
-        if app.cart.has_discount() {
+        let promo_names: Vec<String> = app
+            .promoted(&app.cart)
+            .map(|p| p.used())
+            .unwrap_or_default()
+            .iter()
+            .filter_map(|id| app.data.promotions.iter().find(|p| p.id == *id))
+            .map(|p| p.name.clone())
+            .collect();
+        if app.cart.has_discount() || !promo_names.is_empty() {
             let mut label = lang.text("ส่วนลด", "Discount").to_owned();
+            if !promo_names.is_empty() {
+                label = format!("{label} · {} {}", lang.text("โปร", "promo"), promo_names.join(", "));
+            }
             if let Some(rule) = app.cart.discount {
                 label = format!(
                     "{label} · {} {}",

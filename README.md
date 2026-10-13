@@ -225,3 +225,7 @@ Schema 14 added these (the current schema is 15, see below). Back up with the pr
 - **Kitchen tickets on paper:** Settings → Receipt printer → Kitchen tickets: Off, on the receipt printer, or on a separate kitchen printer (network or system queue, its own paper size). Tickets show a large table name, dishes, options, notes and `*** CANCEL ***` slips. Print jobs queue, so no ticket is lost while a receipt prints.
 
 Schema is now 15; older builds cannot open an upgraded database. Back up before upgrading. Not yet verified: a real second monitor, kitchen printer hardware and Windows. Using several devices (ordering tablets, a networked kitchen display) is not built; see [docs/multi-device.md](docs/multi-device.md).
+
+## Promotions and coupons (2026-10-14)
+
+Settings → Promotions adds shop promotions: percent off, baht off each unit, buy X get Y free (within one bill line) and spend-over bill discounts, for everything, a category or one product, optionally only on some days, at some hours (Bangkok time, may run past midnight), between dates, with a coupon code and a maximum number of bills. They apply automatically while selling and again at payment; each line gets its single best promotion, and a cashier's own discount always comes first. More → Enter coupon adds a code to the bill. Receipts and history show promotion names; each promotion shows how many bills used it.

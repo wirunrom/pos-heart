@@ -140,6 +140,9 @@ pub struct Cart {
     /// What the kitchen already has for this bill.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub sent: Vec<crate::SentItem>,
+    /// Coupon codes entered on this bill (for coupon promotions).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub coupons: Vec<String>,
 }
 impl Default for Cart {
     fn default() -> Self {
@@ -158,6 +161,7 @@ impl Cart {
             table: None,
             guests: 0,
             sent: Vec::new(),
+            coupons: Vec::new(),
         }
     }
     /// True when any line or the bill has a discount.
@@ -171,6 +175,8 @@ impl Cart {
         if self.label.chars().count() > 160
             || self.lines.len() > 500
             || self.discount_reason.chars().count() > 240
+            || self.coupons.len() > 5
+            || self.coupons.iter().any(|c| c.chars().count() > 32)
         {
             return Err(DomainError::TextTooLong);
         }
@@ -218,6 +224,7 @@ pub fn split_cart(
         table: None,
         guests: 0,
         sent: Vec::new(),
+        coupons: cart.coupons.clone(),
     };
     let mut seen = std::collections::HashSet::new();
     for &(index, quantity) in take {
@@ -305,6 +312,9 @@ pub struct SaleLine {
     pub vat_added: Money,
     #[serde(default, skip_serializing_if = "is_zero_i64")]
     pub rounding: i64,
+    /// Promotion that gave this line's discount, by name at the time.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub promotion: Option<String>,
 }
 fn is_zero_u32(n: &u32) -> bool {
     *n == 0
@@ -389,6 +399,9 @@ pub struct Sale {
     /// Who did it and who approved (empty when the shop has no staff).
     #[serde(default, skip_serializing_if = "crate::Attribution::is_empty")]
     pub staff: crate::Attribution,
+    /// Promotions used on this bill and what each took off.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub promotions: Vec<crate::PromoUse>,
 }
 impl Sale {
     /// What each method paid: the split parts, or the whole total.

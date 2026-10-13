@@ -79,6 +79,7 @@ pub struct App {
     pub tables: crate::tables_ui::TablesState,
     pub templates: crate::templates_ui::TemplatesState,
     pub settings_section: crate::settings_ui::Section,
+    pub promotions: crate::promo_ui::PromoState,
     pub kitchen: crate::kitchen_ui::KitchenState,
     /// The kitchen screen window is open.
     pub kitchen_open: bool,
@@ -223,6 +224,7 @@ impl App {
             tables: crate::tables_ui::TablesState::default(),
             templates: crate::templates_ui::TemplatesState::default(),
             settings_section: crate::settings_ui::Section::default(),
+            promotions: crate::promo_ui::PromoState::default(),
             kitchen: crate::kitchen_ui::KitchenState::default(),
             kitchen_open: false,
             pricing_draft: None,
@@ -367,14 +369,43 @@ impl App {
     pub fn bill_price(&self) -> Result<pos_domain::BillPrice, pos_domain::DomainError> {
         self.price_cart(&self.cart)
     }
+    /// Promotions for this bill right now, exactly as checkout applies them.
+    pub fn promoted(&self, cart: &Cart) -> Result<pos_domain::Promoted, pos_domain::DomainError> {
+        let mut lines = Vec::with_capacity(cart.lines.len());
+        for line in &cart.lines {
+            let product = self
+                .known
+                .get(&line.product_id)
+                .ok_or(pos_domain::DomainError::MissingProductFields)?;
+            lines.push(pos_domain::PromoLine {
+                product_id: product.id,
+                category: &product.category,
+                gross: product
+                    .unit_price(&line.options)?
+                    .checked_mul(line.quantity)?,
+                quantity: line.quantity,
+                manual: line.discount,
+            });
+        }
+        let now = time::OffsetDateTime::now_utc().unix_timestamp();
+        pos_domain::apply_promotions(
+            &lines,
+            cart.discount,
+            &self.data.promotions,
+            &pos_domain::LocalTime::bangkok(now),
+            &cart.coupons,
+        )
+    }
     pub fn price_cart(
         &self,
         cart: &Cart,
     ) -> Result<pos_domain::BillPrice, pos_domain::DomainError> {
+        let promoted = self.promoted(cart)?;
         let lines = cart
             .lines
             .iter()
-            .map(|line| {
+            .zip(&promoted.line_discounts)
+            .map(|(line, discount)| {
                 let product = self
                     .known
                     .get(&line.product_id)
@@ -383,7 +414,7 @@ impl App {
                     product
                         .unit_price(&line.options)?
                         .checked_mul(line.quantity)?,
-                    line.discount,
+                    *discount,
                     product.service_charge,
                 ))
             })
@@ -396,7 +427,7 @@ impl App {
             // Split payments are exact: no cash rounding.
             self.payment_method == pos_domain::PaymentMethod::Cash && self.sell.split_pay.is_none(),
         );
-        pos_domain::price_sale(&lines, cart.discount, &options)
+        pos_domain::price_sale(&lines, promoted.bill, &options)
     }
     pub fn total(&self) -> Result<Money, pos_domain::DomainError> {
         self.bill_price().map(|p| p.total)
@@ -815,6 +846,11 @@ impl App {
                         self.lang.text("บันทึกพนักงานแล้ว:", "Staff saved:"),
                         member.name
                     ));
+                    self.refresh();
+                }
+                Event::PromotionSaved => {
+                    self.promotions.editor = None;
+                    self.toast(self.lang.text("บันทึกโปรโมชันแล้ว", "Promotions saved."));
                     self.refresh();
                 }
                 Event::TableSaved => {
@@ -1462,6 +1498,8 @@ impl eframe::App for App {
         }
         sale_ui::payment_dialog(self, &ctx);
         sale_ui::bill_split_dialog(self, &ctx);
+        crate::promo_ui::editor_dialog(self, &ctx);
+        crate::promo_ui::coupon_dialog(self, &ctx);
         sale_ui::options_sheet(self, &ctx);
         crate::discount_ui::dialog(self, &ctx);
         crate::history_ui::void_dialog(self, &ctx);
