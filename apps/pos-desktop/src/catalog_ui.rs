@@ -115,6 +115,12 @@ pub struct Editor {
     /// Recipe rows: ingredient and amount per unit sold (typed).
     pub recipe: Vec<(Uuid, String)>,
     pub recipe_search: String,
+    /// Option rows: choice, ingredient and signed amount per unit (typed).
+    pub option_recipe: Vec<(Uuid, Uuid, String)>,
+    /// Choice picked for the next option row.
+    pub recipe_choice: Option<Uuid>,
+    /// Debug previews scroll the editor to the recipe once.
+    pub scroll_to_recipe: bool,
 }
 impl Default for Editor {
     fn default() -> Self {
@@ -136,6 +142,9 @@ impl Default for Editor {
             options: Vec::new(),
             recipe: Vec::new(),
             recipe_search: String::new(),
+            option_recipe: Vec::new(),
+            recipe_choice: None,
+            scroll_to_recipe: false,
         }
     }
 }
@@ -163,6 +172,13 @@ impl From<Product> for Editor {
                 .map(|r| (r.ingredient_id, format::qty(r.amount)))
                 .collect(),
             recipe_search: String::new(),
+            option_recipe: p
+                .option_recipe
+                .iter()
+                .map(|r| (r.choice_id, r.ingredient_id, format::signed_qty(r.amount)))
+                .collect(),
+            recipe_choice: None,
+            scroll_to_recipe: false,
         };
         e.original = Some(Box::new(e.clone()));
         e
@@ -187,6 +203,7 @@ impl Editor {
                 o.fields() != self.fields()
                     || o.options != self.options
                     || o.recipe != self.recipe
+                    || o.option_recipe != self.option_recipe
                     || o.service_charge != self.service_charge
                     || o.kitchen != self.kitchen
                     || o.cost != self.cost
@@ -243,6 +260,24 @@ impl Editor {
                             ingredient_id: *id,
                             amount,
                         }
+                    })
+                })
+                .collect::<Option<Vec<_>>>()
+                .ok_or_else(|| "recipe".to_owned())?,
+            // Rows of choices removed from the options are dropped.
+            option_recipe: self
+                .option_recipe
+                .iter()
+                .filter(|(choice, ..)| {
+                    self.options
+                        .iter()
+                        .any(|g| g.choices.iter().any(|c| c.id == *choice))
+                })
+                .map(|(choice, ingredient, amount)| {
+                    format::parse_signed_qty(amount).map(|amount| pos_domain::OptionRecipe {
+                        choice_id: *choice,
+                        ingredient_id: *ingredient,
+                        amount,
                     })
                 })
                 .collect::<Option<Vec<_>>>()
@@ -2147,6 +2182,9 @@ fn recipe_editor(
     ingredients: &[pos_domain::Ingredient],
     errors: bool,
 ) {
+    if std::mem::take(&mut editor.scroll_to_recipe) {
+        ui.scroll_to_cursor(Some(Align::Min));
+    }
     ui.horizontal(|ui| {
         ui.label(t.text(
             lang.text("สูตร (วัตถุดิบต่อ 1 ชิ้น)", "Recipe (per unit sold)"),
@@ -2243,6 +2281,7 @@ fn recipe_editor(
             }
         });
     }
+    option_recipe_editor(ui, t, lang, editor, ingredients, errors);
     if let Some(cost) = cost.filter(|_| !editor.recipe.is_empty()) {
         ui.horizontal(|ui| {
             ui.label(t.muted(
@@ -2260,6 +2299,118 @@ fn recipe_editor(
                 .clicked()
             {
                 editor.cost = format::money(cost);
+            }
+        });
+    }
+}
+/// "Adjust by option": a choice adds or removes ingredients per unit
+/// ("+ fried egg" +1 egg, "no egg" −1); totals never go below zero.
+fn option_recipe_editor(
+    ui: &mut egui::Ui,
+    t: &Theme,
+    lang: crate::i18n::Language,
+    editor: &mut Editor,
+    ingredients: &[pos_domain::Ingredient],
+    errors: bool,
+) {
+    let choices: Vec<(Uuid, String)> = editor
+        .options
+        .iter()
+        .flat_map(|g| g.choices.iter().map(|c| (c.id, c.name.clone())))
+        .filter(|(_, name)| !name.trim().is_empty())
+        .collect();
+    if choices.is_empty() {
+        return;
+    }
+    ui.add_space(space::S1);
+    ui.label(t.text(
+        lang.text("ปรับตามตัวเลือก", "Adjust by option"),
+        type_scale::LABEL,
+    ));
+    w::help_text(
+        ui,
+        lang.text(
+            "เช่น +ไข่ดาว ใส่ +1 ฟอง · ไม่ใส่ไข่ ใส่ -1 ฟอง (ต่อ 1 ชิ้น)",
+            "e.g. + fried egg: +1 egg · no egg: -1 egg (per unit)",
+        ),
+    );
+    let mut remove = None;
+    for (i, (choice, ingredient, amount)) in editor.option_recipe.iter_mut().enumerate() {
+        let choice_name = choices.iter().find(|(id, _)| id == choice).map_or(
+            lang.text("ตัวเลือกที่ลบแล้ว", "Removed choice"),
+            |(_, n)| n.as_str(),
+        );
+        let found = ingredients.iter().find(|x| x.id == *ingredient);
+        let parsed = format::parse_signed_qty(amount);
+        ui.horizontal(|ui| {
+            let name_w = (ui.available_width() - 190.0).max(90.0);
+            ui.allocate_ui_with_layout(
+                egui::vec2(name_w, 0.0),
+                egui::Layout::top_down(Align::Min),
+                |ui| {
+                    ui.set_width(name_w);
+                    ui.spacing_mut().item_spacing.y = 0.0;
+                    w::name_label(ui, choice_name, type_scale::BODY, t.p.fg_default);
+                    ui.label(t.muted(
+                        found.map_or(
+                            lang.text("วัตถุดิบที่ลบแล้ว", "Removed ingredient"),
+                            |x| x.name.as_str(),
+                        ),
+                        type_scale::CAPTION,
+                    ));
+                },
+            );
+            w::text_input(
+                ui,
+                amount,
+                w::FieldOpts {
+                    hint: "+1 / -1",
+                    limit: 12,
+                    width: Some(90.0),
+                    invalid: parsed.is_none() && (errors || !amount.is_empty()),
+                    ..Default::default()
+                },
+            );
+            ui.label(t.muted(found.map_or("", |x| x.unit.as_str()), type_scale::LABEL));
+            if w::icon_button(ui, Icon::Close, lang.text("เอาแถวนี้ออก", "Remove this row")).clicked()
+            {
+                remove = Some(i);
+            }
+        });
+    }
+    if let Some(i) = remove {
+        editor.option_recipe.remove(i);
+    }
+    // Add a row: pick a choice, then an ingredient.
+    ui.horizontal_wrapped(|ui| {
+        for (id, name) in &choices {
+            if w::chip(ui, name, editor.recipe_choice == Some(*id), false).clicked() {
+                editor.recipe_choice = if editor.recipe_choice == Some(*id) {
+                    None
+                } else {
+                    Some(*id)
+                };
+            }
+        }
+    });
+    if let Some(choice) = editor.recipe_choice {
+        let available: Vec<&pos_domain::Ingredient> = ingredients
+            .iter()
+            .filter(|x| {
+                x.active
+                    && !editor
+                        .option_recipe
+                        .iter()
+                        .any(|(c, i, _)| *c == choice && *i == x.id)
+            })
+            .take(12)
+            .collect();
+        ui.horizontal_wrapped(|ui| {
+            for x in available {
+                if w::chip(ui, &format!("+ {}", x.name), false, false).clicked() {
+                    editor.option_recipe.push((choice, x.id, String::new()));
+                    editor.recipe_choice = None;
+                }
             }
         });
     }

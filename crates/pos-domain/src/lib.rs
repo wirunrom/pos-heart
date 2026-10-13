@@ -20,7 +20,7 @@ pub use dining::{DiningTable, KitchenTicket, SentItem, TicketLine, kitchen_chang
 pub use discount::{BillPrice, Discount, LinePrice, price_bill, price_sale, refund_share};
 pub use ingredient::{
     Ingredient, IngredientKind, IngredientMovement, IngredientRequest, MAX_RECIPE, MILLI,
-    RecipeItem, ingredient_use, validate_recipe,
+    OptionRecipe, RecipeItem, ingredient_use, line_recipe, validate_option_recipe, validate_recipe,
 };
 pub use money::{Money, SignedMoney};
 pub use options::{
@@ -36,7 +36,8 @@ pub use promotion::{
 };
 pub use promptpay::{PromptPayId, PromptPayKind};
 pub use reporting::{
-    CategorySales, DailySummary, DaySales, ProductMovement, ProfitSummary, StaffSales,
+    CategorySales, DailySummary, DaySales, IngredientUsage, ProductMovement, ProfitSummary,
+    PromoSales, StaffSales,
 };
 pub use sale::{Cart, CartLine, LOW_STOCK, Product, ProductInput, Sale, SaleLine, split_cart};
 pub use shift::{CashCount, CashKind, CashMovement, Shift, ShiftClosing, ShiftCount};

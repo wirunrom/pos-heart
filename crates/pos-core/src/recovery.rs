@@ -136,6 +136,7 @@ impl crate::Pos {
                     service_charge: p.service_charge,
                     kitchen: p.kitchen,
                     recipe: p.recipe,
+                    option_recipe: p.option_recipe,
                     keep_tracked_stock: true,
                 }
                 .validate()?;

@@ -368,7 +368,9 @@ pub fn apply(app: &mut App, ctx: &egui::Context) {
                 .find(|p| !p.recipe.is_empty())
                 .cloned()
             {
-                app.catalog.editor = Some(crate::catalog_ui::Editor::from(p));
+                let mut editor = crate::catalog_ui::Editor::from(p);
+                editor.scroll_to_recipe = true;
+                app.catalog.editor = Some(editor);
             }
         }
         "promo-editor" => {
@@ -403,6 +405,8 @@ pub fn apply(app: &mut App, ctx: &egui::Context) {
         }
         "check-bill" => app.preview_check_bill(),
         "report-staff" => app.report_group = crate::report_ui::Group::Staff,
+        "report-promos" => app.report_group = crate::report_ui::Group::Promotions,
+        "report-ingredients" => app.report_group = crate::report_ui::Group::Ingredients,
         "staff-editor" => {
             app.page = crate::app::Page::Settings;
             app.settings_section = crate::settings_ui::Section::Staff;

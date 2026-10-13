@@ -282,6 +282,7 @@ impl Pos {
                     service_charge: p.service_charge,
                     kitchen: p.kitchen,
                     recipe_json: "[]".into(),
+                    option_recipe_json: "[]".into(),
                 };
                 diesel::insert_into(products::table)
                     .values(&row)

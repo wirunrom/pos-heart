@@ -75,6 +75,7 @@ impl Pos {
             let mut products = HashMap::new();
             let mut by_category: HashMap<String, (i64, SignedMoney)> = HashMap::new();
             let mut by_staff: HashMap<Uuid, pos_domain::StaffSales> = HashMap::new();
+            let mut by_promo: HashMap<Uuid, pos_domain::PromoSales> = HashMap::new();
             let mut credit = |who: &Option<pos_domain::StaffRef>, sale: Option<Money>, refund: Option<Money>| -> Result<()> {
                 let Some(who) = who else { return Ok(()) };
                 let e = by_staff.entry(who.id).or_insert_with(|| pos_domain::StaffSales {
@@ -198,6 +199,16 @@ impl Pos {
                         return Err(Error::CorruptData);
                     }
                     add(&mut summary.void_count, 1)?;
+                    for used in &sale.promotions {
+                        let e = by_promo.entry(used.id).or_insert_with(|| pos_domain::PromoSales {
+                            id: used.id,
+                            name: used.name.clone(),
+                            bills: 0,
+                            amount: SignedMoney::default(),
+                        });
+                        e.bills -= 1;
+                        e.amount = e.amount.checked_add(signed(used.amount, -1))?;
+                    }
                     credit(&cancellation.staff.by, None, Some(cancellation.refund))?;
                     if let Some(tax) = &sale.tax {
                         summary.vat_refunds = summary.vat_refunds.checked_add(tax.vat)?;
@@ -213,6 +224,17 @@ impl Pos {
                     -1_i64
                 } else {
                     add(&mut summary.sale_count, 1)?;
+                    for used in &sale.promotions {
+                        let e = by_promo.entry(used.id).or_insert_with(|| pos_domain::PromoSales {
+                            id: used.id,
+                            name: used.name.clone(),
+                            bills: 0,
+                            amount: SignedMoney::default(),
+                        });
+                        e.name = used.name.clone();
+                        e.bills += 1;
+                        e.amount = e.amount.checked_add(signed(used.amount, 1))?;
+                    }
                     credit(&sale.staff.by, Some(sale.total), None)?;
                     if let Some(tax) = &sale.tax {
                         summary.vat_sales = summary.vat_sales.checked_add(tax.vat)?;
@@ -288,6 +310,10 @@ impl Pos {
                     .then_with(|| a.category.cmp(&b.category))
             });
             summary.categories = categories;
+            let mut promotions: Vec<_> = by_promo.into_values().filter(|p| p.bills != 0).collect();
+            promotions.sort_by(|a, b| b.amount.cmp(&a.amount).then_with(|| a.name.cmp(&b.name)));
+            summary.promotions = promotions;
+            summary.ingredients = crate::ingredient::usage(conn, start, end)?;
             Ok(summary)
         })
     }

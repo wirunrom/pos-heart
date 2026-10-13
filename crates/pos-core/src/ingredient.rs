@@ -144,6 +144,62 @@ pub(crate) fn return_for_void(
     }
     Ok(())
 }
+/// Use by sales (net of voids) and manual removals per ingredient in
+/// [start, end), by name. Ingredients with neither are left out.
+pub(crate) fn usage(
+    conn: &mut SqliteConnection,
+    start: i64,
+    end: i64,
+) -> Result<Vec<pos_domain::IngredientUsage>> {
+    let mut totals: std::collections::HashMap<Uuid, (i64, i64)> = std::collections::HashMap::new();
+    for json in ingredient_movements::table
+        .filter(ingredient_movements::created_at.ge(start))
+        .filter(ingredient_movements::created_at.lt(end))
+        .filter(ingredient_movements::kind.eq_any(["sale", "void", "remove"]))
+        .select(ingredient_movements::movement_json)
+        .load::<String>(conn)?
+    {
+        let m: IngredientMovement = serde_json::from_str(&json)?;
+        let change = m
+            .before
+            .checked_sub(m.after)
+            .ok_or(pos_domain::DomainError::Overflow)?;
+        let entry = totals.entry(m.ingredient_id).or_default();
+        match m.kind {
+            IngredientKind::Remove => {
+                entry.1 = entry
+                    .1
+                    .checked_add(change)
+                    .ok_or(pos_domain::DomainError::Overflow)?
+            }
+            _ => {
+                entry.0 = entry
+                    .0
+                    .checked_add(change)
+                    .ok_or(pos_domain::DomainError::Overflow)?
+            }
+        }
+    }
+    let mut out = Vec::with_capacity(totals.len());
+    for (id, (used, removed)) in totals {
+        if used == 0 && removed == 0 {
+            continue;
+        }
+        let Some(i) = load_one(conn, id)? else {
+            continue;
+        };
+        out.push(pos_domain::IngredientUsage {
+            ingredient_id: id,
+            cost: if used > 0 { i.cost_of(used) } else { None },
+            name: i.name,
+            unit: i.unit,
+            used,
+            removed,
+        });
+    }
+    out.sort_by(|a, b| a.name.cmp(&b.name));
+    Ok(out)
+}
 impl Pos {
     /// Active ingredients first, by name.
     pub fn ingredients(&mut self) -> Result<Vec<Ingredient>> {

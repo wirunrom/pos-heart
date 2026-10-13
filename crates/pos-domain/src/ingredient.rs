@@ -66,6 +66,65 @@ pub fn validate_recipe(recipe: &[RecipeItem]) -> Result<(), DomainError> {
     }
     Ok(())
 }
+/// An option choice's change to the recipe, per unit sold: "+ fried egg"
+/// adds 1 egg (1000), "no egg" removes it (−1000).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct OptionRecipe {
+    pub choice_id: Uuid,
+    pub ingredient_id: Uuid,
+    /// Thousandths; negative reduces the base recipe. Never zero.
+    pub amount: i64,
+}
+/// Choices must belong to the product's options; one row per (choice,
+/// ingredient); amounts non-zero.
+pub fn validate_option_recipe(
+    rows: &[OptionRecipe],
+    groups: &[crate::OptionGroup],
+) -> Result<(), DomainError> {
+    let mut seen = std::collections::HashSet::new();
+    for r in rows {
+        let known = groups
+            .iter()
+            .any(|g| g.choices.iter().any(|c| c.id == r.choice_id));
+        if !known
+            || r.amount == 0
+            || r.amount.abs() > 1_000_000 * MILLI
+            || !seen.insert((r.choice_id, r.ingredient_id))
+        {
+            return Err(DomainError::InvalidIngredient);
+        }
+    }
+    if rows.len() > MAX_RECIPE * 4 {
+        return Err(DomainError::InvalidIngredient);
+    }
+    Ok(())
+}
+/// One unit's recipe with the chosen options applied. An ingredient never
+/// goes below zero; ingredients that end at zero are left out.
+pub fn line_recipe(
+    base: &[RecipeItem],
+    option_recipe: &[OptionRecipe],
+    chosen: &[crate::LineOption],
+) -> Vec<RecipeItem> {
+    let mut out: Vec<RecipeItem> = base.to_vec();
+    for row in option_recipe
+        .iter()
+        .filter(|r| chosen.iter().any(|c| c.choice_id == r.choice_id))
+    {
+        match out
+            .iter_mut()
+            .find(|i| i.ingredient_id == row.ingredient_id)
+        {
+            Some(item) => item.amount = item.amount.saturating_add(row.amount),
+            None => out.push(RecipeItem {
+                ingredient_id: row.ingredient_id,
+                amount: row.amount,
+            }),
+        }
+    }
+    out.retain(|i| i.amount > 0);
+    out
+}
 /// Total use per ingredient for (recipe, units sold) pairs, in first-seen order.
 pub fn ingredient_use<'a>(
     lines: impl IntoIterator<Item = (&'a [RecipeItem], u32)>,
@@ -219,6 +278,63 @@ mod tests {
             Err(DomainError::InvalidIngredient)
         );
         Ok(())
+    }
+    #[test]
+    fn option_recipes_add_and_remove_without_going_below_zero() {
+        let (extra, none) = (Uuid::from_u128(10), Uuid::from_u128(11));
+        let chosen = |id| {
+            [crate::LineOption {
+                group_id: Uuid::nil(),
+                choice_id: id,
+            }]
+        };
+        let base = [item(1, 150 * MILLI), item(2, MILLI)];
+        let rows = [
+            OptionRecipe {
+                choice_id: extra,
+                ingredient_id: Uuid::from_u128(2),
+                amount: MILLI,
+            },
+            OptionRecipe {
+                choice_id: extra,
+                ingredient_id: Uuid::from_u128(3),
+                amount: 5 * MILLI,
+            },
+            OptionRecipe {
+                choice_id: none,
+                ingredient_id: Uuid::from_u128(2),
+                amount: -2 * MILLI,
+            },
+        ];
+        // "+ egg": two eggs and the extra sauce.
+        let more = line_recipe(&base, &rows, &chosen(extra));
+        assert_eq!(
+            more,
+            vec![item(1, 150 * MILLI), item(2, 2 * MILLI), item(3, 5 * MILLI)]
+        );
+        // "No egg": the egg is gone, never negative.
+        assert_eq!(
+            line_recipe(&base, &rows, &chosen(none)),
+            vec![item(1, 150 * MILLI)]
+        );
+        assert_eq!(line_recipe(&base, &rows, &[]), base.to_vec());
+        let group = crate::OptionGroup {
+            id: Uuid::from_u128(20),
+            name: "ไข่".into(),
+            required: false,
+            multiple: false,
+            choices: vec![crate::OptionChoice {
+                id: extra,
+                name: "+ไข่".into(),
+                price: Money::ZERO,
+            }],
+        };
+        assert_eq!(
+            validate_option_recipe(&rows[..2], std::slice::from_ref(&group)),
+            Ok(())
+        );
+        // "none" is not a choice of this product.
+        assert!(validate_option_recipe(&rows, &[group]).is_err());
     }
     #[test]
     fn requests_may_take_stock_below_zero_only_by_removal() {

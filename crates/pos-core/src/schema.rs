@@ -15,6 +15,7 @@ diesel::table! {
         service_charge -> Bool,
         kitchen -> Bool,
         recipe_json -> Text,
+        option_recipe_json -> Text,
     }
 }
 diesel::table! {

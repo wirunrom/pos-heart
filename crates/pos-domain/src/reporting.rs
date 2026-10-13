@@ -42,6 +42,32 @@ pub struct DailySummary {
     /// Sales and refunds by who rang them up (empty without staff).
     pub staff: Vec<StaffSales>,
     pub profit: ProfitSummary,
+    /// Promotions used on this period's sales (voids subtract), most saved first.
+    pub promotions: Vec<PromoSales>,
+    /// Ingredients used by sales (voids give back) and removed by hand in
+    /// this period, by name.
+    pub ingredients: Vec<IngredientUsage>,
+}
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PromoSales {
+    pub id: Uuid,
+    pub name: String,
+    /// Bills that used it, net of voids.
+    pub bills: i64,
+    /// What it took off, net of voids.
+    pub amount: SignedMoney,
+}
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IngredientUsage {
+    pub ingredient_id: Uuid,
+    pub name: String,
+    pub unit: String,
+    /// Thousandths used by sales, net of voids.
+    pub used: i64,
+    /// Thousandths removed by hand (waste, spoiled, staff meals).
+    pub removed: i64,
+    /// Cost of `used` at the current cost per unit, when known.
+    pub cost: Option<Money>,
 }
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StaffSales {

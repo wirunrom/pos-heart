@@ -28,6 +28,8 @@ pub enum Group {
     Products,
     Categories,
     Staff,
+    Promotions,
+    Ingredients,
 }
 /// Bangkok dates `start..=end` shown in Reports (at most 366 days).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -261,6 +263,12 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
                         if app.data.staff_enabled || !s.staff.is_empty() {
                             groups.push((Group::Staff, lang.text("พนักงาน", "Staff")));
                         }
+                        if !app.data.promotions.is_empty() || !s.promotions.is_empty() {
+                            groups.push((Group::Promotions, lang.text("โปร", "Promos")));
+                        }
+                        if !app.data.ingredients.is_empty() || !s.ingredients.is_empty() {
+                            groups.push((Group::Ingredients, lang.text("วัตถุดิบ", "Ingredients")));
+                        }
                         w::segmented(ui, &mut app.report_group, &groups);
                     });
                     ui.add_space(space::S2);
@@ -268,6 +276,8 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
                         Group::Products => top_products(app, ui, &s),
                         Group::Categories => categories(app, ui, &s),
                         Group::Staff => staff(app, ui, &s),
+                        Group::Promotions => promotions(app, ui, &s),
+                        Group::Ingredients => ingredients(app, ui, &s),
                     }
                 });
             });
@@ -859,6 +869,135 @@ fn staff(app: &App, ui: &mut egui::Ui, s: &DailySummary) {
         lang.text(
             "ยอดขายนับตามผู้รับเงิน การคืนเงินนับตามผู้ทำรายการคืน",
             "Sales count for who took payment; refunds for who processed them.",
+        ),
+    );
+}
+/// Bills and amounts per promotion; voids take bills back out.
+fn promotions(app: &App, ui: &mut egui::Ui, s: &DailySummary) {
+    let t = Theme::of(ui);
+    let lang = app.lang;
+    if s.promotions.is_empty() {
+        w::state_view(
+            ui,
+            Icon::Tag,
+            lang.text(
+                "ยังไม่มีบิลที่ใช้โปรในช่วงนี้",
+                "No bills used a promotion in this period",
+            ),
+            lang.text(
+                "ตั้งโปรได้ที่ ตั้งค่า → โปรโมชัน",
+                "Set promotions in Settings → Promotions.",
+            ),
+        );
+        return;
+    }
+    let mut total = pos_domain::SignedMoney::default();
+    for p in &s.promotions {
+        total = total.checked_add(p.amount).unwrap_or(total);
+        ui.horizontal(|ui| {
+            ui.vertical(|ui| {
+                ui.set_width((ui.available_width() - 160.0).max(80.0));
+                ui.spacing_mut().item_spacing.y = 0.0;
+                w::name_label(ui, &p.name, type_scale::BODY_STRONG, t.p.fg_default);
+                ui.label(t.muted(
+                    format!(
+                        "{} {}",
+                        format::signed_count(p.bills),
+                        lang.text("บิล", if p.bills == 1 { "bill" } else { "bills" })
+                    ),
+                    type_scale::CAPTION,
+                ));
+            });
+            ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
+                ui.label(
+                    egui::RichText::new(format::signed(p.amount)).font(t.font(type_scale::MONEY)),
+                );
+            });
+        });
+        w::divider(ui);
+    }
+    w::kv(
+        ui,
+        lang.text("ลดไปทั้งหมด", "Total given"),
+        &format::signed(total),
+        w::Value::Strong,
+    );
+    w::help_text(
+        ui,
+        lang.text(
+            "นับในวันที่ขาย ยกเลิกทั้งบิลหักออก คืนบางรายการไม่หัก ยอดนี้รวมอยู่ในส่วนลดของรายงานแล้ว",
+            "Counted on the sale day; whole voids subtract, partial refunds do not. Already included in the report's discounts.",
+        ),
+    );
+}
+/// Ingredients used by sales (net of voids) and removed by hand.
+fn ingredients(app: &App, ui: &mut egui::Ui, s: &DailySummary) {
+    let t = Theme::of(ui);
+    let lang = app.lang;
+    if s.ingredients.is_empty() {
+        w::state_view(
+            ui,
+            Icon::Products,
+            lang.text("ยังไม่มีการใช้วัตถุดิบในช่วงนี้", "No ingredient use in this period"),
+            lang.text(
+                "ใส่สูตรให้สินค้าในหน้าแก้ไขสินค้า แล้วยอดใช้จะขึ้นที่นี่",
+                "Give products a recipe in the product editor; use shows up here.",
+            ),
+        );
+        return;
+    }
+    let mut cost = Some(Money::ZERO);
+    for u in &s.ingredients {
+        cost = match (cost, u.cost) {
+            (Some(sum), Some(c)) => sum.checked_add(c).ok(),
+            (sum, None) if u.used <= 0 => sum,
+            _ => None,
+        };
+        ui.horizontal(|ui| {
+            ui.vertical(|ui| {
+                ui.set_width((ui.available_width() - 180.0).max(80.0));
+                ui.spacing_mut().item_spacing.y = 0.0;
+                w::name_label(ui, &u.name, type_scale::BODY_STRONG, t.p.fg_default);
+                let mut sub = Vec::new();
+                if u.removed != 0 {
+                    sub.push(format!(
+                        "{} {} {}",
+                        lang.text("นำออก", "removed"),
+                        format::qty(u.removed),
+                        u.unit
+                    ));
+                }
+                if let Some(c) = u.cost {
+                    sub.push(format!(
+                        "{} {}",
+                        lang.text("ต้นทุน", "cost"),
+                        format::money(c)
+                    ));
+                }
+                if !sub.is_empty() {
+                    ui.label(t.muted(sub.join(" · "), type_scale::CAPTION));
+                }
+            });
+            ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
+                ui.label(t.muted(&u.unit, type_scale::LABEL));
+                ui.label(egui::RichText::new(format::qty(u.used)).font(t.font(type_scale::MONEY)));
+            });
+        });
+        w::divider(ui);
+    }
+    if let Some(cost) = cost {
+        w::kv(
+            ui,
+            lang.text("ต้นทุนวัตถุดิบที่ขายไป", "Cost of ingredients sold"),
+            &format::money(cost),
+            w::Value::Strong,
+        );
+    }
+    w::help_text(
+        ui,
+        lang.text(
+            "ใช้ = ตัดตามสูตรตอนขาย หักที่ยกเลิกทั้งบิล · นำออก = เสีย/ทิ้ง/พนักงานทาน ที่บันทึกเอง · ต้นทุนคิดจากต้นทุนต่อหน่วยปัจจุบัน",
+            "Used = deducted by recipes at sale, less whole voids · removed = waste and staff meals recorded by hand · cost uses today's cost per unit.",
         ),
     );
 }

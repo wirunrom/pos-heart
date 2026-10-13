@@ -332,11 +332,20 @@ impl Pos {
             crate::shifts::record_all(conn, shift.clone(), movements)?;
             crate::promotion::count_uses(conn, &promoted.used())?;
             // Recipe ingredients, from the catalog read in this transaction.
-            let used = pos_domain::ingredient_use(cart.lines.iter().filter_map(|line| {
-                catalog
-                    .get(&line.product_id)
-                    .map(|p| (&p.recipe[..], line.quantity))
-            }))?;
+            let recipes: Vec<(Vec<pos_domain::RecipeItem>, u32)> = cart
+                .lines
+                .iter()
+                .filter_map(|line| {
+                    catalog.get(&line.product_id).map(|p| {
+                        (
+                            pos_domain::line_recipe(&p.recipe, &p.option_recipe, &line.options),
+                            line.quantity,
+                        )
+                    })
+                })
+                .collect();
+            let used =
+                pos_domain::ingredient_use(recipes.iter().map(|(r, units)| (&r[..], *units)))?;
             crate::ingredient::use_for_sale(conn, sale.id, sale.number, &used, &sale.staff, now)?;
             if manual_off.satang() > 0 {
                 crate::audit::record(conn, crate::ActivityKind::Discount, &sale.id.to_string(), now, &sale.staff,

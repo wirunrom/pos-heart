@@ -496,7 +496,40 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 kitchen: p.kitchen,
                 keep_tracked_stock: true,
                 recipe: Vec::new(),
+                option_recipe: Vec::new(),
             };
+            // An egg option: "+ fried egg" uses one more, "no egg" one less.
+            let (extra, none) = (uuid::Uuid::new_v4(), uuid::Uuid::new_v4());
+            input.options.push(pos_domain::OptionGroup {
+                id: uuid::Uuid::new_v4(),
+                name: "ไข่ / Egg".into(),
+                required: false,
+                multiple: false,
+                choices: vec![
+                    pos_domain::OptionChoice {
+                        id: extra,
+                        name: "+ไข่ดาว / Fried egg".into(),
+                        price: "10".parse()?,
+                    },
+                    pos_domain::OptionChoice {
+                        id: none,
+                        name: "ไม่ใส่ไข่ / No egg".into(),
+                        price: pos_domain::Money::ZERO,
+                    },
+                ],
+            });
+            input.option_recipe = vec![
+                pos_domain::OptionRecipe {
+                    choice_id: extra,
+                    ingredient_id: egg.id,
+                    amount: MILLI,
+                },
+                pos_domain::OptionRecipe {
+                    choice_id: none,
+                    ingredient_id: egg.id,
+                    amount: -MILLI,
+                },
+            ];
             input.recipe = vec![
                 RecipeItem {
                     ingredient_id: rice.id,
@@ -515,7 +548,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     amount: 10 * MILLI,
                 },
             ];
-            pos.save_product(input)?;
+            let saved = pos.save_product(input)?;
+            // Two plates now, one with an extra egg, so the report has use.
+            if let Some(shift) = pos.active_shift()? {
+                let group = saved.options.last().map(|g| g.id).unwrap_or_default();
+                let mut cart = pos_domain::Cart::new();
+                cart.lines.push(pos_domain::CartLine {
+                    product_id: saved.id,
+                    quantity: 1,
+                    ..Default::default()
+                });
+                cart.lines.push(pos_domain::CartLine {
+                    product_id: saved.id,
+                    quantity: 1,
+                    options: vec![pos_domain::LineOption {
+                        group_id: group,
+                        choice_id: extra,
+                    }],
+                    ..Default::default()
+                });
+                pos.checkout_for_shift(&cart, "500".parse()?, Some(shift.id), real_now - 1800)?;
+            }
         }
     }
     // `--promos`: a buy-2-get-1 tea, 10% off drinks 14:00–17:00, spend 500
@@ -565,6 +618,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         welcome.coupon = "WELCOME".into();
         welcome.max_uses = Some(100);
         pos.save_promotion(&welcome, real_now - 300)?;
+        // One bill over 500 so the report shows the spend-over promotion.
+        if let (Some(shift), Some(big)) = (
+            pos.active_shift()?,
+            pos.products("", 0)?
+                .into_iter()
+                .find(|p| p.price.satang() >= 50_000 && p.stock.is_none_or(|n| n > 0) && p.on_sale),
+        ) {
+            let mut cart = pos_domain::Cart::new();
+            cart.lines.push(pos_domain::CartLine {
+                product_id: big.id,
+                quantity: 1,
+                ..Default::default()
+            });
+            pos.checkout_for_shift(&cart, "5000".parse()?, Some(shift.id), real_now - 200)?;
+        }
     }
     std::fs::write(
         dir.join("shop.json"),

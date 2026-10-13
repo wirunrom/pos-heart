@@ -246,3 +246,10 @@ Native captures on macOS (debug build, `seed_screens DIR --restaurant --tables -
 
 Not verified: Windows; hardware; clicked-through flows.
 
+## Option recipes and promotion/ingredient reports — 2026-10-14
+
+Automated on macOS: `ingredient.rs::option_recipes_add_and_remove_without_going_below_zero`, signed-quantity format tests, `tests/ingredients.rs::option_choices_change_what_a_plate_uses` (plain, + egg and no-egg lines deduct 2 + 2 + 0 eggs; a void gives them back; rows naming another product's choice are refused) and report assertions in `tests/ingredients.rs` (net rice use after sale, partial refund and void) and `tests/promotions.rs` (bills and amounts per promotion, removed again by a void). Full workspace: 179 tests. The schema-version test expects 19 and refuses 20.
+
+Native captures on macOS (debug build, `seed_screens DIR --restaurant --ingredients --promos`, which now sells two basil-rice plates and one spend-over bill): `product-recipe` in Dark Thai 1280×820 scrolled to the recipe and its "Adjust by option" rows; `report-promos` in Dark Thai 1280×820; `report-ingredients` in Light English 1000×700.
+
+Not verified: Touch density for these; Windows. Seen, not changed: at 1000×700 the report's profit rows touch the right edge next to the page scrollbar (existing layout).

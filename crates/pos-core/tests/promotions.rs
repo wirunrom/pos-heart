@@ -117,6 +117,33 @@ fn promotions_apply_at_checkout_and_are_snapshotted() -> Result {
         MONDAY_EVENING + 7200,
     )?;
     assert!(later.promotions.is_empty());
+    // The report counts bills and amounts per promotion, most saved first.
+    let report = pos.daily_summary(time::macros::date!(2025 - 10 - 13))?;
+    let rows: Vec<(&str, i64, String)> = report
+        .promotions
+        .iter()
+        .map(|p| (p.name.as_str(), p.bills, p.amount.to_string()))
+        .collect();
+    assert_eq!(
+        rows,
+        vec![
+            ("ชา 2 แถม 1", 1, "45.00".into()),
+            ("ครบ 200 ลด 10%", 1, "21.00".into())
+        ]
+    );
+    // A void takes the bill back out.
+    pos.void_sale_for_shift(
+        &pos_domain::VoidRequest {
+            sale_id: sale.id,
+            refund_method: sale.payment_method,
+            reason: "ผิด".into(),
+            legacy_restock: None,
+        },
+        Some(shift),
+        MONDAY_EVENING + 60,
+    )?;
+    let report = pos.daily_summary(time::macros::date!(2025 - 10 - 13))?;
+    assert!(report.promotions.is_empty());
     Ok(())
 }
 

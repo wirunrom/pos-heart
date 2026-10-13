@@ -115,6 +115,24 @@ pub fn parse_qty(text: &str) -> Option<i64> {
     let frac: i64 = format!("{frac:0<3}").parse().ok()?;
     whole.checked_mul(1000)?.checked_add(frac)
 }
+/// Signed ingredient change: "+1", "−0.5".
+pub fn signed_qty(milli: i64) -> String {
+    if milli > 0 {
+        format!("+{}", qty(milli))
+    } else {
+        qty(milli)
+    }
+}
+/// "+1", "-0.5" or "−0.5" → signed thousandths; zero is refused.
+pub fn parse_signed_qty(text: &str) -> Option<i64> {
+    let text = text.trim();
+    let (negative, rest) = match text.strip_prefix(['-', '\u{2212}']) {
+        Some(rest) => (true, rest),
+        None => (false, text.strip_prefix('+').unwrap_or(text)),
+    };
+    let n = parse_qty(rest).filter(|n| *n > 0)?;
+    Some(if negative { -n } else { n })
+}
 pub fn signed_count(value: i64) -> String {
     let text = count(value.unsigned_abs());
     if value < 0 {
@@ -197,6 +215,11 @@ mod tests {
         assert_eq!(parse_qty("0.0005"), None);
         assert_eq!(parse_qty("-1"), None);
         assert_eq!(parse_qty(""), None);
+        assert_eq!(parse_signed_qty("-1"), Some(-1000));
+        assert_eq!(parse_signed_qty("\u{2212}0.5"), Some(-500));
+        assert_eq!(parse_signed_qty("+2"), Some(2000));
+        assert_eq!(parse_signed_qty("0"), None);
+        assert_eq!(signed_qty(1000), "+1");
     }
     #[test]
     fn discount_rules_read_naturally() {

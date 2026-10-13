@@ -31,6 +31,7 @@ pub(crate) struct ProductRow {
     pub service_charge: bool,
     pub kitchen: bool,
     pub recipe_json: String,
+    pub option_recipe_json: String,
 }
 impl TryFrom<ProductRow> for Product {
     type Error = Error;
@@ -53,6 +54,7 @@ impl TryFrom<ProductRow> for Product {
             service_charge: row.service_charge,
             kitchen: row.kitchen,
             recipe: serde_json::from_str(&row.recipe_json)?,
+            option_recipe: serde_json::from_str(&row.option_recipe_json)?,
         })
     }
 }
@@ -290,11 +292,19 @@ impl Pos {
                 )?),
                 None => None,
             };
-            crate::ingredient::check_recipe(
-                conn,
-                &input.recipe,
-                previous.as_ref().map_or(&[][..], |p| &p.recipe[..]),
-            )?;
+            // Option rows are checked like recipe items (sign aside).
+            let as_items = |rows: &[pos_domain::OptionRecipe]| -> Vec<pos_domain::RecipeItem> {
+                rows.iter()
+                    .map(|r| pos_domain::RecipeItem {
+                        ingredient_id: r.ingredient_id,
+                        amount: r.amount,
+                    })
+                    .collect()
+            };
+            let mut before: Vec<pos_domain::RecipeItem> = previous.as_ref().map_or_else(Vec::new, |p| p.recipe.clone());
+            before.extend(previous.as_ref().map_or_else(Vec::new, |p| as_items(&p.option_recipe)));
+            crate::ingredient::check_recipe(conn, &input.recipe, &before)?;
+            crate::ingredient::check_recipe(conn, &as_items(&input.option_recipe), &before)?;
             let was_tracked = previous.as_ref().and_then(|p| p.stock);
             let stock = match (was_tracked, input.stock) {
                 (Some(current), Some(_)) if input.keep_tracked_stock => Some(current),
@@ -316,6 +326,7 @@ impl Pos {
                 service_charge: input.service_charge,
                 kitchen: input.kitchen,
                 recipe_json: serde_json::to_string(&input.recipe)?,
+                option_recipe_json: serde_json::to_string(&input.option_recipe)?,
             };
             diesel::insert_into(products::table)
                 .values(&row)
@@ -555,6 +566,7 @@ impl Pos {
                 service_charge: !category.starts_with("ของใช้"),
                 kitchen: category.starts_with("อาหาร") || category.starts_with("เครื่องดื่ม"),
                 recipe: Vec::new(),
+                option_recipe: Vec::new(),
                 keep_tracked_stock: false,
             })?;
         }
