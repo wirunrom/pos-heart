@@ -1,0 +1,44 @@
+[workspace]
+members = ["crates/pos-domain", "crates/pos-core", "apps/pos-desktop"]
+resolver = "3"
+default-members = ["apps/pos-desktop"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.95"
+publish = false
+
+[workspace.dependencies]
+pos-domain = { path = "crates/pos-domain" }
+pos-core = { path = "crates/pos-core" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+uuid = { version = "1", features = ["v4", "serde"] }
+diesel = { version = "2.3.14", default-features = false, features = ["sqlite", "returning_clauses_for_sqlite_3_35"] }
+libsqlite3-sys = { version = "0.38", features = ["bundled"] }
+eframe = { version = "0.36.2", default-features = false, features = ["default_fonts", "wgpu", "accesskit", "x11", "wayland"] }
+directories = "6"
+time = { version = "0.3", features = ["formatting", "macros", "parsing"] }
+tempfile = "3"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = "debuginfo"
+
+# PIN hashing is deliberately slow; keep debug builds and tests usable.
+[profile.dev.package.sha2]
+opt-level = 3
+[profile.dev.package.pbkdf2]
+opt-level = 3
+[profile.dev.package.hmac]
+opt-level = 3

@@ -1,0 +1,1484 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-12T21:04:32.553579+00:00",
+  "title": "Design System: POS Heart",
+  "extensions": {
+    "colorMeta": {
+      "light-canvas": {
+        "role": "neutral",
+        "displayName": "Light Stone Canvas",
+        "canonical": "#F5F4F0",
+        "tonalRamp": [
+          "#121110",
+          "#1F1E1B",
+          "#302E2A",
+          "#47443E",
+          "#625E55",
+          "#A8A398",
+          "#DEDBD3",
+          "#F5F4F0"
+        ]
+      },
+      "light-surface": {
+        "role": "neutral",
+        "displayName": "Light Surface",
+        "canonical": "#FFFFFF",
+        "tonalRamp": [
+          "#121110",
+          "#1F1E1B",
+          "#302E2A",
+          "#47443E",
+          "#625E55",
+          "#A8A398",
+          "#DEDBD3",
+          "#F5F4F0"
+        ]
+      },
+      "light-raised": {
+        "role": "neutral",
+        "displayName": "Light Raised",
+        "canonical": "#FFFFFF",
+        "tonalRamp": [
+          "#121110",
+          "#1F1E1B",
+          "#302E2A",
+          "#47443E",
+          "#625E55",
+          "#A8A398",
+          "#DEDBD3",
+          "#F5F4F0"
+        ]
+      },
+      "light-sunken": {
+        "role": "neutral",
+        "displayName": "Light Sunken Well",
+        "canonical": "#EBE9E3",
+        "tonalRamp": [
+          "#121110",
+          "#1F1E1B",
+          "#302E2A",
+          "#47443E",
+          "#625E55",
+          "#A8A398",
+          "#DEDBD3",
+          "#F5F4F0"
+        ]
+      },
+      "light-hover": {
+        "role": "neutral",
+        "displayName": "Light Hover",
+        "canonical": "#EBE9E3",
+        "tonalRamp": [
+          "#121110",
+          "#1F1E1B",
+          "#302E2A",
+          "#47443E",
+          "#625E55",
+          "#A8A398",
+          "#DEDBD3",
+          "#F5F4F0"
+        ]
+      },
+      "light-pressed": {
+        "role": "neutral",
+        "displayName": "Light Pressed",
+        "canonical": "#DEDBD3",
+        "tonalRamp": [
+          "#121110",
+          "#1F1E1B",
+          "#302E2A",
+          "#47443E",
+          "#625E55",
+          "#A8A398",
+          "#DEDBD3",
+          "#F5F4F0"
+        ]
+      },
+      "light-selected": {
+        "role": "primary",
+        "displayName": "Light Selected Saffron",
+        "canonical": "#FCF0D4",
+        "tonalRamp": [
+          "#2A1E09",
+          "#5A3C04",
+          "#875A03",
+          "#B47A06",
+          "#DC9810",
+          "#F0B232",
+          "#F9DF9F",
+          "#FCF0D4"
+        ]
+      },
+      "light-inverse": {
+        "role": "neutral",
+        "displayName": "Light Inverse",
+        "canonical": "#1F1E1B",
+        "tonalRamp": [
+          "#121110",
+          "#1F1E1B",
+          "#302E2A",
+          "#47443E",
+          "#625E55",
+          "#A8A398",
+          "#DEDBD3",
+          "#F5F4F0"
+        ]
+      },
+      "light-ink": {
+        "role": "neutral",
+        "displayName": "Light Ink",
+        "canonical": "#1F1E1B",
+        "tonalRamp": [
+          "#121110",
+          "#1F1E1B",
+          "#302E2A",
+          "#47443E",
+          "#625E55",
+          "#A8A398",
+          "#DEDBD3",
+          "#F5F4F0"
+        ]
+      },
+      "light-muted": {
+        "role": "neutral",
+        "displayName": "Light Muted",
+        "canonical": "#625E55",
+        "tonalRamp": [
+          "#121110",
+          "#1F1E1B",
+          "#302E2A",
+          "#47443E",
+          "#625E55",
+          "#A8A398",
+          "#DEDBD3",
+          "#F5F4F0"
+        ]
+      },
+      "light-subtle": {
+        "role": "neutral",
+        "displayName": "Light Subtle",
+        "canonical": "#827D72",
+        "tonalRamp": [
+          "#121110",
+          "#1F1E1B",
+          "#302E2A",
+          "#47443E",
+          "#625E55",
+          "#A8A398",
+          "#DEDBD3",
+          "#F5F4F0"
+        ]
+      },
+      "light-on-inverse": {
+        "role": "neutral",
+        "displayName": "Light On Inverse",
+        "canonical": "#FFFFFF",
+        "tonalRamp": [
+          "#121110",
+          "#1F1E1B",
+          "#302E2A",
+          "#47443E",
+          "#625E55",
+          "#A8A398",
+          "#DEDBD3",
+          "#F5F4F0"
+        ]
+      },
+      "light-accent-text": {
+        "role": "primary",
+        "displayName": "Light Saffron Ink",
+        "canonical": "#875A03",
+        "tonalRamp": [
+          "#2A1E09",
+          "#5A3C04",
+          "#875A03",
+          "#B47A06",
+          "#DC9810",
+          "#F0B232",
+          "#F9DF9F",
+          "#FCF0D4"
+        ]
+      },
+      "light-on-accent": {
+        "role": "neutral",
+        "displayName": "Light On Accent",
+        "canonical": "#121110",
+        "tonalRamp": [
+          "#121110",
+          "#1F1E1B",
+          "#302E2A",
+          "#47443E",
+          "#625E55",
+          "#A8A398",
+          "#DEDBD3",
+          "#F5F4F0"
+        ]
+      },
+      "light-on-danger": {
+        "role": "neutral",
+        "displayName": "Light On Danger",
+        "canonical": "#FFFFFF",
+        "tonalRamp": [
+          "#121110",
+          "#1F1E1B",
+          "#302E2A",
+          "#47443E",
+          "#625E55",
+          "#A8A398",
+          "#DEDBD3",
+          "#F5F4F0"
+        ]
+      },
+      "light-border-subtle": {
+        "role": "neutral",
+        "displayName": "Light Hairline",
+        "canonical": "#EBE9E3",
+        "tonalRamp": [
+          "#121110",
+          "#1F1E1B",
+          "#302E2A",
+          "#47443E",
+          "#625E55",
+          "#A8A398",
+          "#DEDBD3",
+          "#F5F4F0"
+        ]
+      },
+      "light-border": {
+        "role": "neutral",
+        "displayName": "Light Border",
+        "canonical": "#DEDBD3",
+        "tonalRamp": [
+          "#121110",
+          "#1F1E1B",
+          "#302E2A",
+          "#47443E",
+          "#625E55",
+          "#A8A398",
+          "#DEDBD3",
+          "#F5F4F0"
+        ]
+      },
+      "light-border-control": {
+        "role": "neutral",
+        "displayName": "Light Control Border",
+        "canonical": "#827D72",
+        "tonalRamp": [
+          "#121110",
+          "#1F1E1B",
+          "#302E2A",
+          "#47443E",
+          "#625E55",
+          "#A8A398",
+          "#DEDBD3",
+          "#F5F4F0"
+        ]
+      },
+      "light-border-selected": {
+        "role": "neutral",
+        "displayName": "Light Selected Border",
+        "canonical": "#1F1E1B",
+        "tonalRamp": [
+          "#121110",
+          "#1F1E1B",
+          "#302E2A",
+          "#47443E",
+          "#625E55",
+          "#A8A398",
+          "#DEDBD3",
+          "#F5F4F0"
+        ]
+      },
+      "light-focus-ring": {
+        "role": "tertiary",
+        "displayName": "Light Focus Blue",
+        "canonical": "#2563C7",
+        "tonalRamp": [
+          "#132748",
+          "#1D4F9F",
+          "#2563C7",
+          "#3B7BE0",
+          "#679AEA",
+          "#93B9F3",
+          "#BBD3F8",
+          "#E2EDFD"
+        ]
+      },
+      "light-accent": {
+        "role": "primary",
+        "displayName": "Light Saffron",
+        "canonical": "#F0B232",
+        "tonalRamp": [
+          "#2A1E09",
+          "#5A3C04",
+          "#875A03",
+          "#B47A06",
+          "#DC9810",
+          "#F0B232",
+          "#F9DF9F",
+          "#FCF0D4"
+        ]
+      },
+      "light-accent-hover": {
+        "role": "primary",
+        "displayName": "Light Saffron Hover",
+        "canonical": "#DC9810",
+        "tonalRamp": [
+          "#2A1E09",
+          "#5A3C04",
+          "#875A03",
+          "#B47A06",
+          "#DC9810",
+          "#F0B232",
+          "#F9DF9F",
+          "#FCF0D4"
+        ]
+      },
+      "light-accent-pressed": {
+        "role": "primary",
+        "displayName": "Light Saffron Pressed",
+        "canonical": "#B47A06",
+        "tonalRamp": [
+          "#2A1E09",
+          "#5A3C04",
+          "#875A03",
+          "#B47A06",
+          "#DC9810",
+          "#F0B232",
+          "#F9DF9F",
+          "#FCF0D4"
+        ]
+      },
+      "light-accent-soft": {
+        "role": "primary",
+        "displayName": "Light Saffron Wash",
+        "canonical": "#FCF0D4",
+        "tonalRamp": [
+          "#2A1E09",
+          "#5A3C04",
+          "#875A03",
+          "#B47A06",
+          "#DC9810",
+          "#F0B232",
+          "#F9DF9F",
+          "#FCF0D4"
+        ]
+      },
+      "light-success": {
+        "role": "status",
+        "displayName": "Light Success",
+        "canonical": "#17633D",
+        "tonalRamp": [
+          "#10301F",
+          "#17633D",
+          "#1F7F4E",
+          "#2F9E64",
+          "#5FB784",
+          "#7FD0A4",
+          "#AEE2C5",
+          "#DDF3E6"
+        ]
+      },
+      "light-success-bg": {
+        "role": "status",
+        "displayName": "Light Success Fill",
+        "canonical": "#DDF3E6",
+        "tonalRamp": [
+          "#10301F",
+          "#17633D",
+          "#1F7F4E",
+          "#2F9E64",
+          "#5FB784",
+          "#7FD0A4",
+          "#AEE2C5",
+          "#DDF3E6"
+        ]
+      },
+      "light-success-solid": {
+        "role": "status",
+        "displayName": "Light Success Solid",
+        "canonical": "#1F7F4E",
+        "tonalRamp": [
+          "#10301F",
+          "#17633D",
+          "#1F7F4E",
+          "#2F9E64",
+          "#5FB784",
+          "#7FD0A4",
+          "#AEE2C5",
+          "#DDF3E6"
+        ]
+      },
+      "light-warning": {
+        "role": "status",
+        "displayName": "Light Warning",
+        "canonical": "#984508",
+        "tonalRamp": [
+          "#3D1F08",
+          "#984508",
+          "#C25A0C",
+          "#EA7317",
+          "#F1925A",
+          "#F8B27A",
+          "#FBCFAB",
+          "#FEEBDC"
+        ]
+      },
+      "light-warning-bg": {
+        "role": "status",
+        "displayName": "Light Warning Fill",
+        "canonical": "#FEEBDC",
+        "tonalRamp": [
+          "#3D1F08",
+          "#984508",
+          "#C25A0C",
+          "#EA7317",
+          "#F1925A",
+          "#F8B27A",
+          "#FBCFAB",
+          "#FEEBDC"
+        ]
+      },
+      "light-warning-solid": {
+        "role": "status",
+        "displayName": "Light Warning Solid",
+        "canonical": "#C25A0C",
+        "tonalRamp": [
+          "#3D1F08",
+          "#984508",
+          "#C25A0C",
+          "#EA7317",
+          "#F1925A",
+          "#F8B27A",
+          "#FBCFAB",
+          "#FEEBDC"
+        ]
+      },
+      "light-danger": {
+        "role": "status",
+        "displayName": "Light Danger",
+        "canonical": "#9A2A21",
+        "tonalRamp": [
+          "#40150F",
+          "#9A2A21",
+          "#C0352A",
+          "#E0483A",
+          "#EB7165",
+          "#F59A90",
+          "#F9C0B9",
+          "#FDE5E2"
+        ]
+      },
+      "light-danger-bg": {
+        "role": "status",
+        "displayName": "Light Danger Fill",
+        "canonical": "#FDE5E2",
+        "tonalRamp": [
+          "#40150F",
+          "#9A2A21",
+          "#C0352A",
+          "#E0483A",
+          "#EB7165",
+          "#F59A90",
+          "#F9C0B9",
+          "#FDE5E2"
+        ]
+      },
+      "light-danger-solid": {
+        "role": "status",
+        "displayName": "Light Danger Solid",
+        "canonical": "#C0352A",
+        "tonalRamp": [
+          "#40150F",
+          "#9A2A21",
+          "#C0352A",
+          "#E0483A",
+          "#EB7165",
+          "#F59A90",
+          "#F9C0B9",
+          "#FDE5E2"
+        ]
+      },
+      "light-info": {
+        "role": "status",
+        "displayName": "Light Info",
+        "canonical": "#1D4F9F",
+        "tonalRamp": [
+          "#132748",
+          "#1D4F9F",
+          "#2563C7",
+          "#3B7BE0",
+          "#679AEA",
+          "#93B9F3",
+          "#BBD3F8",
+          "#E2EDFD"
+        ]
+      },
+      "light-info-bg": {
+        "role": "status",
+        "displayName": "Light Info Fill",
+        "canonical": "#E2EDFD",
+        "tonalRamp": [
+          "#132748",
+          "#1D4F9F",
+          "#2563C7",
+          "#3B7BE0",
+          "#679AEA",
+          "#93B9F3",
+          "#BBD3F8",
+          "#E2EDFD"
+        ]
+      },
+      "light-chart-1": {
+        "role": "primary",
+        "displayName": "Light Chart Series 1",
+        "canonical": "#B47A06",
+        "tonalRamp": [
+          "#2A1E09",
+          "#5A3C04",
+          "#875A03",
+          "#B47A06",
+          "#DC9810",
+          "#F0B232",
+          "#F9DF9F",
+          "#FCF0D4"
+        ]
+      },
+      "light-chart-2": {
+        "role": "neutral",
+        "displayName": "Light Chart Series 2",
+        "canonical": "#47443E",
+        "tonalRamp": [
+          "#121110",
+          "#1F1E1B",
+          "#302E2A",
+          "#47443E",
+          "#625E55",
+          "#A8A398",
+          "#DEDBD3",
+          "#F5F4F0"
+        ]
+      },
+      "light-chart-grid": {
+        "role": "neutral",
+        "displayName": "Light Chart Grid",
+        "canonical": "#EBE9E3",
+        "tonalRamp": [
+          "#121110",
+          "#1F1E1B",
+          "#302E2A",
+          "#47443E",
+          "#625E55",
+          "#A8A398",
+          "#DEDBD3",
+          "#F5F4F0"
+        ]
+      },
+      "light-scrim": {
+        "role": "neutral",
+        "displayName": "Light Scrim",
+        "canonical": "rgba(18, 17, 16, 0.48)",
+        "tonalRamp": [
+          "#121110",
+          "#1F1E1B",
+          "#302E2A",
+          "#47443E",
+          "#625E55",
+          "#A8A398",
+          "#DEDBD3",
+          "#F5F4F0"
+        ]
+      },
+      "dark-canvas": {
+        "role": "neutral",
+        "displayName": "Dark Stone Canvas",
+        "canonical": "#121110",
+        "tonalRamp": [
+          "#121110",
+          "#1F1E1B",
+          "#302E2A",
+          "#47443E",
+          "#625E55",
+          "#A8A398",
+          "#DEDBD3",
+          "#F5F4F0"
+        ]
+      },
+      "dark-surface": {
+        "role": "neutral",
+        "displayName": "Dark Surface",
+        "canonical": "#191816",
+        "tonalRamp": [
+          "#121110",
+          "#1F1E1B",
+          "#302E2A",
+          "#47443E",
+          "#625E55",
+          "#A8A398",
+          "#DEDBD3",
+          "#F5F4F0"
+        ]
+      },
+      "dark-raised": {
+        "role": "neutral",
+        "displayName": "Dark Raised",
+        "canonical": "#1F1E1B",
+        "tonalRamp": [
+          "#121110",
+          "#1F1E1B",
+          "#302E2A",
+          "#47443E",
+          "#625E55",
+          "#A8A398",
+          "#DEDBD3",
+          "#F5F4F0"
+        ]
+      },
+      "dark-sunken": {
+        "role": "neutral",
+        "displayName": "Dark Sunken Well",
+        "canonical": "#0B0B0A",
+        "tonalRamp": [
+          "#121110",
+          "#1F1E1B",
+          "#302E2A",
+          "#47443E",
+          "#625E55",
+          "#A8A398",
+          "#DEDBD3",
+          "#F5F4F0"
+        ]
+      },
+      "dark-hover": {
+        "role": "neutral",
+        "displayName": "Dark Hover",
+        "canonical": "#272522",
+        "tonalRamp": [
+          "#121110",
+          "#1F1E1B",
+          "#302E2A",
+          "#47443E",
+          "#625E55",
+          "#A8A398",
+          "#DEDBD3",
+          "#F5F4F0"
+        ]
+      },
+      "dark-pressed": {
+        "role": "neutral",
+        "displayName": "Dark Pressed",
+        "canonical": "#302E2A",
+        "tonalRamp": [
+          "#121110",
+          "#1F1E1B",
+          "#302E2A",
+          "#47443E",
+          "#625E55",
+          "#A8A398",
+          "#DEDBD3",
+          "#F5F4F0"
+        ]
+      },
+      "dark-selected": {
+        "role": "primary",
+        "displayName": "Dark Selected Saffron",
+        "canonical": "#2A1E09",
+        "tonalRamp": [
+          "#2A1E09",
+          "#5A3C04",
+          "#875A03",
+          "#B47A06",
+          "#DC9810",
+          "#F0B232",
+          "#F9DF9F",
+          "#FCF0D4"
+        ]
+      },
+      "dark-inverse": {
+        "role": "neutral",
+        "displayName": "Dark Inverse",
+        "canonical": "#F5F4F0",
+        "tonalRamp": [
+          "#121110",
+          "#1F1E1B",
+          "#302E2A",
+          "#47443E",
+          "#625E55",
+          "#A8A398",
+          "#DEDBD3",
+          "#F5F4F0"
+        ]
+      },
+      "dark-ink": {
+        "role": "neutral",
+        "displayName": "Dark Ink",
+        "canonical": "#F5F4F0",
+        "tonalRamp": [
+          "#121110",
+          "#1F1E1B",
+          "#302E2A",
+          "#47443E",
+          "#625E55",
+          "#A8A398",
+          "#DEDBD3",
+          "#F5F4F0"
+        ]
+      },
+      "dark-muted": {
+        "role": "neutral",
+        "displayName": "Dark Muted",
+        "canonical": "#A8A398",
+        "tonalRamp": [
+          "#121110",
+          "#1F1E1B",
+          "#302E2A",
+          "#47443E",
+          "#625E55",
+          "#A8A398",
+          "#DEDBD3",
+          "#F5F4F0"
+        ]
+      },
+      "dark-subtle": {
+        "role": "neutral",
+        "displayName": "Dark Subtle",
+        "canonical": "#827D72",
+        "tonalRamp": [
+          "#121110",
+          "#1F1E1B",
+          "#302E2A",
+          "#47443E",
+          "#625E55",
+          "#A8A398",
+          "#DEDBD3",
+          "#F5F4F0"
+        ]
+      },
+      "dark-on-inverse": {
+        "role": "neutral",
+        "displayName": "Dark On Inverse",
+        "canonical": "#191816",
+        "tonalRamp": [
+          "#121110",
+          "#1F1E1B",
+          "#302E2A",
+          "#47443E",
+          "#625E55",
+          "#A8A398",
+          "#DEDBD3",
+          "#F5F4F0"
+        ]
+      },
+      "dark-accent-text": {
+        "role": "primary",
+        "displayName": "Dark Saffron Ink",
+        "canonical": "#F5C859",
+        "tonalRamp": [
+          "#2A1E09",
+          "#5A3C04",
+          "#875A03",
+          "#B47A06",
+          "#DC9810",
+          "#F0B232",
+          "#F9DF9F",
+          "#FCF0D4"
+        ]
+      },
+      "dark-on-accent": {
+        "role": "neutral",
+        "displayName": "Dark On Accent",
+        "canonical": "#121110",
+        "tonalRamp": [
+          "#121110",
+          "#1F1E1B",
+          "#302E2A",
+          "#47443E",
+          "#625E55",
+          "#A8A398",
+          "#DEDBD3",
+          "#F5F4F0"
+        ]
+      },
+      "dark-on-danger": {
+        "role": "neutral",
+        "displayName": "Dark On Danger",
+        "canonical": "#FFFFFF",
+        "tonalRamp": [
+          "#121110",
+          "#1F1E1B",
+          "#302E2A",
+          "#47443E",
+          "#625E55",
+          "#A8A398",
+          "#DEDBD3",
+          "#F5F4F0"
+        ]
+      },
+      "dark-border-subtle": {
+        "role": "neutral",
+        "displayName": "Dark Hairline",
+        "canonical": "#272522",
+        "tonalRamp": [
+          "#121110",
+          "#1F1E1B",
+          "#302E2A",
+          "#47443E",
+          "#625E55",
+          "#A8A398",
+          "#DEDBD3",
+          "#F5F4F0"
+        ]
+      },
+      "dark-border": {
+        "role": "neutral",
+        "displayName": "Dark Border",
+        "canonical": "#302E2A",
+        "tonalRamp": [
+          "#121110",
+          "#1F1E1B",
+          "#302E2A",
+          "#47443E",
+          "#625E55",
+          "#A8A398",
+          "#DEDBD3",
+          "#F5F4F0"
+        ]
+      },
+      "dark-border-control": {
+        "role": "neutral",
+        "displayName": "Dark Control Border",
+        "canonical": "#827D72",
+        "tonalRamp": [
+          "#121110",
+          "#1F1E1B",
+          "#302E2A",
+          "#47443E",
+          "#625E55",
+          "#A8A398",
+          "#DEDBD3",
+          "#F5F4F0"
+        ]
+      },
+      "dark-border-selected": {
+        "role": "neutral",
+        "displayName": "Dark Selected Border",
+        "canonical": "#F5F4F0",
+        "tonalRamp": [
+          "#121110",
+          "#1F1E1B",
+          "#302E2A",
+          "#47443E",
+          "#625E55",
+          "#A8A398",
+          "#DEDBD3",
+          "#F5F4F0"
+        ]
+      },
+      "dark-focus-ring": {
+        "role": "tertiary",
+        "displayName": "Dark Focus Blue",
+        "canonical": "#93B9F3",
+        "tonalRamp": [
+          "#132748",
+          "#1D4F9F",
+          "#2563C7",
+          "#3B7BE0",
+          "#679AEA",
+          "#93B9F3",
+          "#BBD3F8",
+          "#E2EDFD"
+        ]
+      },
+      "dark-accent": {
+        "role": "primary",
+        "displayName": "Dark Saffron",
+        "canonical": "#F0B232",
+        "tonalRamp": [
+          "#2A1E09",
+          "#5A3C04",
+          "#875A03",
+          "#B47A06",
+          "#DC9810",
+          "#F0B232",
+          "#F9DF9F",
+          "#FCF0D4"
+        ]
+      },
+      "dark-accent-hover": {
+        "role": "primary",
+        "displayName": "Dark Saffron Hover",
+        "canonical": "#F5C859",
+        "tonalRamp": [
+          "#2A1E09",
+          "#5A3C04",
+          "#875A03",
+          "#B47A06",
+          "#DC9810",
+          "#F0B232",
+          "#F9DF9F",
+          "#FCF0D4"
+        ]
+      },
+      "dark-accent-pressed": {
+        "role": "primary",
+        "displayName": "Dark Saffron Pressed",
+        "canonical": "#DC9810",
+        "tonalRamp": [
+          "#2A1E09",
+          "#5A3C04",
+          "#875A03",
+          "#B47A06",
+          "#DC9810",
+          "#F0B232",
+          "#F9DF9F",
+          "#FCF0D4"
+        ]
+      },
+      "dark-accent-soft": {
+        "role": "primary",
+        "displayName": "Dark Saffron Wash",
+        "canonical": "#2A1E09",
+        "tonalRamp": [
+          "#2A1E09",
+          "#5A3C04",
+          "#875A03",
+          "#B47A06",
+          "#DC9810",
+          "#F0B232",
+          "#F9DF9F",
+          "#FCF0D4"
+        ]
+      },
+      "dark-success": {
+        "role": "status",
+        "displayName": "Dark Success",
+        "canonical": "#7FD0A4",
+        "tonalRamp": [
+          "#10301F",
+          "#17633D",
+          "#1F7F4E",
+          "#2F9E64",
+          "#5FB784",
+          "#7FD0A4",
+          "#AEE2C5",
+          "#DDF3E6"
+        ]
+      },
+      "dark-success-bg": {
+        "role": "status",
+        "displayName": "Dark Success Fill",
+        "canonical": "#10301F",
+        "tonalRamp": [
+          "#10301F",
+          "#17633D",
+          "#1F7F4E",
+          "#2F9E64",
+          "#5FB784",
+          "#7FD0A4",
+          "#AEE2C5",
+          "#DDF3E6"
+        ]
+      },
+      "dark-success-solid": {
+        "role": "status",
+        "displayName": "Dark Success Solid",
+        "canonical": "#2F9E64",
+        "tonalRamp": [
+          "#10301F",
+          "#17633D",
+          "#1F7F4E",
+          "#2F9E64",
+          "#5FB784",
+          "#7FD0A4",
+          "#AEE2C5",
+          "#DDF3E6"
+        ]
+      },
+      "dark-warning": {
+        "role": "status",
+        "displayName": "Dark Warning",
+        "canonical": "#F8B27A",
+        "tonalRamp": [
+          "#3D1F08",
+          "#984508",
+          "#C25A0C",
+          "#EA7317",
+          "#F1925A",
+          "#F8B27A",
+          "#FBCFAB",
+          "#FEEBDC"
+        ]
+      },
+      "dark-warning-bg": {
+        "role": "status",
+        "displayName": "Dark Warning Fill",
+        "canonical": "#3D1F08",
+        "tonalRamp": [
+          "#3D1F08",
+          "#984508",
+          "#C25A0C",
+          "#EA7317",
+          "#F1925A",
+          "#F8B27A",
+          "#FBCFAB",
+          "#FEEBDC"
+        ]
+      },
+      "dark-warning-solid": {
+        "role": "status",
+        "displayName": "Dark Warning Solid",
+        "canonical": "#EA7317",
+        "tonalRamp": [
+          "#3D1F08",
+          "#984508",
+          "#C25A0C",
+          "#EA7317",
+          "#F1925A",
+          "#F8B27A",
+          "#FBCFAB",
+          "#FEEBDC"
+        ]
+      },
+      "dark-danger": {
+        "role": "status",
+        "displayName": "Dark Danger",
+        "canonical": "#F59A90",
+        "tonalRamp": [
+          "#40150F",
+          "#9A2A21",
+          "#C0352A",
+          "#E0483A",
+          "#EB7165",
+          "#F59A90",
+          "#F9C0B9",
+          "#FDE5E2"
+        ]
+      },
+      "dark-danger-bg": {
+        "role": "status",
+        "displayName": "Dark Danger Fill",
+        "canonical": "#40150F",
+        "tonalRamp": [
+          "#40150F",
+          "#9A2A21",
+          "#C0352A",
+          "#E0483A",
+          "#EB7165",
+          "#F59A90",
+          "#F9C0B9",
+          "#FDE5E2"
+        ]
+      },
+      "dark-danger-solid": {
+        "role": "status",
+        "displayName": "Dark Danger Solid",
+        "canonical": "#C0352A",
+        "tonalRamp": [
+          "#40150F",
+          "#9A2A21",
+          "#C0352A",
+          "#E0483A",
+          "#EB7165",
+          "#F59A90",
+          "#F9C0B9",
+          "#FDE5E2"
+        ]
+      },
+      "dark-info": {
+        "role": "status",
+        "displayName": "Dark Info",
+        "canonical": "#93B9F3",
+        "tonalRamp": [
+          "#132748",
+          "#1D4F9F",
+          "#2563C7",
+          "#3B7BE0",
+          "#679AEA",
+          "#93B9F3",
+          "#BBD3F8",
+          "#E2EDFD"
+        ]
+      },
+      "dark-info-bg": {
+        "role": "status",
+        "displayName": "Dark Info Fill",
+        "canonical": "#132748",
+        "tonalRamp": [
+          "#132748",
+          "#1D4F9F",
+          "#2563C7",
+          "#3B7BE0",
+          "#679AEA",
+          "#93B9F3",
+          "#BBD3F8",
+          "#E2EDFD"
+        ]
+      },
+      "dark-chart-1": {
+        "role": "primary",
+        "displayName": "Dark Chart Series 1",
+        "canonical": "#F0B232",
+        "tonalRamp": [
+          "#2A1E09",
+          "#5A3C04",
+          "#875A03",
+          "#B47A06",
+          "#DC9810",
+          "#F0B232",
+          "#F9DF9F",
+          "#FCF0D4"
+        ]
+      },
+      "dark-chart-2": {
+        "role": "neutral",
+        "displayName": "Dark Chart Series 2",
+        "canonical": "#C9C5BB",
+        "tonalRamp": [
+          "#121110",
+          "#1F1E1B",
+          "#302E2A",
+          "#47443E",
+          "#625E55",
+          "#A8A398",
+          "#DEDBD3",
+          "#F5F4F0"
+        ]
+      },
+      "dark-chart-grid": {
+        "role": "neutral",
+        "displayName": "Dark Chart Grid",
+        "canonical": "#272522",
+        "tonalRamp": [
+          "#121110",
+          "#1F1E1B",
+          "#302E2A",
+          "#47443E",
+          "#625E55",
+          "#A8A398",
+          "#DEDBD3",
+          "#F5F4F0"
+        ]
+      },
+      "dark-scrim": {
+        "role": "neutral",
+        "displayName": "Dark Scrim",
+        "canonical": "rgba(0, 0, 0, 0.64)",
+        "tonalRamp": [
+          "#121110",
+          "#1F1E1B",
+          "#302E2A",
+          "#47443E",
+          "#625E55",
+          "#A8A398",
+          "#DEDBD3",
+          "#F5F4F0"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "One dashboard headline per screen at most."
+      },
+      "title-lg": {
+        "displayName": "Title Large",
+        "purpose": "Page titles."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Panel, dialog and section titles; bill name; extra-large button labels."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Default text, product names, table cells (Compact)."
+      },
+      "body-touch": {
+        "displayName": "Body (Touch)",
+        "purpose": "Body size in Touch density."
+      },
+      "body-strong": {
+        "displayName": "Body Strong",
+        "purpose": "Button labels and emphasised values."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Field labels, tabs, segmented controls, chips (Compact). Renders Regular; SemiBold in tabs, segments, chips."
+      },
+      "label-touch": {
+        "displayName": "Label (Touch)",
+        "purpose": "Label size in Touch density."
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "Metadata, helper text, SKU lines, side-nav group labels. Floor: 12 px."
+      },
+      "money-xl": {
+        "displayName": "Money XL",
+        "purpose": "Amount due. One per view."
+      },
+      "money-lg": {
+        "displayName": "Money Large",
+        "purpose": "Change, cash received, KPI tiles, extra-large pay button amount."
+      },
+      "money": {
+        "displayName": "Money",
+        "purpose": "Line amounts, table cells, tile prices; right-aligned (Compact)."
+      },
+      "money-touch": {
+        "displayName": "Money (Touch)",
+        "purpose": "Money size in Touch density."
+      },
+      "money-sm": {
+        "displayName": "Money Small",
+        "purpose": "Unit prices, secondary amounts, shortcut key hints."
+      }
+    },
+    "shadows": [
+      {
+        "name": "shadow-1",
+        "value": "0 1px 6px rgba(0,0,0,0.055)",
+        "darkValue": "0 1px 6px rgba(0,0,0,0.47)",
+        "purpose": "Surfaces on the canvas: cart, tables, cards. Dark adds a 1px border-subtle edge."
+      },
+      {
+        "name": "shadow-2",
+        "value": "0 4px 16px rgba(0,0,0,0.12)",
+        "darkValue": "0 4px 16px rgba(0,0,0,0.59)",
+        "purpose": "Menus, popovers, toasts."
+      },
+      {
+        "name": "shadow-3",
+        "value": "0 16px 48px rgba(0,0,0,0.20)",
+        "darkValue": "0 16px 48px rgba(0,0,0,0.71)",
+        "purpose": "Dialogs and sheets, over the scrim."
+      },
+      {
+        "name": "focus-ring",
+        "value": "0 0 0 2px focus-ring at 3px offset",
+        "purpose": "Keyboard focus only; never on the always-focused sell search."
+      }
+    ],
+    "motion": [
+      {
+        "name": "instant",
+        "value": "0ms",
+        "purpose": "Selection, focus, typing feedback."
+      },
+      {
+        "name": "fast",
+        "value": "120ms",
+        "purpose": "Hover/press and small state changes; the egui animation time."
+      },
+      {
+        "name": "base",
+        "value": "200ms",
+        "purpose": "Defined token; not yet wired to an animated surface."
+      },
+      {
+        "name": "slow",
+        "value": "280ms",
+        "purpose": "Defined token; not yet wired to an animated surface."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "narrow",
+        "value": "<1100px",
+        "purpose": "Cart 360px; management side nav 176px."
+      },
+      {
+        "name": "standard",
+        "value": ">=1100px",
+        "purpose": "Cart 392px Compact / 420px Touch; side nav 208px."
+      },
+      {
+        "name": "wide",
+        "value": ">=1180px",
+        "purpose": "Product inspector docks at 340px instead of opening as a sheet."
+      }
+    ],
+    "density": {
+      "compact": {
+        "controls": [
+          28,
+          36,
+          44,
+          52
+        ],
+        "row": 40,
+        "icon": 20,
+        "topbar": 52,
+        "tileMin": [
+          136,
+          84
+        ],
+        "shortcutHints": true
+      },
+      "touch": {
+        "controls": [
+          40,
+          48,
+          56,
+          64
+        ],
+        "row": 56,
+        "icon": 24,
+        "topbar": 64,
+        "tileMin": [
+          176,
+          104
+        ],
+        "shortcutHints": false,
+        "touchTargetMin": 44
+      }
+    },
+    "sourceOfTruth": "design/ (POS Design System v0.1); runtime: apps/pos-desktop/src/ui/tokens.rs"
+  },
+  "components": [
+    {
+      "name": "Pay button (primary)",
+      "kind": "button",
+      "refersTo": "light-button-primary",
+      "description": "The one saffron commit per view; carries the full amount in Plex Mono and the F9 hint in Compact.",
+      "html": "<div class=\"ds-wrap\"><section class=\"ds-light\"><button class=\"ds-btn ds-primary\">รับเงินสด <span class=\"ds-m\">฿3,331.00</span><span class=\"ds-kbd\">F9</span></button></section><section class=\"ds-dark\"><button class=\"ds-btn ds-primary\">รับเงินสด <span class=\"ds-m\">฿3,331.00</span><span class=\"ds-kbd\">F9</span></button></section></div>",
+      "css": ".ds-wrap{display:flex;flex-wrap:wrap;gap:12px;font-family:'IBM Plex Sans','IBM Plex Sans Thai','Noto Sans Thai',sans-serif}.ds-light{--canvas:#F5F4F0;--surface:#FFFFFF;--raised:#FFFFFF;--sunken:#EBE9E3;--hover:#EBE9E3;--pressed:#DEDBD3;--selected:#FCF0D4;--inverse:#1F1E1B;--ink:#1F1E1B;--muted:#625E55;--subtle:#827D72;--on-inverse:#FFFFFF;--accent-text:#875A03;--on-accent:#121110;--on-danger:#FFFFFF;--border-subtle:#EBE9E3;--border:#DEDBD3;--border-control:#827D72;--border-selected:#1F1E1B;--focus-ring:#2563C7;--accent:#F0B232;--accent-hover:#DC9810;--accent-pressed:#B47A06;--accent-soft:#FCF0D4;--danger:#9A2A21;--danger-bg:#FDE5E2;--danger-solid:#C0352A;--success:#17633D;--success-bg:#DDF3E6}.ds-dark{--canvas:#121110;--surface:#191816;--raised:#1F1E1B;--sunken:#0B0B0A;--hover:#272522;--pressed:#302E2A;--selected:#2A1E09;--inverse:#F5F4F0;--ink:#F5F4F0;--muted:#A8A398;--subtle:#827D72;--on-inverse:#191816;--accent-text:#F5C859;--on-accent:#121110;--on-danger:#FFFFFF;--border-subtle:#272522;--border:#302E2A;--border-control:#827D72;--border-selected:#F5F4F0;--focus-ring:#93B9F3;--accent:#F0B232;--accent-hover:#F5C859;--accent-pressed:#DC9810;--accent-soft:#2A1E09;--danger:#F59A90;--danger-bg:#40150F;--danger-solid:#C0352A;--success:#7FD0A4;--success-bg:#10301F;box-shadow:inset 0 0 0 1px var(--border-subtle)}.ds-light,.ds-dark{background:var(--canvas);color:var(--ink);padding:16px;border-radius:12px;min-width:240px;display:flex;flex-direction:column;gap:10px;align-items:flex-start}.ds-m{font-family:'IBM Plex Mono',monospace}.ds-kbd{font-family:'IBM Plex Mono',monospace;font-size:12px;border:1px solid currentColor;border-radius:4px;padding:1px 4px;opacity:.75;margin-left:8px}.ds-btn{height:36px;padding:0 16px;border-radius:6px;font:600 14px 'IBM Plex Sans','IBM Plex Sans Thai',sans-serif;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:background .12s}.ds-btn:focus-visible{outline:2px solid var(--focus-ring);outline-offset:3px}.ds-primary{background:var(--accent);color:var(--on-accent);border:0}.ds-primary:hover{background:var(--accent-hover)}.ds-primary:active{background:var(--accent-pressed)}"
+    },
+    {
+      "name": "Secondary button",
+      "kind": "button",
+      "refersTo": "light-button-secondary",
+      "description": "Default button: surface fill, 1px control border.",
+      "html": "<div class=\"ds-wrap\"><section class=\"ds-light\"><button class=\"ds-btn ds-secondary\">Export</button></section><section class=\"ds-dark\"><button class=\"ds-btn ds-secondary\">Export</button></section></div>",
+      "css": ".ds-wrap{display:flex;flex-wrap:wrap;gap:12px;font-family:'IBM Plex Sans','IBM Plex Sans Thai','Noto Sans Thai',sans-serif}.ds-light{--canvas:#F5F4F0;--surface:#FFFFFF;--raised:#FFFFFF;--sunken:#EBE9E3;--hover:#EBE9E3;--pressed:#DEDBD3;--selected:#FCF0D4;--inverse:#1F1E1B;--ink:#1F1E1B;--muted:#625E55;--subtle:#827D72;--on-inverse:#FFFFFF;--accent-text:#875A03;--on-accent:#121110;--on-danger:#FFFFFF;--border-subtle:#EBE9E3;--border:#DEDBD3;--border-control:#827D72;--border-selected:#1F1E1B;--focus-ring:#2563C7;--accent:#F0B232;--accent-hover:#DC9810;--accent-pressed:#B47A06;--accent-soft:#FCF0D4;--danger:#9A2A21;--danger-bg:#FDE5E2;--danger-solid:#C0352A;--success:#17633D;--success-bg:#DDF3E6}.ds-dark{--canvas:#121110;--surface:#191816;--raised:#1F1E1B;--sunken:#0B0B0A;--hover:#272522;--pressed:#302E2A;--selected:#2A1E09;--inverse:#F5F4F0;--ink:#F5F4F0;--muted:#A8A398;--subtle:#827D72;--on-inverse:#191816;--accent-text:#F5C859;--on-accent:#121110;--on-danger:#FFFFFF;--border-subtle:#272522;--border:#302E2A;--border-control:#827D72;--border-selected:#F5F4F0;--focus-ring:#93B9F3;--accent:#F0B232;--accent-hover:#F5C859;--accent-pressed:#DC9810;--accent-soft:#2A1E09;--danger:#F59A90;--danger-bg:#40150F;--danger-solid:#C0352A;--success:#7FD0A4;--success-bg:#10301F;box-shadow:inset 0 0 0 1px var(--border-subtle)}.ds-light,.ds-dark{background:var(--canvas);color:var(--ink);padding:16px;border-radius:12px;min-width:240px;display:flex;flex-direction:column;gap:10px;align-items:flex-start}.ds-m{font-family:'IBM Plex Mono',monospace}.ds-kbd{font-family:'IBM Plex Mono',monospace;font-size:12px;border:1px solid currentColor;border-radius:4px;padding:1px 4px;opacity:.75;margin-left:8px}.ds-btn{height:36px;padding:0 16px;border-radius:6px;font:600 14px 'IBM Plex Sans','IBM Plex Sans Thai',sans-serif;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:background .12s}.ds-btn:focus-visible{outline:2px solid var(--focus-ring);outline-offset:3px}.ds-secondary{background:var(--surface);color:var(--ink);border:1px solid var(--border-control)}.ds-secondary:hover{background:var(--hover)}.ds-secondary:active{background:var(--pressed)}"
+    },
+    {
+      "name": "Danger button",
+      "kind": "button",
+      "refersTo": "light-button-danger",
+      "description": "Irreversible actions confirmed in a dialog.",
+      "html": "<div class=\"ds-wrap\"><section class=\"ds-light\"><button class=\"ds-btn ds-danger\">ยกเลิกบิล</button></section><section class=\"ds-dark\"><button class=\"ds-btn ds-danger\">ยกเลิกบิล</button></section></div>",
+      "css": ".ds-wrap{display:flex;flex-wrap:wrap;gap:12px;font-family:'IBM Plex Sans','IBM Plex Sans Thai','Noto Sans Thai',sans-serif}.ds-light{--canvas:#F5F4F0;--surface:#FFFFFF;--raised:#FFFFFF;--sunken:#EBE9E3;--hover:#EBE9E3;--pressed:#DEDBD3;--selected:#FCF0D4;--inverse:#1F1E1B;--ink:#1F1E1B;--muted:#625E55;--subtle:#827D72;--on-inverse:#FFFFFF;--accent-text:#875A03;--on-accent:#121110;--on-danger:#FFFFFF;--border-subtle:#EBE9E3;--border:#DEDBD3;--border-control:#827D72;--border-selected:#1F1E1B;--focus-ring:#2563C7;--accent:#F0B232;--accent-hover:#DC9810;--accent-pressed:#B47A06;--accent-soft:#FCF0D4;--danger:#9A2A21;--danger-bg:#FDE5E2;--danger-solid:#C0352A;--success:#17633D;--success-bg:#DDF3E6}.ds-dark{--canvas:#121110;--surface:#191816;--raised:#1F1E1B;--sunken:#0B0B0A;--hover:#272522;--pressed:#302E2A;--selected:#2A1E09;--inverse:#F5F4F0;--ink:#F5F4F0;--muted:#A8A398;--subtle:#827D72;--on-inverse:#191816;--accent-text:#F5C859;--on-accent:#121110;--on-danger:#FFFFFF;--border-subtle:#272522;--border:#302E2A;--border-control:#827D72;--border-selected:#F5F4F0;--focus-ring:#93B9F3;--accent:#F0B232;--accent-hover:#F5C859;--accent-pressed:#DC9810;--accent-soft:#2A1E09;--danger:#F59A90;--danger-bg:#40150F;--danger-solid:#C0352A;--success:#7FD0A4;--success-bg:#10301F;box-shadow:inset 0 0 0 1px var(--border-subtle)}.ds-light,.ds-dark{background:var(--canvas);color:var(--ink);padding:16px;border-radius:12px;min-width:240px;display:flex;flex-direction:column;gap:10px;align-items:flex-start}.ds-m{font-family:'IBM Plex Mono',monospace}.ds-kbd{font-family:'IBM Plex Mono',monospace;font-size:12px;border:1px solid currentColor;border-radius:4px;padding:1px 4px;opacity:.75;margin-left:8px}.ds-btn{height:36px;padding:0 16px;border-radius:6px;font:600 14px 'IBM Plex Sans','IBM Plex Sans Thai',sans-serif;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:background .12s}.ds-btn:focus-visible{outline:2px solid var(--focus-ring);outline-offset:3px}.ds-danger{background:var(--danger-solid);color:var(--on-danger);border:0}.ds-danger:hover{filter:brightness(.92)}.ds-danger:active{background:var(--danger)}"
+    },
+    {
+      "name": "Sell search",
+      "kind": "input",
+      "refersTo": "light-input-search",
+      "description": "Search with icon and F2 hint; keeps focus for scanners so focus is a firm border, not the blue ring.",
+      "html": "<div class=\"ds-wrap\"><section class=\"ds-light\"><label class=\"ds-search\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"11\" cy=\"11\" r=\"7\"/><path d=\"M20 20l-4-4\"/></svg><input placeholder=\"ค้นหาชื่อ รหัส หรือสแกนบาร์โค้ด\"><span class=\"ds-kbd\">F2</span></label></section><section class=\"ds-dark\"><label class=\"ds-search\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"11\" cy=\"11\" r=\"7\"/><path d=\"M20 20l-4-4\"/></svg><input placeholder=\"ค้นหาชื่อ รหัส หรือสแกนบาร์โค้ด\"><span class=\"ds-kbd\">F2</span></label></section></div>",
+      "css": ".ds-wrap{display:flex;flex-wrap:wrap;gap:12px;font-family:'IBM Plex Sans','IBM Plex Sans Thai','Noto Sans Thai',sans-serif}.ds-light{--canvas:#F5F4F0;--surface:#FFFFFF;--raised:#FFFFFF;--sunken:#EBE9E3;--hover:#EBE9E3;--pressed:#DEDBD3;--selected:#FCF0D4;--inverse:#1F1E1B;--ink:#1F1E1B;--muted:#625E55;--subtle:#827D72;--on-inverse:#FFFFFF;--accent-text:#875A03;--on-accent:#121110;--on-danger:#FFFFFF;--border-subtle:#EBE9E3;--border:#DEDBD3;--border-control:#827D72;--border-selected:#1F1E1B;--focus-ring:#2563C7;--accent:#F0B232;--accent-hover:#DC9810;--accent-pressed:#B47A06;--accent-soft:#FCF0D4;--danger:#9A2A21;--danger-bg:#FDE5E2;--danger-solid:#C0352A;--success:#17633D;--success-bg:#DDF3E6}.ds-dark{--canvas:#121110;--surface:#191816;--raised:#1F1E1B;--sunken:#0B0B0A;--hover:#272522;--pressed:#302E2A;--selected:#2A1E09;--inverse:#F5F4F0;--ink:#F5F4F0;--muted:#A8A398;--subtle:#827D72;--on-inverse:#191816;--accent-text:#F5C859;--on-accent:#121110;--on-danger:#FFFFFF;--border-subtle:#272522;--border:#302E2A;--border-control:#827D72;--border-selected:#F5F4F0;--focus-ring:#93B9F3;--accent:#F0B232;--accent-hover:#F5C859;--accent-pressed:#DC9810;--accent-soft:#2A1E09;--danger:#F59A90;--danger-bg:#40150F;--danger-solid:#C0352A;--success:#7FD0A4;--success-bg:#10301F;box-shadow:inset 0 0 0 1px var(--border-subtle)}.ds-light,.ds-dark{background:var(--canvas);color:var(--ink);padding:16px;border-radius:12px;min-width:240px;display:flex;flex-direction:column;gap:10px;align-items:flex-start}.ds-m{font-family:'IBM Plex Mono',monospace}.ds-kbd{font-family:'IBM Plex Mono',monospace;font-size:12px;border:1px solid currentColor;border-radius:4px;padding:1px 4px;opacity:.75;margin-left:8px}.ds-search{display:flex;align-items:center;gap:8px;height:36px;padding:0 10px;width:300px;background:var(--surface);border:1px solid var(--border-control);border-radius:6px;color:var(--muted)}.ds-search:focus-within{box-shadow:inset 0 0 0 1.5px var(--border-selected)}.ds-search input{flex:1;border:0;background:transparent;color:var(--ink);font:400 14px 'IBM Plex Sans','IBM Plex Sans Thai',sans-serif;outline:none}.ds-search input::placeholder{color:var(--subtle)}"
+    },
+    {
+      "name": "Money input",
+      "kind": "input",
+      "refersTo": "light-input-money",
+      "description": "Right-aligned Plex Mono; selects all on focus, formats on blur.",
+      "html": "<div class=\"ds-wrap\"><section class=\"ds-light\"><input class=\"ds-money\" value=\"3,400.00\"></section><section class=\"ds-dark\"><input class=\"ds-money\" value=\"3,400.00\"></section></div>",
+      "css": ".ds-wrap{display:flex;flex-wrap:wrap;gap:12px;font-family:'IBM Plex Sans','IBM Plex Sans Thai','Noto Sans Thai',sans-serif}.ds-light{--canvas:#F5F4F0;--surface:#FFFFFF;--raised:#FFFFFF;--sunken:#EBE9E3;--hover:#EBE9E3;--pressed:#DEDBD3;--selected:#FCF0D4;--inverse:#1F1E1B;--ink:#1F1E1B;--muted:#625E55;--subtle:#827D72;--on-inverse:#FFFFFF;--accent-text:#875A03;--on-accent:#121110;--on-danger:#FFFFFF;--border-subtle:#EBE9E3;--border:#DEDBD3;--border-control:#827D72;--border-selected:#1F1E1B;--focus-ring:#2563C7;--accent:#F0B232;--accent-hover:#DC9810;--accent-pressed:#B47A06;--accent-soft:#FCF0D4;--danger:#9A2A21;--danger-bg:#FDE5E2;--danger-solid:#C0352A;--success:#17633D;--success-bg:#DDF3E6}.ds-dark{--canvas:#121110;--surface:#191816;--raised:#1F1E1B;--sunken:#0B0B0A;--hover:#272522;--pressed:#302E2A;--selected:#2A1E09;--inverse:#F5F4F0;--ink:#F5F4F0;--muted:#A8A398;--subtle:#827D72;--on-inverse:#191816;--accent-text:#F5C859;--on-accent:#121110;--on-danger:#FFFFFF;--border-subtle:#272522;--border:#302E2A;--border-control:#827D72;--border-selected:#F5F4F0;--focus-ring:#93B9F3;--accent:#F0B232;--accent-hover:#F5C859;--accent-pressed:#DC9810;--accent-soft:#2A1E09;--danger:#F59A90;--danger-bg:#40150F;--danger-solid:#C0352A;--success:#7FD0A4;--success-bg:#10301F;box-shadow:inset 0 0 0 1px var(--border-subtle)}.ds-light,.ds-dark{background:var(--canvas);color:var(--ink);padding:16px;border-radius:12px;min-width:240px;display:flex;flex-direction:column;gap:10px;align-items:flex-start}.ds-m{font-family:'IBM Plex Mono',monospace}.ds-kbd{font-family:'IBM Plex Mono',monospace;font-size:12px;border:1px solid currentColor;border-radius:4px;padding:1px 4px;opacity:.75;margin-left:8px}.ds-money{height:44px;width:160px;padding:0 12px;text-align:right;font:600 22px 'IBM Plex Mono',monospace;color:var(--ink);background:var(--surface);border:1px solid var(--border-control);border-radius:6px}.ds-money:focus-visible{outline:2px solid var(--focus-ring);outline-offset:3px}"
+    },
+    {
+      "name": "Quick-cash chips",
+      "kind": "chip",
+      "refersTo": "light-chip",
+      "description": "Full-radius chips; selected fills with inverse.",
+      "html": "<div class=\"ds-wrap\"><section class=\"ds-light\"><div style=\"display:flex;gap:8px\"><button class=\"ds-chip\">พอดี</button><button class=\"ds-chip ds-on ds-m\">3,400</button><button class=\"ds-chip ds-m\">3,500</button></div></section><section class=\"ds-dark\"><div style=\"display:flex;gap:8px\"><button class=\"ds-chip\">พอดี</button><button class=\"ds-chip ds-on ds-m\">3,400</button><button class=\"ds-chip ds-m\">3,500</button></div></section></div>",
+      "css": ".ds-wrap{display:flex;flex-wrap:wrap;gap:12px;font-family:'IBM Plex Sans','IBM Plex Sans Thai','Noto Sans Thai',sans-serif}.ds-light{--canvas:#F5F4F0;--surface:#FFFFFF;--raised:#FFFFFF;--sunken:#EBE9E3;--hover:#EBE9E3;--pressed:#DEDBD3;--selected:#FCF0D4;--inverse:#1F1E1B;--ink:#1F1E1B;--muted:#625E55;--subtle:#827D72;--on-inverse:#FFFFFF;--accent-text:#875A03;--on-accent:#121110;--on-danger:#FFFFFF;--border-subtle:#EBE9E3;--border:#DEDBD3;--border-control:#827D72;--border-selected:#1F1E1B;--focus-ring:#2563C7;--accent:#F0B232;--accent-hover:#DC9810;--accent-pressed:#B47A06;--accent-soft:#FCF0D4;--danger:#9A2A21;--danger-bg:#FDE5E2;--danger-solid:#C0352A;--success:#17633D;--success-bg:#DDF3E6}.ds-dark{--canvas:#121110;--surface:#191816;--raised:#1F1E1B;--sunken:#0B0B0A;--hover:#272522;--pressed:#302E2A;--selected:#2A1E09;--inverse:#F5F4F0;--ink:#F5F4F0;--muted:#A8A398;--subtle:#827D72;--on-inverse:#191816;--accent-text:#F5C859;--on-accent:#121110;--on-danger:#FFFFFF;--border-subtle:#272522;--border:#302E2A;--border-control:#827D72;--border-selected:#F5F4F0;--focus-ring:#93B9F3;--accent:#F0B232;--accent-hover:#F5C859;--accent-pressed:#DC9810;--accent-soft:#2A1E09;--danger:#F59A90;--danger-bg:#40150F;--danger-solid:#C0352A;--success:#7FD0A4;--success-bg:#10301F;box-shadow:inset 0 0 0 1px var(--border-subtle)}.ds-light,.ds-dark{background:var(--canvas);color:var(--ink);padding:16px;border-radius:12px;min-width:240px;display:flex;flex-direction:column;gap:10px;align-items:flex-start}.ds-m{font-family:'IBM Plex Mono',monospace}.ds-kbd{font-family:'IBM Plex Mono',monospace;font-size:12px;border:1px solid currentColor;border-radius:4px;padding:1px 4px;opacity:.75;margin-left:8px}.ds-chip{height:32px;padding:0 14px;border-radius:9999px;border:1px solid var(--border-control);background:var(--surface);color:var(--ink);font-weight:600;font-size:13px;cursor:pointer}.ds-chip:hover{background:var(--hover)}.ds-chip.ds-on{background:var(--inverse);color:var(--on-inverse);border-color:transparent}.ds-chip:focus-visible{outline:2px solid var(--focus-ring);outline-offset:3px}"
+    },
+    {
+      "name": "Status pill",
+      "kind": "chip",
+      "refersTo": null,
+      "description": "Top-bar status: solid dot for live state, hollow dot for Offline.",
+      "html": "<div class=\"ds-wrap\"><section class=\"ds-light\"><div style=\"display:flex;gap:8px\"><span class=\"ds-pill\"><i class=\"ds-dot ds-hollow\"></i>Offline</span><span class=\"ds-pill\"><i class=\"ds-dot\"></i>Shift open · 21:50</span></div></section><section class=\"ds-dark\"><div style=\"display:flex;gap:8px\"><span class=\"ds-pill\"><i class=\"ds-dot ds-hollow\"></i>Offline</span><span class=\"ds-pill\"><i class=\"ds-dot\"></i>Shift open · 21:50</span></div></section></div>",
+      "css": ".ds-wrap{display:flex;flex-wrap:wrap;gap:12px;font-family:'IBM Plex Sans','IBM Plex Sans Thai','Noto Sans Thai',sans-serif}.ds-light{--canvas:#F5F4F0;--surface:#FFFFFF;--raised:#FFFFFF;--sunken:#EBE9E3;--hover:#EBE9E3;--pressed:#DEDBD3;--selected:#FCF0D4;--inverse:#1F1E1B;--ink:#1F1E1B;--muted:#625E55;--subtle:#827D72;--on-inverse:#FFFFFF;--accent-text:#875A03;--on-accent:#121110;--on-danger:#FFFFFF;--border-subtle:#EBE9E3;--border:#DEDBD3;--border-control:#827D72;--border-selected:#1F1E1B;--focus-ring:#2563C7;--accent:#F0B232;--accent-hover:#DC9810;--accent-pressed:#B47A06;--accent-soft:#FCF0D4;--danger:#9A2A21;--danger-bg:#FDE5E2;--danger-solid:#C0352A;--success:#17633D;--success-bg:#DDF3E6}.ds-dark{--canvas:#121110;--surface:#191816;--raised:#1F1E1B;--sunken:#0B0B0A;--hover:#272522;--pressed:#302E2A;--selected:#2A1E09;--inverse:#F5F4F0;--ink:#F5F4F0;--muted:#A8A398;--subtle:#827D72;--on-inverse:#191816;--accent-text:#F5C859;--on-accent:#121110;--on-danger:#FFFFFF;--border-subtle:#272522;--border:#302E2A;--border-control:#827D72;--border-selected:#F5F4F0;--focus-ring:#93B9F3;--accent:#F0B232;--accent-hover:#F5C859;--accent-pressed:#DC9810;--accent-soft:#2A1E09;--danger:#F59A90;--danger-bg:#40150F;--danger-solid:#C0352A;--success:#7FD0A4;--success-bg:#10301F;box-shadow:inset 0 0 0 1px var(--border-subtle)}.ds-light,.ds-dark{background:var(--canvas);color:var(--ink);padding:16px;border-radius:12px;min-width:240px;display:flex;flex-direction:column;gap:10px;align-items:flex-start}.ds-m{font-family:'IBM Plex Mono',monospace}.ds-kbd{font-family:'IBM Plex Mono',monospace;font-size:12px;border:1px solid currentColor;border-radius:4px;padding:1px 4px;opacity:.75;margin-left:8px}.ds-pill{display:inline-flex;align-items:center;gap:8px;height:32px;padding:0 12px;border-radius:9999px;border:1px solid var(--border);background:var(--surface);font-size:13px}.ds-dot{width:9px;height:9px;border-radius:50%;background:var(--success)}.ds-hollow{background:transparent;box-shadow:inset 0 0 0 1.5px var(--muted)}"
+    },
+    {
+      "name": "Product tile",
+      "kind": "card",
+      "refersTo": "light-product-tile",
+      "description": "Raised tile, md radius; in-cart gets 2px selected border and inverse count; unavailable sinks.",
+      "html": "<div class=\"ds-wrap\"><section class=\"ds-light\"><div style=\"display:flex;gap:8px\"><div class=\"ds-tile ds-in\"><b class=\"ds-count\">2</b><span>มันฝรั่งทอด 75 ก.</span><div class=\"ds-row\"><small>เหลือ 16</small><span class=\"ds-m\">32.00</span></div></div><div class=\"ds-tile ds-off\"><span>กระดาษทิชชู่</span><div class=\"ds-row\"><small class=\"ds-out\">หมด</small><span class=\"ds-m\">119.00</span></div></div></div></section><section class=\"ds-dark\"><div style=\"display:flex;gap:8px\"><div class=\"ds-tile ds-in\"><b class=\"ds-count\">2</b><span>มันฝรั่งทอด 75 ก.</span><div class=\"ds-row\"><small>เหลือ 16</small><span class=\"ds-m\">32.00</span></div></div><div class=\"ds-tile ds-off\"><span>กระดาษทิชชู่</span><div class=\"ds-row\"><small class=\"ds-out\">หมด</small><span class=\"ds-m\">119.00</span></div></div></div></section></div>",
+      "css": ".ds-wrap{display:flex;flex-wrap:wrap;gap:12px;font-family:'IBM Plex Sans','IBM Plex Sans Thai','Noto Sans Thai',sans-serif}.ds-light{--canvas:#F5F4F0;--surface:#FFFFFF;--raised:#FFFFFF;--sunken:#EBE9E3;--hover:#EBE9E3;--pressed:#DEDBD3;--selected:#FCF0D4;--inverse:#1F1E1B;--ink:#1F1E1B;--muted:#625E55;--subtle:#827D72;--on-inverse:#FFFFFF;--accent-text:#875A03;--on-accent:#121110;--on-danger:#FFFFFF;--border-subtle:#EBE9E3;--border:#DEDBD3;--border-control:#827D72;--border-selected:#1F1E1B;--focus-ring:#2563C7;--accent:#F0B232;--accent-hover:#DC9810;--accent-pressed:#B47A06;--accent-soft:#FCF0D4;--danger:#9A2A21;--danger-bg:#FDE5E2;--danger-solid:#C0352A;--success:#17633D;--success-bg:#DDF3E6}.ds-dark{--canvas:#121110;--surface:#191816;--raised:#1F1E1B;--sunken:#0B0B0A;--hover:#272522;--pressed:#302E2A;--selected:#2A1E09;--inverse:#F5F4F0;--ink:#F5F4F0;--muted:#A8A398;--subtle:#827D72;--on-inverse:#191816;--accent-text:#F5C859;--on-accent:#121110;--on-danger:#FFFFFF;--border-subtle:#272522;--border:#302E2A;--border-control:#827D72;--border-selected:#F5F4F0;--focus-ring:#93B9F3;--accent:#F0B232;--accent-hover:#F5C859;--accent-pressed:#DC9810;--accent-soft:#2A1E09;--danger:#F59A90;--danger-bg:#40150F;--danger-solid:#C0352A;--success:#7FD0A4;--success-bg:#10301F;box-shadow:inset 0 0 0 1px var(--border-subtle)}.ds-light,.ds-dark{background:var(--canvas);color:var(--ink);padding:16px;border-radius:12px;min-width:240px;display:flex;flex-direction:column;gap:10px;align-items:flex-start}.ds-m{font-family:'IBM Plex Mono',monospace}.ds-kbd{font-family:'IBM Plex Mono',monospace;font-size:12px;border:1px solid currentColor;border-radius:4px;padding:1px 4px;opacity:.75;margin-left:8px}.ds-tile{position:relative;width:136px;min-height:84px;padding:10px 12px;border-radius:8px;background:var(--raised);border:1px solid var(--border);display:flex;flex-direction:column;justify-content:space-between;font-size:14px;box-sizing:border-box;cursor:pointer}.ds-tile:hover{border-color:var(--border-control)}.ds-tile.ds-in{border:2px solid var(--border-selected)}.ds-tile.ds-off{background:var(--sunken);color:var(--muted)}.ds-row{display:flex;justify-content:space-between;align-items:baseline}.ds-row small{color:var(--muted);font-size:12px}.ds-out{color:var(--danger)!important;font-weight:600}.ds-count{position:absolute;top:8px;right:8px;min-width:20px;height:20px;border-radius:9999px;background:var(--inverse);color:var(--on-inverse);font-size:12px;display:flex;align-items:center;justify-content:center}"
+    },
+    {
+      "name": "Order summary well",
+      "kind": "card",
+      "refersTo": "light-sunken-well",
+      "description": "Sunken well inside the cart surface with Money XL amount due.",
+      "html": "<div class=\"ds-wrap\"><section class=\"ds-light\"><div class=\"ds-well\"><div class=\"ds-kv\"><span>ยอดชำระ</span><b class=\"ds-m ds-xl\">฿3,331.00</b></div><div class=\"ds-kv\"><span>เงินทอน</span><b class=\"ds-m\">69.00</b></div></div></section><section class=\"ds-dark\"><div class=\"ds-well\"><div class=\"ds-kv\"><span>ยอดชำระ</span><b class=\"ds-m ds-xl\">฿3,331.00</b></div><div class=\"ds-kv\"><span>เงินทอน</span><b class=\"ds-m\">69.00</b></div></div></section></div>",
+      "css": ".ds-wrap{display:flex;flex-wrap:wrap;gap:12px;font-family:'IBM Plex Sans','IBM Plex Sans Thai','Noto Sans Thai',sans-serif}.ds-light{--canvas:#F5F4F0;--surface:#FFFFFF;--raised:#FFFFFF;--sunken:#EBE9E3;--hover:#EBE9E3;--pressed:#DEDBD3;--selected:#FCF0D4;--inverse:#1F1E1B;--ink:#1F1E1B;--muted:#625E55;--subtle:#827D72;--on-inverse:#FFFFFF;--accent-text:#875A03;--on-accent:#121110;--on-danger:#FFFFFF;--border-subtle:#EBE9E3;--border:#DEDBD3;--border-control:#827D72;--border-selected:#1F1E1B;--focus-ring:#2563C7;--accent:#F0B232;--accent-hover:#DC9810;--accent-pressed:#B47A06;--accent-soft:#FCF0D4;--danger:#9A2A21;--danger-bg:#FDE5E2;--danger-solid:#C0352A;--success:#17633D;--success-bg:#DDF3E6}.ds-dark{--canvas:#121110;--surface:#191816;--raised:#1F1E1B;--sunken:#0B0B0A;--hover:#272522;--pressed:#302E2A;--selected:#2A1E09;--inverse:#F5F4F0;--ink:#F5F4F0;--muted:#A8A398;--subtle:#827D72;--on-inverse:#191816;--accent-text:#F5C859;--on-accent:#121110;--on-danger:#FFFFFF;--border-subtle:#272522;--border:#302E2A;--border-control:#827D72;--border-selected:#F5F4F0;--focus-ring:#93B9F3;--accent:#F0B232;--accent-hover:#F5C859;--accent-pressed:#DC9810;--accent-soft:#2A1E09;--danger:#F59A90;--danger-bg:#40150F;--danger-solid:#C0352A;--success:#7FD0A4;--success-bg:#10301F;box-shadow:inset 0 0 0 1px var(--border-subtle)}.ds-light,.ds-dark{background:var(--canvas);color:var(--ink);padding:16px;border-radius:12px;min-width:240px;display:flex;flex-direction:column;gap:10px;align-items:flex-start}.ds-m{font-family:'IBM Plex Mono',monospace}.ds-kbd{font-family:'IBM Plex Mono',monospace;font-size:12px;border:1px solid currentColor;border-radius:4px;padding:1px 4px;opacity:.75;margin-left:8px}.ds-well{background:var(--sunken);border-radius:8px;padding:12px;width:280px}.ds-kv{display:flex;justify-content:space-between;align-items:baseline;color:var(--muted);font-size:14px}.ds-kv b{color:var(--ink);font-size:22px}.ds-kv .ds-xl{font-size:34px}"
+    },
+    {
+      "name": "Toast with undo",
+      "kind": "custom",
+      "refersTo": "light-toast",
+      "description": "Inverse toast at bottom centre with saffron Undo (Ctrl Z) and close.",
+      "html": "<div class=\"ds-wrap\"><section class=\"ds-light\"><div class=\"ds-toast\">ลบรายการแล้ว <button>เลิกทำ</button></div></section><section class=\"ds-dark\"><div class=\"ds-toast\">ลบรายการแล้ว <button>เลิกทำ</button></div></section></div>",
+      "css": ".ds-wrap{display:flex;flex-wrap:wrap;gap:12px;font-family:'IBM Plex Sans','IBM Plex Sans Thai','Noto Sans Thai',sans-serif}.ds-light{--canvas:#F5F4F0;--surface:#FFFFFF;--raised:#FFFFFF;--sunken:#EBE9E3;--hover:#EBE9E3;--pressed:#DEDBD3;--selected:#FCF0D4;--inverse:#1F1E1B;--ink:#1F1E1B;--muted:#625E55;--subtle:#827D72;--on-inverse:#FFFFFF;--accent-text:#875A03;--on-accent:#121110;--on-danger:#FFFFFF;--border-subtle:#EBE9E3;--border:#DEDBD3;--border-control:#827D72;--border-selected:#1F1E1B;--focus-ring:#2563C7;--accent:#F0B232;--accent-hover:#DC9810;--accent-pressed:#B47A06;--accent-soft:#FCF0D4;--danger:#9A2A21;--danger-bg:#FDE5E2;--danger-solid:#C0352A;--success:#17633D;--success-bg:#DDF3E6}.ds-dark{--canvas:#121110;--surface:#191816;--raised:#1F1E1B;--sunken:#0B0B0A;--hover:#272522;--pressed:#302E2A;--selected:#2A1E09;--inverse:#F5F4F0;--ink:#F5F4F0;--muted:#A8A398;--subtle:#827D72;--on-inverse:#191816;--accent-text:#F5C859;--on-accent:#121110;--on-danger:#FFFFFF;--border-subtle:#272522;--border:#302E2A;--border-control:#827D72;--border-selected:#F5F4F0;--focus-ring:#93B9F3;--accent:#F0B232;--accent-hover:#F5C859;--accent-pressed:#DC9810;--accent-soft:#2A1E09;--danger:#F59A90;--danger-bg:#40150F;--danger-solid:#C0352A;--success:#7FD0A4;--success-bg:#10301F;box-shadow:inset 0 0 0 1px var(--border-subtle)}.ds-light,.ds-dark{background:var(--canvas);color:var(--ink);padding:16px;border-radius:12px;min-width:240px;display:flex;flex-direction:column;gap:10px;align-items:flex-start}.ds-m{font-family:'IBM Plex Mono',monospace}.ds-kbd{font-family:'IBM Plex Mono',monospace;font-size:12px;border:1px solid currentColor;border-radius:4px;padding:1px 4px;opacity:.75;margin-left:8px}.ds-toast{background:var(--inverse);color:var(--on-inverse);border-radius:8px;padding:8px 16px;font-size:14px;display:flex;gap:12px;align-items:center;box-shadow:0 4px 16px rgba(0,0,0,.12)}.ds-toast button{background:none;border:0;color:var(--accent);font-weight:600;cursor:pointer}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Calm counter",
+    "overview": "A warm-paper workspace: stone neutrals, dark ink, thin hairlines instead of heavy frames, and a single saffron signal that marks the action that moves money. The screen stays quiet so the cashier always knows which button comes next. Money is set in a fixed-width face, shown in full to two decimals, and right-aligned everywhere it appears.\n\nThe world draws from three explored directions. From Studio: layered surfaces, a neutral frame with one signal color, the workspace switcher, `Ctrl K`, switchable density, held bills as tabs, offline and shift status always in the top bar. From Ledger: IBM Plex Mono money, right-aligned columns, F-key hints on desktop, hairlines instead of thick frames. From Counter: a real touch density (48–64 px controls), quick-cash chips, cart steppers, and an amount due readable from a metre away.\n\nTwo independent axes shape every screen. Appearance is Light, Dark or System (follows the OS). Density is Compact (keyboard and mouse, shortcut hints visible) or Touch (larger controls and type, hints hidden). Every screen supports both input methods in both densities.",
+    "keyCharacteristics": [
+      "Warm stone neutrals in both themes; saffron is the only brand hue.",
+      "One saffron primary per view, reserved for commit actions such as take payment, confirm and save.",
+      "IBM Plex Sans + IBM Plex Sans Thai for UI; IBM Plex Mono for every amount.",
+      "4 pt spacing grid, five radius tiers, three elevation levels.",
+      "Every action has a visible control and a keyboard shortcut.",
+      "Built-in line icons painted as vectors, always paired with a text label or tooltip."
+    ],
+    "rules": [
+      {
+        "name": "The One Saffron Rule",
+        "body": "At most one saffron primary button per view, and only for an action that commits or moves money (take payment, confirm, save). Everything else is secondary, ghost or danger.",
+        "section": "colors"
+      },
+      {
+        "name": "The Semantic Only Rule",
+        "body": "Screens read colors from the active `Palette` through role names. They never use `primitive` ramps or hex literals, and they never mix light and dark roles in one control.",
+        "section": "colors"
+      },
+      {
+        "name": "The Not By Color Alone Rule",
+        "body": "Status always pairs a hue with text (badge label, \"Out · 0\", \"Offline\"). Money stays readable without its color.",
+        "section": "colors"
+      },
+      {
+        "name": "The Whole Baht Rule",
+        "body": "Money is always IBM Plex Mono, shows every digit with two decimals (`1,019.00`), and is right-aligned. Never abbreviate, truncate or round it for display.",
+        "section": "typography"
+      },
+      {
+        "name": "The Density Type Rule",
+        "body": "Only body, label and money grow with Touch density (14→16, 13→15, 14→16). Titles, captions and the large money sizes stay fixed.",
+        "section": "typography"
+      },
+      {
+        "name": "The Both Hands Rule",
+        "body": "Every action has a visible control and a key. In Compact, buttons and fields show their key hint (`F9`, `F2`, `Ctrl K`) as a bordered mono chip; in Touch the hint is hidden but the key still works.",
+        "section": "layout"
+      },
+      {
+        "name": "The Dark Edge Rule",
+        "body": "In dark mode every surface gets a 1 px border-subtle edge. Never rely on shadow alone to separate dark planes.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do use exactly one saffron primary per view, for the commit or money-moving action.",
+      "Do read colors and sizes from `Theme` (palette, metrics, space, radius, type_scale). Change values in `design/tokens/` and regenerate.",
+      "Do set every amount in IBM Plex Mono, in full with two decimals, right-aligned in columns.",
+      "Do give every action both a visible control and a shortcut, and show the hint in Compact.",
+      "Do check every screen in Light and Dark, Compact and Touch, Thai and English, at 1000 × 700 and 1280 × 820.",
+      "Do keep keyboard focus visible with the blue ring, except for the always-focused sell search, which uses its firm border.",
+      "Do prefer undo (toast plus `Ctrl Z`) over confirmation. Confirm only irreversible actions, and state the effect in numbers."
+    ],
+    "donts": [
+      "Don't use the solid saffron fill for navigation, decoration or a second button in the same view. Navigation may use only the Saffron Wash, and charts only series 1.",
+      "Don't use subtle text for information, or set any text below 12 px.",
+      "Don't separate dark surfaces by shadow alone. Keep the highlight edge.",
+      "Don't convey status by color alone.",
+      "Don't add product images, a receipt print step, or any Future-exploration surface (tables/zones, kitchen display, PromptPay QR, stock count, split tender, discounts, multi-branch) until it is designed in `design/` first."
+    ]
+  }
+}

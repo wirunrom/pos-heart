@@ -1,0 +1,29 @@
+# Payment methods
+
+Mode: Operate. Follows `design/` (POS Design System v0.1, OrderSummary) and `desktop.md`; preserves the payment invariants in AGENTS.md / docs/architecture.md.
+
+One method per bill: Cash / Transfer / Card as a segmented control inside the pinned order summary. New bills reset to Cash.
+
+Cash: primary money field (2-point dark border, right-aligned mono, formats on blur, selects all on focus), quick chips (Exact plus notes rounded up from the total), live change in money-lg, inline error "short by X" that disables payment, and a second-look dialog when tender exceeds 10× the amount due. F9 first focuses the cash field, then takes payment; Enter in the field also pays.
+
+Transfer / Card: guidance that the app does not transfer, charge cards or add to the drawer; the XL button reads "Review transfer/card ฿total" and opens a blocking dialog with the exact amount, matching instructions and **Confirm payment received** (primary) / Back to bill. The review pins cart, amount (including option prices and discounts) and shift; the database revalidates both.
+
+PromptPay QR: when Settings → Shop has a PromptPay ID, the Transfer button reads "แสดง QR รับโอน / Show transfer QR" and the review widens to show a QR with the exact amount (dark modules on white with a quiet zone in both themes), the amount in money type, shop name and masked ID, plus a note that the QR is generated on this device and the app cannot see the bank. The primary reads "เงินเข้าแล้ว ยืนยัน / Money arrived, confirm"; it is still recorded as Transfer. Without an ID the plain transfer review is unchanged.
+
+Discounts in the summary: when any discount applies, the footer shows Items total, a Discount row (danger colour, U+2212 minus) and Amount due; the pay button and reviews use the discounted amount due. Line discounts show under the line; F7 (line) / F8 (bill) open the discount dialog (baht/percent segmented, quick % chips, preview of discount and remainder, optional reason chips). A discount over the price shows an inline error and blocks payment. On narrow carts the F6/F7 hint chips drop first, then the discount action becomes an icon button with accessible name and tooltip. Receipts show per-line and bill discounts and the reason; refund amounts are after discount.
+
+After payment the cart area shows the receipt number, method and large change (or amount paid) with View receipt until the next product is added. With a printer set up the receipt prints automatically (and the drawer opens for cash when enabled); when auto-print is off the paid state offers Print receipt. The receipt dialog and history detail offer Print copy and Print preview (always, even without a printer); the paid state shows Print preview too. A failed print shows a warning banner ("Could not print … your data is saved") with Print again and a dismiss X; the sale is never affected and there is no print step in the flow.
+
+Refunds: whole bill (only while nothing was refunded) or selected items (per-line steppers up to what is left, live amount, legacy restock review), original method, required reason (preset chips or free text), explicit external-return instruction, danger action showing the amount. Receipts and history identify the method; voided receipts keep their original total with a Refunded badge. Shift drawer statement counts cash only; transfer/card appear in shift sales and the ledger as payment records.
+
+Staff: with staff sign-in, refund/void buttons follow the signed-in role: a lock icon with "Needs approval" for Approval, disabled with "Your role cannot do this" for Deny; the discount dialog notes the role's discount limit. An action needing approval opens the approval dialog (only members who may approve, never the requester) and replays the exact action after a valid PIN (one action only). Receipts show who took payment and any approver.
+
+VAT: on VAT receipts the receipt view shows value before VAT and VAT rows, "Abbreviated tax invoice · VAT included", and, once issued, the full-invoice line (TI number · buyer · date). History detail and the receipt dialog offer Issue tax invoice (VAT receipts that are not voided/refunded and have none yet), opening a buyer dialog (name, tax ID with check digit, head office/branch, address; one per receipt, not editable later); it prints automatically when a printer is set up, and Print tax invoice prints a copy. The refund dialog warns when a full tax invoice exists (a credit note is needed and not produced). Dialog action rows have a bounded height so they never stretch a modal.
+
+Service charge, ++ VAT and cash rounding: the footer adds Service charge X%, VAT on top and Cash rounding rows when they apply (combined into one caption line on short or compact windows); the cash amount due shows the rounded total while transfer/card reviews show the exact unrounded total. The bill More menu toggles No service charge (takeaway). Receipt view and printed receipts show service, VAT added and rounding rows.
+
+Checks: Thai/English, Light/Dark, Compact/Touch, 1000×700 and 1280×820. Windows, physical touch and external payment processing are out of scope.
+
+Tables: paying a table bill deletes its held row in the checkout transaction, so the table becomes free; kitchen tickets stay on the kitchen screen until bumped. Sending to the kitchen never takes payment and never uses the saffron primary.
+
+Check bill: Sell → More → Check bill opens the print preview of the open bill before payment ("Check bill · not a receipt"), priced exactly like checkout: lines, items total, discount, service charge, VAT added, amount due (exact non-cash amount), a note with the cash-rounded amount, and — when a PromptPay ID is set and the template's QR switch is on — a PromptPay QR for the exact amount. It records nothing and is not a payment; the transfer is still confirmed manually at payment. Print from the preview when a printer is configured.

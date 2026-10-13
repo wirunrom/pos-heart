@@ -1,0 +1,1129 @@
+{
+ "$schema": "https://design-tokens.github.io/community-group/format/",
+ "$description": "Tier order: primitive → semantic → component. Components reference semantic (or component) tokens only. brand.* is the ONLY place a product name/brand colour enters.",
+ "brand": {
+  "name": {
+   "$type": "string",
+   "$value": "POS Heart",
+   "$description": "Working title. Shown in UI chrome only via this token."
+  },
+  "accent-ramp": {
+   "$type": "string",
+   "$value": "saffron",
+   "$description": "Which primitive ramp feeds semantic accent-*. Rebrand = change this + logo asset."
+  },
+  "logo": {
+   "$type": "asset",
+   "$value": null,
+   "$description": "No logo yet: render brand.name in title style."
+  }
+ },
+ "primitive": {
+  "color": {
+   "stone": {
+    "0": {
+     "$type": "color",
+     "$value": "#ffffff"
+    },
+    "25": {
+     "$type": "color",
+     "$value": "#fbfaf8"
+    },
+    "50": {
+     "$type": "color",
+     "$value": "#f5f4f0"
+    },
+    "100": {
+     "$type": "color",
+     "$value": "#ebe9e3"
+    },
+    "200": {
+     "$type": "color",
+     "$value": "#dedbd3"
+    },
+    "300": {
+     "$type": "color",
+     "$value": "#c9c5bb"
+    },
+    "400": {
+     "$type": "color",
+     "$value": "#a8a398"
+    },
+    "500": {
+     "$type": "color",
+     "$value": "#827d72"
+    },
+    "600": {
+     "$type": "color",
+     "$value": "#625e55"
+    },
+    "700": {
+     "$type": "color",
+     "$value": "#47443e"
+    },
+    "800": {
+     "$type": "color",
+     "$value": "#302e2a"
+    },
+    "850": {
+     "$type": "color",
+     "$value": "#272522"
+    },
+    "900": {
+     "$type": "color",
+     "$value": "#1f1e1b"
+    },
+    "925": {
+     "$type": "color",
+     "$value": "#191816"
+    },
+    "950": {
+     "$type": "color",
+     "$value": "#121110"
+    },
+    "975": {
+     "$type": "color",
+     "$value": "#0b0b0a"
+    }
+   },
+   "saffron": {
+    "100": {
+     "$type": "color",
+     "$value": "#fcf0d4"
+    },
+    "200": {
+     "$type": "color",
+     "$value": "#f9df9f"
+    },
+    "300": {
+     "$type": "color",
+     "$value": "#f5c859"
+    },
+    "400": {
+     "$type": "color",
+     "$value": "#f0b232"
+    },
+    "500": {
+     "$type": "color",
+     "$value": "#dc9810"
+    },
+    "600": {
+     "$type": "color",
+     "$value": "#b47a06"
+    },
+    "700": {
+     "$type": "color",
+     "$value": "#875a03"
+    },
+    "800": {
+     "$type": "color",
+     "$value": "#5a3c04"
+    },
+    "900": {
+     "$type": "color",
+     "$value": "#3a2806"
+    },
+    "950": {
+     "$type": "color",
+     "$value": "#2a1e09"
+    }
+   },
+   "green": {
+    "100": {
+     "$type": "color",
+     "$value": "#ddf3e6"
+    },
+    "300": {
+     "$type": "color",
+     "$value": "#7fd0a4"
+    },
+    "500": {
+     "$type": "color",
+     "$value": "#2f9e64"
+    },
+    "600": {
+     "$type": "color",
+     "$value": "#1f7f4e"
+    },
+    "700": {
+     "$type": "color",
+     "$value": "#17633d"
+    },
+    "900": {
+     "$type": "color",
+     "$value": "#10301f"
+    }
+   },
+   "orange": {
+    "100": {
+     "$type": "color",
+     "$value": "#feebdc"
+    },
+    "300": {
+     "$type": "color",
+     "$value": "#f8b27a"
+    },
+    "500": {
+     "$type": "color",
+     "$value": "#ea7317"
+    },
+    "600": {
+     "$type": "color",
+     "$value": "#c25a0c"
+    },
+    "700": {
+     "$type": "color",
+     "$value": "#984508"
+    },
+    "900": {
+     "$type": "color",
+     "$value": "#3d1f08"
+    }
+   },
+   "red": {
+    "100": {
+     "$type": "color",
+     "$value": "#fde5e2"
+    },
+    "300": {
+     "$type": "color",
+     "$value": "#f59a90"
+    },
+    "500": {
+     "$type": "color",
+     "$value": "#e0483a"
+    },
+    "600": {
+     "$type": "color",
+     "$value": "#c0352a"
+    },
+    "700": {
+     "$type": "color",
+     "$value": "#9a2a21"
+    },
+    "900": {
+     "$type": "color",
+     "$value": "#40150f"
+    }
+   },
+   "blue": {
+    "100": {
+     "$type": "color",
+     "$value": "#e2edfd"
+    },
+    "300": {
+     "$type": "color",
+     "$value": "#93b9f3"
+    },
+    "500": {
+     "$type": "color",
+     "$value": "#3b7be0"
+    },
+    "600": {
+     "$type": "color",
+     "$value": "#2563c7"
+    },
+    "700": {
+     "$type": "color",
+     "$value": "#1d4f9f"
+    },
+    "900": {
+     "$type": "color",
+     "$value": "#132748"
+    }
+   }
+  }
+ },
+ "semantic": {
+  "color": {
+   "bg-canvas": {
+    "$type": "color",
+    "$value": "{primitive.color.stone.50}",
+    "$description": "App background behind surfaces.",
+    "$extensions": {
+     "modes": {
+      "dark": "{primitive.color.stone.950}"
+     }
+    }
+   },
+   "bg-surface": {
+    "$type": "color",
+    "$value": "{primitive.color.stone.0}",
+    "$description": "Panels, cards, cart, tables. Default text ground.",
+    "$extensions": {
+     "modes": {
+      "dark": "{primitive.color.stone.925}"
+     }
+    }
+   },
+   "bg-raised": {
+    "$type": "color",
+    "$value": "{primitive.color.stone.0}",
+    "$description": "Popovers, menus, dialogs, tiles that sit above a surface.",
+    "$extensions": {
+     "modes": {
+      "dark": "{primitive.color.stone.900}"
+     }
+    }
+   },
+   "bg-sunken": {
+    "$type": "color",
+    "$value": "{primitive.color.stone.100}",
+    "$description": "Wells inside a surface: summary blocks, inputs groups, disabled tiles.",
+    "$extensions": {
+     "modes": {
+      "dark": "{primitive.color.stone.975}"
+     }
+    }
+   },
+   "bg-hover": {
+    "$type": "color",
+    "$value": "{primitive.color.stone.100}",
+    "$description": "Hover fill for rows, tabs, ghost buttons.",
+    "$extensions": {
+     "modes": {
+      "dark": "{primitive.color.stone.850}"
+     }
+    }
+   },
+   "bg-pressed": {
+    "$type": "color",
+    "$value": "{primitive.color.stone.200}",
+    "$description": "Pressed fill for neutral controls.",
+    "$extensions": {
+     "modes": {
+      "dark": "{primitive.color.stone.800}"
+     }
+    }
+   },
+   "bg-selected": {
+    "$type": "color",
+    "$value": "{primitive.color.saffron.100}",
+    "$description": "Selected row / current cart line.",
+    "$extensions": {
+     "modes": {
+      "dark": "{primitive.color.saffron.950}"
+     }
+    }
+   },
+   "bg-inverse": {
+    "$type": "color",
+    "$value": "{primitive.color.stone.900}",
+    "$description": "Active segment, tooltips, count badges.",
+    "$extensions": {
+     "modes": {
+      "dark": "{primitive.color.stone.50}"
+     }
+    }
+   },
+   "fg-default": {
+    "$type": "color",
+    "$value": "{primitive.color.stone.900}",
+    "$description": "Primary text and all money values.",
+    "$extensions": {
+     "modes": {
+      "dark": "{primitive.color.stone.50}"
+     }
+    }
+   },
+   "fg-muted": {
+    "$type": "color",
+    "$value": "{primitive.color.stone.600}",
+    "$description": "Secondary text, labels, metadata. ≥4.5:1 on surface and sunken.",
+    "$extensions": {
+     "modes": {
+      "dark": "{primitive.color.stone.400}"
+     }
+    }
+   },
+   "fg-subtle": {
+    "$type": "color",
+    "$value": "{primitive.color.stone.500}",
+    "$description": "Placeholders and disabled text only (exempt from 4.5:1). Never for information.",
+    "$extensions": {
+     "modes": {
+      "dark": "{primitive.color.stone.500}"
+     }
+    }
+   },
+   "fg-inverse": {
+    "$type": "color",
+    "$value": "{primitive.color.stone.0}",
+    "$description": "Text on bg-inverse.",
+    "$extensions": {
+     "modes": {
+      "dark": "{primitive.color.stone.925}"
+     }
+    }
+   },
+   "fg-accent": {
+    "$type": "color",
+    "$value": "{primitive.color.saffron.700}",
+    "$description": "Accent text: notes, modifiers, active tab label.",
+    "$extensions": {
+     "modes": {
+      "dark": "{primitive.color.saffron.300}"
+     }
+    }
+   },
+   "fg-on-accent": {
+    "$type": "color",
+    "$value": "{primitive.color.stone.950}",
+    "$description": "Text/icons on accent-bg (dark on saffron in both themes).",
+    "$extensions": {
+     "modes": {
+      "dark": "{primitive.color.stone.950}"
+     }
+    }
+   },
+   "fg-on-danger": {
+    "$type": "color",
+    "$value": "{primitive.color.stone.0}",
+    "$description": "Text on danger-solid.",
+    "$extensions": {
+     "modes": {
+      "dark": "{primitive.color.stone.0}"
+     }
+    }
+   },
+   "border-subtle": {
+    "$type": "color",
+    "$value": "{primitive.color.stone.100}",
+    "$description": "Dividers between rows inside a surface.",
+    "$extensions": {
+     "modes": {
+      "dark": "{primitive.color.stone.850}"
+     }
+    }
+   },
+   "border-default": {
+    "$type": "color",
+    "$value": "{primitive.color.stone.200}",
+    "$description": "Card and tile outlines, section dividers.",
+    "$extensions": {
+     "modes": {
+      "dark": "{primitive.color.stone.800}"
+     }
+    }
+   },
+   "border-control": {
+    "$type": "color",
+    "$value": "{primitive.color.stone.500}",
+    "$description": "Input and control boundaries (≥3:1 on surface).",
+    "$extensions": {
+     "modes": {
+      "dark": "{primitive.color.stone.500}"
+     }
+    }
+   },
+   "border-selected": {
+    "$type": "color",
+    "$value": "{primitive.color.stone.900}",
+    "$description": "Selected tile / chosen option outline (2px).",
+    "$extensions": {
+     "modes": {
+      "dark": "{primitive.color.stone.50}"
+     }
+    }
+   },
+   "focus-ring": {
+    "$type": "color",
+    "$value": "{primitive.color.blue.600}",
+    "$description": "Keyboard focus ring, 2px + 2px offset. Distinct from accent on purpose.",
+    "$extensions": {
+     "modes": {
+      "dark": "{primitive.color.blue.300}"
+     }
+    }
+   },
+   "accent-bg": {
+    "$type": "color",
+    "$value": "{primitive.color.saffron.400}",
+    "$description": "THE commit action: take payment, confirm, primary save. One per view.",
+    "$extensions": {
+     "modes": {
+      "dark": "{primitive.color.saffron.400}"
+     }
+    }
+   },
+   "accent-bg-hover": {
+    "$type": "color",
+    "$value": "{primitive.color.saffron.500}",
+    "$description": "Hover on accent-bg.",
+    "$extensions": {
+     "modes": {
+      "dark": "{primitive.color.saffron.300}"
+     }
+    }
+   },
+   "accent-bg-pressed": {
+    "$type": "color",
+    "$value": "{primitive.color.saffron.600}",
+    "$description": "Pressed on accent-bg.",
+    "$extensions": {
+     "modes": {
+      "dark": "{primitive.color.saffron.500}"
+     }
+    }
+   },
+   "accent-soft": {
+    "$type": "color",
+    "$value": "{primitive.color.saffron.100}",
+    "$description": "Soft accent fill: active nav item, selected chip.",
+    "$extensions": {
+     "modes": {
+      "dark": "{primitive.color.saffron.950}"
+     }
+    }
+   },
+   "success-fg": {
+    "$type": "color",
+    "$value": "{primitive.color.green.700}",
+    "$description": "Success text/icon: paid, synced, balanced.",
+    "$extensions": {
+     "modes": {
+      "dark": "{primitive.color.green.300}"
+     }
+    }
+   },
+   "success-bg": {
+    "$type": "color",
+    "$value": "{primitive.color.green.100}",
+    "$description": "Success badge/banner fill.",
+    "$extensions": {
+     "modes": {
+      "dark": "{primitive.color.green.900}"
+     }
+    }
+   },
+   "success-solid": {
+    "$type": "color",
+    "$value": "{primitive.color.green.600}",
+    "$description": "Success dot, chart positive.",
+    "$extensions": {
+     "modes": {
+      "dark": "{primitive.color.green.500}"
+     }
+    }
+   },
+   "warning-fg": {
+    "$type": "color",
+    "$value": "{primitive.color.orange.700}",
+    "$description": "Warning text: low stock, unsaved, over/short within tolerance.",
+    "$extensions": {
+     "modes": {
+      "dark": "{primitive.color.orange.300}"
+     }
+    }
+   },
+   "warning-bg": {
+    "$type": "color",
+    "$value": "{primitive.color.orange.100}",
+    "$description": "Warning badge/banner fill.",
+    "$extensions": {
+     "modes": {
+      "dark": "{primitive.color.orange.900}"
+     }
+    }
+   },
+   "warning-solid": {
+    "$type": "color",
+    "$value": "{primitive.color.orange.600}",
+    "$description": "Warning dot.",
+    "$extensions": {
+     "modes": {
+      "dark": "{primitive.color.orange.500}"
+     }
+    }
+   },
+   "danger-fg": {
+    "$type": "color",
+    "$value": "{primitive.color.red.700}",
+    "$description": "Danger text: out of stock, failed, refund amounts, validation errors.",
+    "$extensions": {
+     "modes": {
+      "dark": "{primitive.color.red.300}"
+     }
+    }
+   },
+   "danger-bg": {
+    "$type": "color",
+    "$value": "{primitive.color.red.100}",
+    "$description": "Danger badge/banner fill.",
+    "$extensions": {
+     "modes": {
+      "dark": "{primitive.color.red.900}"
+     }
+    }
+   },
+   "danger-solid": {
+    "$type": "color",
+    "$value": "{primitive.color.red.600}",
+    "$description": "Destructive button fill (with fg-on-danger).",
+    "$extensions": {
+     "modes": {
+      "dark": "{primitive.color.red.600}"
+     }
+    }
+   },
+   "info-fg": {
+    "$type": "color",
+    "$value": "{primitive.color.blue.700}",
+    "$description": "Info text: in progress, syncing, sent to kitchen.",
+    "$extensions": {
+     "modes": {
+      "dark": "{primitive.color.blue.300}"
+     }
+    }
+   },
+   "info-bg": {
+    "$type": "color",
+    "$value": "{primitive.color.blue.100}",
+    "$description": "Info badge/banner fill.",
+    "$extensions": {
+     "modes": {
+      "dark": "{primitive.color.blue.900}"
+     }
+    }
+   },
+   "info-solid": {
+    "$type": "color",
+    "$value": "{primitive.color.blue.600}",
+    "$description": "Info dot, chart secondary series.",
+    "$extensions": {
+     "modes": {
+      "dark": "{primitive.color.blue.500}"
+     }
+    }
+   },
+   "chart-1": {
+    "$type": "color",
+    "$value": "{primitive.color.saffron.600}",
+    "$description": "Chart series 1 (current period / net sales).",
+    "$extensions": {
+     "modes": {
+      "dark": "{primitive.color.saffron.400}"
+     }
+    }
+   },
+   "chart-2": {
+    "$type": "color",
+    "$value": "{primitive.color.stone.700}",
+    "$description": "Chart series 2 (comparison period).",
+    "$extensions": {
+     "modes": {
+      "dark": "{primitive.color.stone.300}"
+     }
+    }
+   },
+   "chart-3": {
+    "$type": "color",
+    "$value": "{primitive.color.blue.500}",
+    "$description": "Chart series 3.",
+    "$extensions": {
+     "modes": {
+      "dark": "{primitive.color.blue.300}"
+     }
+    }
+   },
+   "chart-4": {
+    "$type": "color",
+    "$value": "{primitive.color.green.500}",
+    "$description": "Chart series 4.",
+    "$extensions": {
+     "modes": {
+      "dark": "{primitive.color.green.300}"
+     }
+    }
+   },
+   "chart-grid": {
+    "$type": "color",
+    "$value": "{primitive.color.stone.100}",
+    "$description": "Chart gridlines.",
+    "$extensions": {
+     "modes": {
+      "dark": "{primitive.color.stone.850}"
+     }
+    }
+   },
+   "overlay-scrim": {
+    "$type": "color",
+    "$value": "rgba(18, 17, 16, 0.48)",
+    "$extensions": {
+     "modes": {
+      "dark": "rgba(0, 0, 0, 0.64)"
+     }
+    },
+    "$description": "Scrim behind dialogs and sheets."
+   }
+  },
+  "space": {
+   "space-0": {
+    "$type": "dimension",
+    "$value": "0px",
+    "$description": "No gap."
+   },
+   "space-1": {
+    "$type": "dimension",
+    "$value": "4px",
+    "$description": "Icon–label gap, badge padding."
+   },
+   "space-2": {
+    "$type": "dimension",
+    "$value": "8px",
+    "$description": "Gap inside controls, between chips and tiles."
+   },
+   "space-3": {
+    "$type": "dimension",
+    "$value": "12px",
+    "$description": "Row padding (compact), card inner gap."
+   },
+   "space-4": {
+    "$type": "dimension",
+    "$value": "16px",
+    "$description": "Panel padding, row padding (touch)."
+   },
+   "space-5": {
+    "$type": "dimension",
+    "$value": "20px",
+    "$description": "Section gap inside a panel."
+   },
+   "space-6": {
+    "$type": "dimension",
+    "$value": "24px",
+    "$description": "Between groups of fields."
+   },
+   "space-8": {
+    "$type": "dimension",
+    "$value": "32px",
+    "$description": "Between page sections."
+   },
+   "space-10": {
+    "$type": "dimension",
+    "$value": "40px",
+    "$description": "Empty-state spacing."
+   },
+   "space-12": {
+    "$type": "dimension",
+    "$value": "48px",
+    "$description": "Screen margins on large displays."
+   }
+  },
+  "radius": {
+   "radius-xs": {
+    "$type": "dimension",
+    "$value": "4px",
+    "$description": "Badges, kbd hints, count bubbles."
+   },
+   "radius-sm": {
+    "$type": "dimension",
+    "$value": "6px",
+    "$description": "Inputs and buttons (compact)."
+   },
+   "radius-md": {
+    "$type": "dimension",
+    "$value": "8px",
+    "$description": "Buttons (touch), tiles, menus."
+   },
+   "radius-lg": {
+    "$type": "dimension",
+    "$value": "12px",
+    "$description": "Surfaces: cart panel, cards, popovers."
+   },
+   "radius-xl": {
+    "$type": "dimension",
+    "$value": "16px",
+    "$description": "Dialogs and sheets."
+   },
+   "radius-full": {
+    "$type": "dimension",
+    "$value": "999px",
+    "$description": "Pills, status dots, avatars."
+   }
+  },
+  "size": {
+   "control-sm": {
+    "$type": "dimension",
+    "$value": "28px",
+    "$description": "Compact small control (table row actions). Touch: 40px."
+   },
+   "control-md": {
+    "$type": "dimension",
+    "$value": "36px",
+    "$description": "Compact default control height. Touch: 48px."
+   },
+   "control-lg": {
+    "$type": "dimension",
+    "$value": "44px",
+    "$description": "Compact large control / search. Touch: 56px."
+   },
+   "control-xl": {
+    "$type": "dimension",
+    "$value": "52px",
+    "$description": "Commit button (Pay). Touch: 64px."
+   },
+   "row-height": {
+    "$type": "dimension",
+    "$value": "40px",
+    "$description": "Default list/table row. Touch: 56px."
+   },
+   "touch-target-min": {
+    "$type": "dimension",
+    "$value": "44px",
+    "$description": "Minimum hit area for any interactive element in touch density (visual can be smaller, hit area cannot)."
+   },
+   "icon-sm": {
+    "$type": "dimension",
+    "$value": "16px",
+    "$description": "Icons inside dense controls."
+   },
+   "icon-md": {
+    "$type": "dimension",
+    "$value": "20px",
+    "$description": "Default icon."
+   },
+   "icon-lg": {
+    "$type": "dimension",
+    "$value": "24px",
+    "$description": "Touch and empty states."
+   },
+   "rail-width": {
+    "$type": "dimension",
+    "$value": "72px",
+    "$description": "Collapsed workspace rail width."
+   },
+   "cart-width": {
+    "$type": "dimension",
+    "$value": "392px",
+    "$description": "Cart panel width at ≥1200px; 360px at 1000px."
+   }
+  },
+  "layer": {
+   "layer-base": {
+    "$type": "number",
+    "$value": "0",
+    "$description": "Page content."
+   },
+   "layer-sticky": {
+    "$type": "number",
+    "$value": "10",
+    "$description": "Sticky headers, pinned summary."
+   },
+   "layer-dropdown": {
+    "$type": "number",
+    "$value": "100",
+    "$description": "Menus, comboboxes, popovers."
+   },
+   "layer-sheet": {
+    "$type": "number",
+    "$value": "200",
+    "$description": "Side sheets/drawers."
+   },
+   "layer-dialog": {
+    "$type": "number",
+    "$value": "300",
+    "$description": "Modal dialogs."
+   },
+   "layer-toast": {
+    "$type": "number",
+    "$value": "400",
+    "$description": "Toasts — above dialogs so results of dialog actions are visible."
+   }
+  },
+  "opacity": {
+   "opacity-disabled": {
+    "$type": "number",
+    "$value": "0.45",
+    "$description": "Disabled controls (keep label readable; also change cursor/semantics)."
+   },
+   "opacity-scrim": {
+    "$type": "number",
+    "$value": "0.48",
+    "$description": "Reference value of overlay-scrim."
+   }
+  },
+  "duration": {
+   "duration-instant": {
+    "$type": "duration",
+    "$value": "0ms",
+    "$description": "Selection, focus, typing feedback."
+   },
+   "duration-fast": {
+    "$type": "duration",
+    "$value": "120ms",
+    "$description": "Hover/press, small state changes."
+   },
+   "duration-base": {
+    "$type": "duration",
+    "$value": "200ms",
+    "$description": "Popover, toast enter, row insert highlight."
+   },
+   "duration-slow": {
+    "$type": "duration",
+    "$value": "280ms",
+    "$description": "Sheet/dialog enter. Exit = 0.7× enter."
+   }
+  },
+  "easing": {
+   "standard": {
+    "$type": "cubicBezier",
+    "$value": [
+     0.2,
+     0,
+     0,
+     1
+    ]
+   },
+   "exit": {
+    "$type": "cubicBezier",
+    "$value": [
+     0.4,
+     0,
+     1,
+     1
+    ]
+   }
+  },
+  "shadow": {
+   "shadow-1": {
+    "$type": "shadow",
+    "$value": "0 1px 2px rgba(31, 30, 27, 0.06), 0 1px 6px rgba(31, 30, 27, 0.05)",
+    "$extensions": {
+     "modes": {
+      "dark": "0 0 0 1px rgba(255, 255, 255, 0.04), 0 2px 8px rgba(0, 0, 0, 0.5)"
+     }
+    },
+    "$description": "Resting surfaces on canvas (cart, cards)."
+   },
+   "shadow-2": {
+    "$type": "shadow",
+    "$value": "0 4px 16px rgba(31, 30, 27, 0.12), 0 1px 3px rgba(31, 30, 27, 0.08)",
+    "$extensions": {
+     "modes": {
+      "dark": "0 0 0 1px rgba(255, 255, 255, 0.06), 0 8px 24px rgba(0, 0, 0, 0.6)"
+     }
+    },
+    "$description": "Popovers, menus, toasts."
+   },
+   "shadow-3": {
+    "$type": "shadow",
+    "$value": "0 16px 48px rgba(31, 30, 27, 0.20), 0 2px 6px rgba(31, 30, 27, 0.08)",
+    "$extensions": {
+     "modes": {
+      "dark": "0 0 0 1px rgba(255, 255, 255, 0.08), 0 20px 56px rgba(0, 0, 0, 0.7)"
+     }
+    },
+    "$description": "Dialogs and sheets."
+   }
+  },
+  "font": {
+   "family": {
+    "ui": {
+     "$type": "fontFamily",
+     "$value": "\"IBM Plex Sans Thai\", \"IBM Plex Sans\", \"Noto Sans Thai\", system-ui, sans-serif"
+    },
+    "num": {
+     "$type": "fontFamily",
+     "$value": "\"IBM Plex Mono\", \"Noto Sans Mono\", ui-monospace, monospace"
+    }
+   },
+   "style": {
+    "display": {
+     "$type": "typography",
+     "$value": {
+      "fontFamily": "{semantic.font.family.ui}",
+      "fontSize": "30px",
+      "lineHeight": "40px",
+      "fontWeight": 600
+     },
+     "$description": "One per screen at most: dashboard/summary headline."
+    },
+    "title-lg": {
+     "$type": "typography",
+     "$value": {
+      "fontFamily": "{semantic.font.family.ui}",
+      "fontSize": "22px",
+      "lineHeight": "32px",
+      "fontWeight": 600
+     },
+     "$description": "Page title."
+    },
+    "title": {
+     "$type": "typography",
+     "$value": {
+      "fontFamily": "{semantic.font.family.ui}",
+      "fontSize": "17px",
+      "lineHeight": "26px",
+      "fontWeight": 600
+     },
+     "$description": "Panel / dialog / section title, bill name."
+    },
+    "body": {
+     "$type": "typography",
+     "$value": {
+      "fontFamily": "{semantic.font.family.ui}",
+      "fontSize": "14px",
+      "lineHeight": "22px",
+      "fontWeight": 400
+     },
+     "$description": "Default text (compact). Touch: 16/26."
+    },
+    "body-strong": {
+     "$type": "typography",
+     "$value": {
+      "fontFamily": "{semantic.font.family.ui}",
+      "fontSize": "14px",
+      "lineHeight": "22px",
+      "fontWeight": 600
+     },
+     "$description": "Emphasis inside body, labels of key values."
+    },
+    "label": {
+     "$type": "typography",
+     "$value": {
+      "fontFamily": "{semantic.font.family.ui}",
+      "fontSize": "13px",
+      "lineHeight": "20px",
+      "fontWeight": 500
+     },
+     "$description": "Field labels, buttons (compact), tabs."
+    },
+    "caption": {
+     "$type": "typography",
+     "$value": {
+      "fontFamily": "{semantic.font.family.ui}",
+      "fontSize": "12px",
+      "lineHeight": "18px",
+      "fontWeight": 400
+     },
+     "$description": "Metadata, helper text. Never below 12px; Thai marks need the line height."
+    },
+    "money-xl": {
+     "$type": "typography",
+     "$value": {
+      "fontFamily": "{semantic.font.family.num}",
+      "fontSize": "34px",
+      "lineHeight": "40px",
+      "fontWeight": 600
+     },
+     "$description": "Amount due, change due. One per view."
+    },
+    "money-lg": {
+     "$type": "typography",
+     "$value": {
+      "fontFamily": "{semantic.font.family.num}",
+      "fontSize": "22px",
+      "lineHeight": "28px",
+      "fontWeight": 600
+     },
+     "$description": "Change, cash received, KPI tiles."
+    },
+    "money": {
+     "$type": "typography",
+     "$value": {
+      "fontFamily": "{semantic.font.family.num}",
+      "fontSize": "14px",
+      "lineHeight": "22px",
+      "fontWeight": 500
+     },
+     "$description": "Line amounts, table cells, tile prices. Always right-aligned in columns."
+    },
+    "money-sm": {
+     "$type": "typography",
+     "$value": {
+      "fontFamily": "{semantic.font.family.num}",
+      "fontSize": "12px",
+      "lineHeight": "18px",
+      "fontWeight": 500
+     },
+     "$description": "Unit prices, secondary amounts."
+    }
+   }
+  }
+ },
+ "component": {
+  "color": {
+   "button-primary-bg": {
+    "$type": "color",
+    "$value": "{semantic.color.accent-bg}",
+    "$description": "Primary button fill."
+   },
+   "button-primary-fg": {
+    "$type": "color",
+    "$value": "{semantic.color.fg-on-accent}",
+    "$description": "Primary button label."
+   },
+   "tile-selected-border": {
+    "$type": "color",
+    "$value": "{semantic.color.border-selected}",
+    "$description": "Product tile already in cart."
+   },
+   "cartline-selected-bg": {
+    "$type": "color",
+    "$value": "{semantic.color.bg-selected}",
+    "$description": "Current cart line (keyboard target)."
+   },
+   "nav-item-active-bg": {
+    "$type": "color",
+    "$value": "{semantic.color.accent-soft}",
+    "$description": "Active item in workspace nav."
+   }
+  }
+ },
+ "modes": {
+  "theme": {
+   "values": [
+    "light",
+    "dark",
+    "system"
+   ],
+   "note": "system resolves to light/dark from the OS; semantic colours carry $extensions.modes.dark."
+  },
+  "density": {
+   "compact": {
+    "note": "Default on desktop with mouse/keyboard."
+   },
+   "touch": {
+    "note": "Default on touchscreens, tablet, KDS. Toggle per device, remembered locally.",
+    "overrides": {
+     "size.control-sm": "40px",
+     "size.control-md": "48px",
+     "size.control-lg": "56px",
+     "size.control-xl": "64px",
+     "size.row-height": "56px",
+     "size.icon-md": "24px",
+     "font.style.body": "16px/26px",
+     "font.style.label": "15px/22px",
+     "font.style.money": "16px/24px",
+     "space.row-padding": "{semantic.space.space-4}"
+    }
+   }
+  },
+  "platform": {
+   "desktop": {
+    "density": "compact",
+    "pointer": "fine"
+   },
+   "tablet": {
+    "density": "touch",
+    "pointer": "coarse"
+   },
+   "kds": {
+    "density": "touch",
+    "theme": "dark",
+    "font.scale": 1.25,
+    "note": "Read at 1–2 m: titles ≥22px, timers money-lg."
+   },
+   "customer": {
+    "density": "touch",
+    "font.scale": 1.125,
+    "note": "Customer-facing ordering: larger imagery, fewer controls, brand-forward."
+   },
+   "web-backoffice": {
+    "density": "compact",
+    "pointer": "fine",
+    "note": "Max content width 1440px; tables first."
+   }
+  }
+ }
+}
