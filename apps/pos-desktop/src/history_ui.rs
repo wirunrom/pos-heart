@@ -118,10 +118,7 @@ fn list(app: &mut App, ui: &mut egui::Ui, dialog_detail: bool) {
                 || format::receipt_number(r.sale.number).contains(&q)
                 || r.sale.number.to_string().contains(&q)
                 || r.sale.label.to_lowercase().contains(&q)
-                || lang
-                    .payment_method(r.sale.payment_method)
-                    .to_lowercase()
-                    .contains(&q)
+                || lang.sale_method(&r.sale).to_lowercase().contains(&q)
         })
         .cloned()
         .collect();
@@ -265,7 +262,11 @@ fn list(app: &mut App, ui: &mut egui::Ui, dialog_detail: bool) {
                 x += cols[2];
                 crate::ui::icons::paint_sized(
                     ui.painter(),
-                    method_icon(record.sale.payment_method),
+                    if record.sale.is_split() {
+                        Icon::Coins
+                    } else {
+                        method_icon(record.sale.payment_method)
+                    },
                     pos2(x + space::S3 + 8.0, cy),
                     16.0,
                     t.p.fg_muted,
@@ -273,7 +274,11 @@ fn list(app: &mut App, ui: &mut egui::Ui, dialog_detail: bool) {
                 ui.painter().text(
                     pos2(x + space::S3 + 22.0, cy),
                     Align2::LEFT_CENTER,
-                    lang.payment_method(record.sale.payment_method),
+                    if record.sale.is_split() {
+                        lang.text("แบ่งจ่าย", "Split")
+                    } else {
+                        lang.payment_method(record.sale.payment_method)
+                    },
                     t.font(type_scale::LABEL),
                     t.p.fg_default,
                 );
@@ -364,7 +369,7 @@ pub fn receipt(ui: &mut egui::Ui, record: &SaleRecord, lang: Language) {
         format!(
             "{} · {}{}",
             format::date_time(lang, sale.created_at),
-            lang.payment_method(sale.payment_method),
+            lang.sale_method(sale),
             if sale.label.is_empty() {
                 String::new()
             } else {
@@ -473,10 +478,13 @@ pub fn receipt(ui: &mut egui::Ui, record: &SaleRecord, lang: Language) {
                 }
                 ui.label(t.muted(sub, type_scale::CAPTION));
                 if line.discount.satang() > 0 {
-                    let rule = line.discount_rule.map_or(
-                        lang.text("ส่วนลด", "Discount").to_owned(),
-                        |r| crate::discount_ui::label(lang, r),
-                    );
+                    let rule = match &line.promotion {
+                        Some(name) => format!("{} {name}", lang.text("โปร", "Promo")),
+                        None => line.discount_rule.map_or(
+                            lang.text("ส่วนลด", "Discount").to_owned(),
+                            |r| crate::discount_ui::label(lang, r),
+                        ),
+                    };
                     ui.label(
                         RichText::new(format!("{rule} {}", format::minus(line.discount)))
                             .font(t.font(type_scale::CAPTION))
@@ -511,13 +519,14 @@ pub fn receipt(ui: &mut egui::Ui, record: &SaleRecord, lang: Language) {
             );
         }
         if sale.discount.satang() > 0 {
-            let label = match sale.discount_rule {
-                Some(rule) => format!(
+            let label = match (bill_promo(sale), sale.discount_rule) {
+                (Some(name), _) => format!("{} {name}", lang.text("โปร", "Promo")),
+                (None, Some(rule)) => format!(
                     "{} {}",
                     lang.text("ส่วนลดทั้งบิล", "Bill discount"),
                     format::discount_rule(rule)
                 ),
-                None => lang.text("ส่วนลดทั้งบิล", "Bill discount").to_owned(),
+                (None, None) => lang.text("ส่วนลดทั้งบิล", "Bill discount").to_owned(),
             };
             w::kv(ui, &label, &format::minus(sale.discount), w::Value::Danger);
         }
@@ -556,7 +565,17 @@ pub fn receipt(ui: &mut egui::Ui, record: &SaleRecord, lang: Language) {
             w::Value::Plain,
         );
     }
-    if sale.payment_method == PaymentMethod::Cash {
+    if sale.is_split() {
+        for part in &sale.tenders {
+            w::kv(
+                ui,
+                lang.payment_method(part.method),
+                &format::money(part.amount),
+                w::Value::Plain,
+            );
+        }
+    }
+    if sale.payment_method == PaymentMethod::Cash || sale.cash > pos_domain::Money::ZERO {
         w::kv(
             ui,
             lang.text("รับเงินสด", "Cash received"),
@@ -616,6 +635,19 @@ pub fn receipt(ui: &mut egui::Ui, record: &SaleRecord, lang: Language) {
             ),
         );
     }
+    for note in &record.credit_notes {
+        w::help_text(
+            ui,
+            &format!(
+                "{} CN-{:06} · {} {} · {}",
+                lang.text("ใบลดหนี้", "Credit note"),
+                note.number,
+                lang.text("ลด", "credited"),
+                format::money(note.total),
+                format::date_time(lang, note.created_at)
+            ),
+        );
+    }
     w::help_text(
         ui,
         if sale.tax.is_some() {
@@ -643,6 +675,20 @@ fn detail(app: &mut App, ui: &mut egui::Ui, record: &SaleRecord) {
     ui.horizontal_wrapped(|ui| {
         crate::print_ui::receipt_button(app, ui, record, true);
         crate::tax_ui::invoice_button(app, ui, record);
+        for note in &record.credit_notes {
+            if w::button(format!(
+                "{} CN-{:06}",
+                lang.text("ใบลดหนี้", "Credit note"),
+                note.number
+            ))
+            .icon(Icon::Printer)
+            .ghost()
+            .show(ui)
+            .clicked()
+            {
+                app.preview_credit_note(note);
+            }
+        }
         if !record.fully_refunded() {
             refund_actions(app, ui, record);
         }
@@ -794,7 +840,9 @@ pub fn void_dialog(app: &mut App, ctx: &egui::Context) {
         }
         w::help_text(
             ui,
-            if editor.sale.payment_method == PaymentMethod::Cash {
+            if editor.sale.payment_method == PaymentMethod::Cash
+                || editor.sale.cash > pos_domain::Money::ZERO
+            {
                 lang.text(
                     "ส่งเงินสดคืนลูกค้าแล้วจึงกดยืนยัน",
                     "Confirm after handing back the cash.",
@@ -875,11 +923,36 @@ fn void_contents(
             format!(
                 "{} {}",
                 lang.text("ผ่าน", "via"),
-                lang.payment_method(editor.sale.payment_method)
+                lang.sale_method(&editor.sale)
             ),
             type_scale::BODY,
         ));
     });
+    if editor.sale.is_split() {
+        let parts: Vec<String> = editor
+            .sale
+            .tenders
+            .iter()
+            .map(|p| {
+                format!(
+                    "{} {}",
+                    lang.payment_method(p.method),
+                    format::money(p.amount)
+                )
+            })
+            .collect();
+        ui.label(t.text(
+            format!(
+                "{} {}",
+                lang.text(
+                    "คืนแต่ละส่วนตามช่องทางเดิม:",
+                    "Each part goes back by its method:"
+                ),
+                parts.join(" · ")
+            ),
+            type_scale::BODY,
+        ));
+    }
     ui.add(egui::Label::new(t.text(
         lang.text(
             "บิลเดิมยังอยู่และแก้ไขไม่ได้ ระบบบันทึกการยกเลิก คืนเงินเข้ากะปัจจุบัน และคืนสต็อกเมื่อยืนยัน",
@@ -961,6 +1034,8 @@ fn void_contents(
 /// operator can retry with the same request ID.
 pub struct RefundEditor {
     record: SaleRecord,
+    /// Method the money goes back by; a split sale offers each of its parts.
+    method: PaymentMethod,
     id: Uuid,
     quantities: Vec<u32>,
     reason: String,
@@ -971,6 +1046,11 @@ impl RefundEditor {
     pub fn new(record: SaleRecord) -> Self {
         let n = record.sale.lines.len();
         Self {
+            method: record
+                .sale
+                .paid_by()
+                .first()
+                .map_or(record.sale.payment_method, |p| p.method),
             record,
             id: Uuid::new_v4(),
             quantities: vec![0; n],
@@ -1024,7 +1104,7 @@ impl RefundEditor {
         let request = pos_domain::RefundRequest {
             id: self.id,
             sale_id: self.record.sale.id,
-            refund_method: self.record.sale.payment_method,
+            refund_method: self.method,
             reason: self.reason.trim().to_owned(),
             lines,
             legacy_restock: (!legacy.is_empty()).then(|| {
@@ -1135,10 +1215,10 @@ pub fn refund_dialog(app: &mut App, ctx: &egui::Context) {
         if editor.record.tax_invoice.is_some() {
             w::banner(
                 ui,
-                w::Tone::Warning,
+                w::Tone::Info,
                 lang.text(
-                    "บิลนี้ออกใบกำกับภาษีเต็มรูปแล้ว การคืนเงินต้องออกใบลดหนี้ให้ลูกค้า ซึ่งแอปยังไม่ออกให้",
-                    "A full tax invoice was issued for this sale. Refunding needs a credit note, which this app does not produce.",
+                    "บิลนี้มีใบกำกับภาษีเต็มรูป เมื่อยืนยันระบบจะออกใบลดหนี้ให้อัตโนมัติ พิมพ์ได้จากรายละเอียดบิล",
+                    "This sale has a full tax invoice. Confirming issues a credit note, which you can print from the receipt details.",
                 ),
                 None,
             );
@@ -1179,13 +1259,46 @@ pub fn refund_dialog(app: &mut App, ctx: &egui::Context) {
         }
         let amount = editor.amount();
         ui.add_space(space::S1);
+        if editor.record.sale.is_split() {
+            // Refunds by a method never exceed what that method paid.
+            let options: Vec<(PaymentMethod, String)> = editor
+                .record
+                .sale
+                .tenders
+                .iter()
+                .map(|p| {
+                    let used = editor
+                        .record
+                        .refunds
+                        .iter()
+                        .filter(|r| r.refund_method == p.method)
+                        .fold(0_i64, |sum, r| sum + r.refund.satang());
+                    let left = pos_domain::Money::from_satang(p.amount.satang() - used)
+                        .unwrap_or_default();
+                    (
+                        p.method,
+                        format!(
+                            "{} ≤ {}",
+                            lang.payment_method(p.method),
+                            format::money(left)
+                        ),
+                    )
+                })
+                .collect();
+            let refs: Vec<(PaymentMethod, &str)> =
+                options.iter().map(|(m, s)| (*m, s.as_str())).collect();
+            ui.horizontal(|ui| {
+                ui.label(t.muted(lang.text("คืนผ่าน", "Refund by"), type_scale::LABEL));
+                w::segmented(ui, &mut editor.method, &refs);
+            });
+        }
         ui.horizontal(|ui| {
             ui.label(t.text(lang.text("คืนเงิน", "Refund"), type_scale::BODY_STRONG));
             ui.label(t.muted(
                 format!(
                     "{} {}",
                     lang.text("ผ่าน", "via"),
-                    lang.payment_method(editor.record.sale.payment_method)
+                    lang.payment_method(editor.method)
                 ),
                 type_scale::LABEL,
             ));
@@ -1216,7 +1329,7 @@ pub fn refund_dialog(app: &mut App, ctx: &egui::Context) {
         );
         w::help_text(
             ui,
-            if editor.record.sale.payment_method == PaymentMethod::Cash {
+            if editor.method == PaymentMethod::Cash {
                 lang.text(
                     "ส่งเงินสดคืนลูกค้าแล้วจึงกดยืนยัน · บิลเดิมไม่ถูกแก้ไข",
                     "Confirm after handing back the cash · the receipt is not changed",
@@ -1298,4 +1411,17 @@ pub fn pricing_rows(lang: Language, sale: &Sale) -> Vec<(String, String)> {
         ));
     }
     rows
+}
+/// The promotion behind a sale's bill discount: one used on the bill that
+/// no line names.
+pub fn bill_promo(sale: &Sale) -> Option<&str> {
+    sale.promotions
+        .iter()
+        .find(|p| {
+            !sale
+                .lines
+                .iter()
+                .any(|l| l.promotion.as_deref() == Some(p.name.as_str()))
+        })
+        .map(|p| p.name.as_str())
 }

@@ -38,6 +38,7 @@ pub struct Data {
     pub tax: pos_domain::TaxSettings,
     pub pricing: pos_domain::PricingSettings,
     pub tables: Vec<pos_domain::DiningTable>,
+    pub promotions: Vec<pos_domain::Promotion>,
     /// Open kitchen tickets oldest first, then recently bumped ones.
     pub kitchen: Vec<pos_domain::KitchenTicket>,
 }
@@ -61,6 +62,10 @@ pub enum Command {
     SetCategory(Vec<Uuid>, String),
     AdjustStock(pos_domain::StockRequest),
     Pay(Cart, PaymentRequest, Uuid),
+    /// One bill paid by several methods.
+    PaySplit(Cart, pos_domain::SplitPayment, Uuid),
+    /// Move (line, units) of a bill to a new bill with this ID.
+    SplitBill(Cart, Vec<(usize, u32)>, Uuid),
     Void(VoidRequest, Uuid),
     RefundItems(pos_domain::RefundRequest, Uuid),
     OpenShift(Uuid, Money),
@@ -93,6 +98,8 @@ pub enum Command {
     SetTax(pos_domain::TaxSettings),
     SetPricing(pos_domain::PricingSettings),
     SaveTable(pos_domain::DiningTable),
+    SavePromotion(pos_domain::Promotion),
+    DeletePromotion(Uuid),
     SendKitchen(Cart),
     /// Kitchen screen: bump (Some time) or recall (None) a ticket.
     BumpTicket(Uuid, Option<i64>),
@@ -129,6 +136,8 @@ pub enum Event {
     StockAdjusted(pos_domain::StockMovement),
     Archived,
     Paid(Sale),
+    /// The rest of the bill and the split-off bill.
+    Split(Cart, Cart),
     Voided(SaleVoid),
     Refunded(pos_domain::SaleRefund),
     Resumed(Cart, Vec<Product>),
@@ -151,6 +160,7 @@ pub enum Event {
     TaxSaved,
     PricingSaved,
     TableSaved,
+    PromotionSaved,
     KitchenSent(Cart, Option<Box<pos_domain::KitchenTicket>>),
     Kitchen(Vec<pos_domain::KitchenTicket>),
     InvoiceIssued(pos_domain::TaxInvoice),
@@ -231,6 +241,13 @@ fn run(pos: &mut Pos, command: Command) -> pos_core::Result<Event> {
         Command::AdjustStock(request) => Event::StockAdjusted(pos.adjust_stock(&request, now())?),
         Command::Pay(cart, payment, shift) => {
             Event::Paid(pos.checkout_with_payment(&cart, payment, Some(shift), now())?)
+        }
+        Command::PaySplit(cart, split, shift) => {
+            Event::Paid(pos.checkout_split(&cart, &split, Some(shift), now())?)
+        }
+        Command::SplitBill(cart, take, id) => {
+            let (rest, moved) = pos.split_bill(&cart, &take, id, now())?;
+            Event::Split(rest, moved)
         }
         Command::Void(request, shift) => {
             Event::Voided(pos.void_sale_for_shift(&request, Some(shift), now())?)
@@ -334,6 +351,14 @@ fn run(pos: &mut Pos, command: Command) -> pos_core::Result<Event> {
             Event::SignedOut
         }
         Command::SaveStaff(input) => Event::StaffSaved(pos.save_staff(&input, now())?),
+        Command::SavePromotion(p) => {
+            pos.save_promotion(&p, now())?;
+            Event::PromotionSaved
+        }
+        Command::DeletePromotion(id) => {
+            pos.delete_promotion(id)?;
+            Event::PromotionSaved
+        }
         Command::SaveTable(t) => {
             pos.save_table(&t)?;
             Event::TableSaved
@@ -421,6 +446,7 @@ fn load(pos: &mut Pos, q: &Query) -> pos_core::Result<Data> {
         tax: pos.tax_settings()?,
         pricing: pos.pricing_settings()?,
         tables: pos.dining_tables()?,
+        promotions: pos.promotions()?,
         kitchen: pos.kitchen_tickets()?,
         stock_history,
         shift,

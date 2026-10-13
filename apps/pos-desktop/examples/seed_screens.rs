@@ -431,7 +431,73 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 },
                 record.sale.created_at + 60,
             )?;
+            // One item returned afterwards: its credit note (ใบลดหนี้).
+            if let Some(shift) = pos.active_shift()? {
+                pos.refund_items(
+                    &pos_domain::RefundRequest {
+                        id: uuid::Uuid::new_v4(),
+                        sale_id: record.sale.id,
+                        refund_method: record.sale.paid_by()[0].method,
+                        reason: "สินค้าชำรุด".into(),
+                        lines: vec![pos_domain::RefundLine {
+                            line: 0,
+                            quantity: 1,
+                        }],
+                        legacy_restock: Some(Vec::new()),
+                    },
+                    Some(shift.id),
+                    record.sale.created_at + 120,
+                )?;
+            }
         }
+    }
+    // `--promos`: a buy-2-get-1 tea, 10% off drinks 14:00–17:00, spend 500
+    // save 50, and a WELCOME coupon (10%, 100 bills).
+    if std::env::args().any(|a| a == "--promos") {
+        use pos_domain::{Discount, PromoRule, PromoTarget, Promotion};
+        let real_now = time::OffsetDateTime::now_utc().unix_timestamp();
+        let products = pos.products("", 0)?;
+        if let Some(tea) = products.iter().find(|p| p.name.contains("Thai iced tea")) {
+            pos.save_promotion(
+                &Promotion::new(
+                    "ชาไทย 2 แถม 1",
+                    PromoRule::BuyGet { buy: 2, free: 1 },
+                    PromoTarget::Product(tea.id),
+                ),
+                real_now - 600,
+            )?;
+            let mut afternoon = Promotion::new(
+                "บ่ายนี้เครื่องดื่มลด 10%",
+                PromoRule::Off {
+                    discount: Discount::Percent(1000),
+                },
+                PromoTarget::Category(tea.category.clone()),
+            );
+            afternoon.from_minute = 14 * 60;
+            afternoon.to_minute = 17 * 60;
+            pos.save_promotion(&afternoon, real_now - 500)?;
+        }
+        pos.save_promotion(
+            &Promotion::new(
+                "ครบ 500 ลด 50",
+                PromoRule::Bill {
+                    min_spend: "500".parse()?,
+                    discount: Discount::Amount("50".parse()?),
+                },
+                PromoTarget::All,
+            ),
+            real_now - 400,
+        )?;
+        let mut welcome = Promotion::new(
+            "คูปองต้อนรับ ลด 10%",
+            PromoRule::Off {
+                discount: Discount::Percent(1000),
+            },
+            PromoTarget::All,
+        );
+        welcome.coupon = "WELCOME".into();
+        welcome.max_uses = Some(100);
+        pos.save_promotion(&welcome, real_now - 300)?;
     }
     std::fs::write(
         dir.join("shop.json"),

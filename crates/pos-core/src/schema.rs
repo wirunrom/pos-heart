@@ -139,7 +139,27 @@ diesel::table! {
         ticket_json -> Text,
     }
 }
+diesel::table! {
+    credit_notes (number) {
+        number -> BigInt,
+        id -> Text,
+        sale_id -> Text,
+        source_id -> Text,
+        created_at -> BigInt,
+        note_json -> Text,
+    }
+}
+diesel::table! {
+    promotions (id) {
+        id -> Text,
+        promo_json -> Text,
+        uses -> BigInt,
+        updated_at -> BigInt,
+    }
+}
 diesel::allow_tables_to_appear_in_same_query!(
+    promotions,
+    credit_notes,
     products,
     sales,
     held_carts,

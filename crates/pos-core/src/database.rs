@@ -12,7 +12,7 @@ use std::path::Path;
 use uuid::Uuid;
 
 /// Highest supported business schema. Backups and recovery use the same gate.
-pub const SCHEMA_VERSION: i32 = 15;
+pub const SCHEMA_VERSION: i32 = 17;
 
 /// Owned by the database worker. Diesel and raw SQL share this one connection.
 pub struct Pos {
@@ -94,6 +94,12 @@ impl Pos {
             }
             if version < 15 {
                 conn.batch_execute(include_str!("../migrations/015_dining.sql"))?;
+            }
+            if version < 16 {
+                conn.batch_execute(include_str!("../migrations/016_credit_notes.sql"))?;
+            }
+            if version < 17 {
+                conn.batch_execute(include_str!("../migrations/017_promotions.sql"))?;
             }
             crate::staff::ensure_roles(conn)?;
             Ok(())
@@ -201,9 +207,26 @@ impl Pos {
             {
                 invoices.insert(sale_id, serde_json::from_str(&json)?);
             }
+            let mut notes: std::collections::HashMap<String, Vec<pos_domain::CreditNote>> =
+                std::collections::HashMap::new();
+            for (sale_id, json) in crate::schema::credit_notes::table
+                .filter(crate::schema::credit_notes::sale_id.eq_any(&ids))
+                .order(crate::schema::credit_notes::number)
+                .select((
+                    crate::schema::credit_notes::sale_id,
+                    crate::schema::credit_notes::note_json,
+                ))
+                .load::<(String, String)>(conn)?
+            {
+                notes
+                    .entry(sale_id)
+                    .or_default()
+                    .push(serde_json::from_str(&json)?);
+            }
             rows.into_iter()
                 .map(|(id, sale, cancellation)| {
                     Ok(SaleRecord {
+                        credit_notes: notes.remove(&id).unwrap_or_default(),
                         tax_invoice: invoices.remove(&id),
                         sale: serde_json::from_str(&sale)?,
                         cancellation: cancellation

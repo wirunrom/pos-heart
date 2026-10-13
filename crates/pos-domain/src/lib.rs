@@ -5,6 +5,7 @@ mod money;
 mod options;
 mod payment;
 mod pricing;
+mod promotion;
 mod promptpay;
 mod reporting;
 mod sale;
@@ -20,13 +21,19 @@ pub use money::{Money, SignedMoney};
 pub use options::{
     LineOption, OptionChoice, OptionGroup, SaleOption, price_with_options, validate_groups,
 };
-pub use payment::{MethodSummary, PaymentMethod, PaymentRequest, PaymentSummary};
+pub use payment::{
+    MethodSummary, PaymentMethod, PaymentRequest, PaymentSummary, SplitPayment, Tender,
+};
 pub use pricing::{CashRounding, PriceOptions, PricingSettings, RoundMode, percent_of};
+pub use promotion::{
+    ALL_DAYS, LocalTime, PromoLine, PromoRule, PromoTarget, PromoUse, Promoted, Promotion,
+    apply_promotions, same_code,
+};
 pub use promptpay::{PromptPayId, PromptPayKind};
 pub use reporting::{
     CategorySales, DailySummary, DaySales, ProductMovement, ProfitSummary, StaffSales,
 };
-pub use sale::{Cart, CartLine, LOW_STOCK, Product, ProductInput, Sale, SaleLine};
+pub use sale::{Cart, CartLine, LOW_STOCK, Product, ProductInput, Sale, SaleLine, split_cart};
 pub use shift::{CashCount, CashKind, CashMovement, Shift, ShiftClosing, ShiftCount};
 pub use staff::{
     Access, Attribution, CASHIER, MANAGER, OWNER, Permission, RoleDef, Staff, StaffInput, StaffRef,
@@ -34,8 +41,8 @@ pub use staff::{
 };
 pub use stock::{StockKind, StockMovement, StockRequest};
 pub use tax::{
-    Buyer, DEFAULT_VAT_BP, SaleTax, TaxInvoice, TaxSettings, valid_branch, valid_tax_id,
-    vat_included,
+    Buyer, CreditLine, CreditNote, DEFAULT_VAT_BP, SaleTax, TaxInvoice, TaxSettings, valid_branch,
+    valid_tax_id, vat_included,
 };
 pub use void::{
     RefundLine, RefundRequest, RefundedLine, SaleRecord, SaleRefund, SaleVoid, StockReturn,
@@ -88,4 +95,10 @@ pub enum DomainError {
     InvalidRole,
     #[error("โต๊ะต้องมีชื่อ 1–20 ตัวอักษร โซนไม่เกิน 40 ตัวอักษร และที่นั่งไม่เกิน 99")]
     InvalidTable,
+    #[error("แบ่งจ่ายต้องใช้อย่างน้อย 2 วิธี และยอดรวมต้องเท่ากับยอดชำระพอดี")]
+    InvalidSplit,
+    #[error("แยกบิลต้องเลือกอย่างน้อยหนึ่งรายการ และเหลือในบิลเดิมอย่างน้อยหนึ่งรายการ")]
+    InvalidBillSplit,
+    #[error("โปรโมชันไม่ถูกต้อง: ตรวจชื่อ เงื่อนไข วัน เวลา และคูปอง")]
+    InvalidPromotion,
 }

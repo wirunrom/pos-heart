@@ -233,7 +233,7 @@ fn schema_twelve_migration_keeps_legacy_receipts_unknown_and_byte_identical() ->
         .bind::<Text, _>(&old)
         .execute(&mut db)?;
     db.batch_execute(
-        "DROP TABLE kitchen_tickets; DROP TABLE dining_tables; ALTER TABLE products DROP COLUMN kitchen;
+        "DROP TABLE promotions; DROP TABLE credit_notes; DROP TABLE kitchen_tickets; DROP TABLE dining_tables; ALTER TABLE products DROP COLUMN kitchen;
          DROP TABLE activity_events; ALTER TABLE products DROP COLUMN cost_satang; PRAGMA user_version=12;",
     )?;
     drop(db);

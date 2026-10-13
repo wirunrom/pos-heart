@@ -115,6 +115,8 @@ impl Pos {
                 id: Uuid::new_v4(),
                 sale_id: sale.id,
                 refund_method: sale.payment_method,
+                // A split sale returns each part to its own method.
+                tenders: sale.tenders.clone(),
                 created_at: now,
                 reason: request.reason.trim().into(),
                 refund: sale.total,
@@ -133,19 +135,42 @@ impl Pos {
                     sale_voids::void_json.eq(serde_json::to_string(&cancellation)?),
                 ))
                 .execute(conn)?;
-            crate::shifts::record(
-                conn,
-                shift.clone(),
-                pos_domain::CashMovement {
-                    id: cancellation.id,
+            let movements = cancellation
+                .refunded_by()
+                .into_iter()
+                .enumerate()
+                .map(|(i, part)| pos_domain::CashMovement {
+                    id: if i == 0 { cancellation.id } else { Uuid::new_v4() },
                     shift_id: shift.id,
                     created_at: now,
                     kind: pos_domain::CashKind::Refund,
-                    amount: cancellation.refund,
+                    amount: part.amount,
                     reason: format!("#{} · {}", sale.number, cancellation.reason),
-                    payment_method: sale.payment_method,
+                    payment_method: part.method,
                     staff: staff.clone(),
+                })
+                .collect();
+            crate::shifts::record_all(conn, shift.clone(), movements)?;
+            crate::tax::credit_note(
+                conn,
+                &sale,
+                crate::tax::Credit {
+                    source_id: cancellation.id,
+                    reason: &cancellation.reason,
+                    lines: sale
+                        .lines
+                        .iter()
+                        .map(|l| pos_domain::CreditLine {
+                            name: l.name.clone(),
+                            quantity: l.quantity,
+                            amount: l.net(),
+                        })
+                        .collect(),
+                    total: cancellation.refund,
+                    vat: sale.tax.as_ref().map_or(pos_domain::Money::ZERO, |t| t.vat),
+                    staff: &cancellation.staff,
                 },
+                now,
             )?;
             crate::audit::record(
                 conn, crate::ActivityKind::Void, &sale.id.to_string(), now,

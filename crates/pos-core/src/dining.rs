@@ -56,6 +56,74 @@ fn bill_on(conn: &mut SqliteConnection, table: Uuid, except: Uuid) -> Result<Opt
 }
 /// Checks a bill's table before it is held: the table exists, is active,
 /// and holds no other open bill.
+fn stored_cart(conn: &mut SqliteConnection, id: Uuid) -> Result<Option<Cart>> {
+    held_carts::table
+        .find(id.to_string())
+        .select(held_carts::cart_json)
+        .first::<String>(conn)
+        .optional()?
+        .map(|json| Ok(serde_json::from_str(&json)?))
+        .transpose()
+}
+fn store_cart(conn: &mut SqliteConnection, cart: &Cart, now: i64) -> Result<()> {
+    let json = serde_json::to_string(cart)?;
+    diesel::insert_into(held_carts::table)
+        .values((
+            held_carts::id.eq(cart.id.to_string()),
+            held_carts::updated_at.eq(now),
+            held_carts::cart_json.eq(&json),
+        ))
+        .on_conflict(held_carts::id)
+        .do_update()
+        .set((
+            held_carts::updated_at.eq(now),
+            held_carts::cart_json.eq(&json),
+        ))
+        .execute(conn)?;
+    Ok(())
+}
+impl Pos {
+    /// Moves some units of a bill to a new held bill (no table) in one
+    /// IMMEDIATE transaction: "these two pay separately". The kitchen state
+    /// is split from the stored bill, never the UI copy, so neither bill
+    /// fires or cancels dishes because of the split. A retry with the same
+    /// `new_id` returns the stored pair.
+    pub fn split_bill(
+        &mut self,
+        cart: &Cart,
+        take: &[(usize, u32)],
+        new_id: Uuid,
+        now: i64,
+    ) -> Result<(Cart, Cart)> {
+        cart.validate()?;
+        self.conn.immediate_transaction(|conn| {
+            if let Some(moved) = stored_cart(conn, new_id)? {
+                let rest = stored_cart(conn, cart.id)?.ok_or(Error::CartNotFound)?;
+                return Ok((rest, moved));
+            }
+            for id in [cart.id, new_id] {
+                let paid = diesel::select(diesel::dsl::exists(
+                    sales::table.filter(sales::cart_id.eq(id.to_string())),
+                ))
+                .get_result::<bool>(conn)?;
+                if paid {
+                    return Err(Error::AlreadyPaid);
+                }
+            }
+            let mut cart = cart.clone();
+            if let Some(stored) = stored_cart(conn, cart.id)? {
+                cart.sent = stored.sent;
+            }
+            let (rest, moved) = pos_domain::split_cart(&cart, take, new_id)?;
+            rest.validate()?;
+            moved.validate()?;
+            check_table(conn, &rest)?;
+            store_cart(conn, &rest, now)?;
+            store_cart(conn, &moved, now)?;
+            Ok((rest, moved))
+        })
+    }
+}
 pub(crate) fn check_table(conn: &mut SqliteConnection, cart: &Cart) -> Result<()> {
     let Some(table) = cart.table else {
         return Ok(());

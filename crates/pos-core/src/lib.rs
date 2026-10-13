@@ -5,6 +5,7 @@ mod checkout;
 mod database;
 mod dining;
 mod import;
+mod promotion;
 mod recovery;
 mod refund;
 mod reporting;
@@ -69,6 +70,10 @@ pub enum Error {
     PaymentTotalChanged,
     #[error("Refund must use the original payment method")]
     InvalidRefundMethod,
+    #[error("Refunds by this method would exceed what it paid")]
+    RefundExceedsMethod,
+    #[error("Another promotion already uses this coupon code")]
+    DuplicateCoupon,
     #[error("Open a shift before taking or refunding payment")]
     NoOpenShift,
     #[error("A shift is already open")]

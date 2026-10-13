@@ -193,3 +193,27 @@ Automated on macOS: fmt, warnings-denied Clippy and `cargo test --workspace` (**
 Native captures on macOS (debug build, `seed_screens` sample data, presets `templates`, `templates-bill`, `templates-kitchen`, `receipt-preview`, `check-bill`): Printed documents card in Light Thai Compact at 1280×820 and the kitchen tab at 1000×700; Dark English Touch at 1280×820 (after fixing a collapsed preview column and an over-wide card); check bill preview with a PromptPay QR from Sell; receipt preview dialog in Dark English Touch at 1000×700; a receipt preview with an imported logo.
 
 Not verified: printed output (logo, QR scanning, text sizes) on real printer hardware; drag-and-drop of image files on Windows; Windows generally.
+
+## Split payment and split bill — 2026-10-14
+
+Automated on macOS: three new integration tests in `crates/pos-core/tests/split.rs`: split payments reach each method while only the cash part reaches drawer expected (per-method report and shift buckets, cart-ID retry); split sales refund through their own methods (whole void per part, item refunds limited to a sale's method and its paid amount); splitting a table bill keeps the kitchen state and the table (nothing re-fires or cancels, retry returns the stored pair). Two domain unit tests cover `SplitPayment::normalized()` (merging, zero parts, fewer than two methods, cash given) and `split_cart` (units with their sent units, discounts, at least one unit moved and one left). No migration; receipts and voids without `tenders` read unchanged.
+
+Native captures on macOS (debug build, `seed_screens` sample data, `--page sell --preview sell-split | sell-split-review | bill-split`) at 1280×820 in Dark Thai: the Sell footer in split mode; the split review dialog with a PromptPay QR for exactly the transfer part; the split-bill dialog. These are preview states, not a clicked-through payment.
+
+Not verified: Windows; receipt printer and cash drawer hardware for split receipts and the drawer kick; scanning the transfer-part QR with a banking app; other palettes, languages, densities and 1000×700 for these surfaces.
+
+## Credit notes — 2026-10-14
+
+Automated on macOS: `crates/pos-core/tests/tax.rs::refunds_of_invoiced_sales_issue_numbered_credit_notes` (no note without a full invoice; a partial refund's note values 200 / 100 / 100 + VAT 7 = 107; a retried refund adds no second note; a second refund continues to a correct value of zero; a void's note numbers on; buyer and invoice references). The schema-version test now expects 16 and refuses 17; older fixtures drop `credit_notes`.
+
+Native capture on macOS (debug build, `seed_screens DIR --vat`, which now refunds one item of the invoiced sale): `--page history --preview credit-note` (print preview of CN-000001, 80 mm, Dark Thai 1280×820; values 62.62 / 29.91 / 32.71 + VAT 2.29 = 35.00) and `--preview history-invoiced` (history detail with the TI and CN lines and the Credit note button).
+
+Not verified: the layout against the Revenue Department's requirements by an accountant; printing on hardware; Windows; other palettes, languages and sizes.
+
+## Promotions — 2026-10-14
+
+Automated on macOS: three domain unit tests in `promotion.rs` (Bangkok date/weekday/minute incl. a leap day; best promotion per line, happy hour, manual discounts win; bill threshold, manual bill discount, coupons, max uses, end dates, days, midnight-wrapping hours, validation) and `crates/pos-core/tests/promotions.rs` (buy-2-get-1 plus spend-over at checkout with snapshots and use counts; outside the hours nothing applies; coupons need their code, are unique and stop when used up). The schema-version test expects 17 and refuses 18.
+
+Native captures on macOS (debug build, `seed_screens DIR --restaurant --tables --promos`) at 1280×820 Dark Thai: Settings → Promotions list, the promotion editor (percent off a category, 14:00–17:00), Sell with the spend-over promotion in the discount row, and the coupon dialog.
+
+Not verified: other palettes, languages, densities and 1000×700; a clicked-through checkout with a coupon; Windows.

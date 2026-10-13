@@ -153,6 +153,44 @@ pub struct TaxInvoice {
     #[serde(default, skip_serializing_if = "crate::Attribution::is_empty")]
     pub staff: crate::Attribution,
 }
+/// One returned line on a credit note.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CreditLine {
+    pub name: String,
+    pub quantity: u32,
+    /// Amount refunded for these units, VAT included.
+    pub amount: Money,
+}
+/// Credit note (ใบลดหนี้, Revenue Code s.86/10) for a refund or void of a
+/// sale that has a full tax invoice. Issued with the refund in the same
+/// transaction, numbered in its own sequence, never rewritten. Values are
+/// before VAT: per the original invoice, the correct value after this and
+/// earlier notes, and the difference; `vat` is the difference's VAT.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CreditNote {
+    pub id: Uuid,
+    pub number: u64,
+    pub sale_id: Uuid,
+    pub sale_number: u64,
+    pub invoice_number: u64,
+    pub invoice_date: i64,
+    /// The void or partial refund this note documents.
+    pub source_id: Uuid,
+    pub created_at: i64,
+    pub reason: String,
+    /// Seller snapshot from the receipt (name, tax ID, branch, address).
+    pub seller: SaleTax,
+    pub buyer: Buyer,
+    pub lines: Vec<CreditLine>,
+    pub original_value: Money,
+    pub correct_value: Money,
+    pub difference: Money,
+    pub vat: Money,
+    /// Refunded to the customer: difference + VAT.
+    pub total: Money,
+    #[serde(default, skip_serializing_if = "crate::Attribution::is_empty")]
+    pub staff: crate::Attribution,
+}
 
 #[cfg(test)]
 mod tests {

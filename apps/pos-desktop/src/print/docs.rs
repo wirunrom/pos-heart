@@ -167,10 +167,13 @@ pub fn receipt(
             d.detail(format!("@ {}", format::money(line.unit_price)), "");
         }
         if line.discount.satang() > 0 {
-            let rule = line.discount_rule.map_or_else(
-                || lang.text("ส่วนลด", "Discount").to_owned(),
-                |r| crate::discount_ui::label(lang, r),
-            );
+            let rule = match &line.promotion {
+                Some(name) => format!("{} {name}", lang.text("โปร", "Promo")),
+                None => line.discount_rule.map_or_else(
+                    || lang.text("ส่วนลด", "Discount").to_owned(),
+                    |r| crate::discount_ui::label(lang, r),
+                ),
+            };
             d.detail(rule, format::minus(line.discount));
         }
     }
@@ -185,13 +188,14 @@ pub fn receipt(
         );
     }
     if sale.discount.satang() > 0 {
-        let label = match sale.discount_rule {
-            Some(rule) => format!(
+        let label = match (crate::history_ui::bill_promo(sale), sale.discount_rule) {
+            (Some(name), _) => format!("{} {name}", lang.text("โปร", "Promo")),
+            (None, Some(rule)) => format!(
                 "{} {}",
                 lang.text("ส่วนลดทั้งบิล", "Bill discount"),
                 format::discount_rule(rule)
             ),
-            None => lang.text("ส่วนลดทั้งบิล", "Bill discount").to_owned(),
+            (None, None) => lang.text("ส่วนลดทั้งบิล", "Bill discount").to_owned(),
         };
         d.row(label, format::minus(sale.discount), Style::Body);
     }
@@ -213,7 +217,28 @@ pub fn receipt(
             format::money(tax.vat),
         );
     }
+    for part in &sale.tenders {
+        d.row(
+            lang.payment_method(part.method),
+            format::money(part.amount),
+            Style::Body,
+        );
+    }
     match sale.payment_method {
+        _ if sale.is_split() => {
+            if t.show_cash && sale.cash > pos_domain::Money::ZERO {
+                d.row(
+                    lang.text("รับเงินสด", "Cash"),
+                    format::money(sale.cash),
+                    Style::Body,
+                );
+                d.row(
+                    lang.text("เงินทอน", "Change"),
+                    format::money(sale.change),
+                    Style::Body,
+                );
+            }
+        }
         PaymentMethod::Cash if t.show_cash => {
             d.row(
                 lang.text("รับเงินสด", "Cash"),
@@ -653,6 +678,144 @@ pub fn tax_invoice(
         Align::Left,
     );
     Some(d)
+}
+
+/// Credit note (ใบลดหนี้, Revenue Code s.86/10): seller and buyer, its own
+/// number, the original tax invoice, the returned items, the value per the
+/// invoice, the correct value, the difference and its VAT, and the reason.
+pub fn credit_note(note: &pos_domain::CreditNote, lang: Language, copy: bool) -> Doc {
+    let tax = &note.seller;
+    let mut d = Doc::default();
+    d.text(
+        lang.text("ใบลดหนี้", "Credit note"),
+        Style::Title,
+        Align::Center,
+    );
+    d.text(
+        if copy {
+            lang.text("สำเนา", "Copy")
+        } else {
+            lang.text("ต้นฉบับ", "Original")
+        },
+        Style::Small,
+        Align::Center,
+    );
+    d.space();
+    d.text(tax.seller_name.clone(), Style::Strong, Align::Left);
+    d.text(tax.address.clone(), Style::Small, Align::Left);
+    d.text(
+        format!(
+            "{} {} · {}",
+            lang.text("เลขประจำตัวผู้เสียภาษี", "Tax ID"),
+            tax.tax_id,
+            crate::tax_ui::branch_label(lang, &tax.branch)
+        ),
+        Style::Small,
+        Align::Left,
+    );
+    d.divider();
+    d.row(
+        lang.text("เลขที่", "No."),
+        format!("CN-{:06}", note.number),
+        Style::Strong,
+    );
+    d.row(
+        lang.text("วันที่", "Date"),
+        format::date_time(lang, note.created_at),
+        Style::Small,
+    );
+    d.row(
+        lang.text("อ้างอิงใบกำกับภาษี", "Tax invoice"),
+        format!("TI-{:06}", note.invoice_number),
+        Style::Small,
+    );
+    d.row(
+        lang.text("ลงวันที่", "Dated"),
+        format::date_time(lang, note.invoice_date),
+        Style::Small,
+    );
+    d.row(
+        lang.text("อ้างอิงบิล", "Receipt"),
+        format::receipt_number(note.sale_number),
+        Style::Small,
+    );
+    d.divider();
+    d.text(lang.text("ผู้ซื้อ", "Buyer"), Style::Strong, Align::Left);
+    d.text(note.buyer.name.clone(), Style::Body, Align::Left);
+    d.text(note.buyer.address.clone(), Style::Small, Align::Left);
+    d.text(
+        format!(
+            "{} {} · {}",
+            lang.text("เลขประจำตัวผู้เสียภาษี", "Tax ID"),
+            note.buyer.tax_id,
+            crate::tax_ui::branch_label(lang, &note.buyer.branch)
+        ),
+        Style::Small,
+        Align::Left,
+    );
+    d.divider();
+    d.text(
+        lang.text("รายการที่ลดหนี้", "Items credited"),
+        Style::Strong,
+        Align::Left,
+    );
+    for line in &note.lines {
+        d.row(
+            format!(
+                "{} × {}",
+                format::count(u64::from(line.quantity)),
+                line.name
+            ),
+            format::money(line.amount),
+            Style::Body,
+        );
+    }
+    d.divider();
+    d.row(
+        lang.text("มูลค่าตามใบกำกับภาษีเดิม", "Value per original invoice"),
+        format::money(note.original_value),
+        Style::Body,
+    );
+    d.row(
+        lang.text("มูลค่าที่ถูกต้อง", "Correct value"),
+        format::money(note.correct_value),
+        Style::Body,
+    );
+    d.row(
+        lang.text("ผลต่าง", "Difference"),
+        format::money(note.difference),
+        Style::Body,
+    );
+    d.row(
+        format!(
+            "{} {}",
+            lang.text("VAT ของผลต่าง", "VAT on difference"),
+            crate::tax_ui::rate_label(tax.rate_bp)
+        ),
+        format::money(note.vat),
+        Style::Body,
+    );
+    d.row(
+        lang.text("รวมลดหนี้", "Total credited"),
+        format::baht(note.total),
+        Style::Total,
+    );
+    d.space();
+    d.text(
+        format!("{} {}", lang.text("เหตุผล:", "Reason:"), note.reason),
+        Style::Body,
+        Align::Left,
+    );
+    d.space();
+    d.text(
+        lang.text(
+            "ผู้รับคืน ____________________",
+            "Issued by ____________________",
+        ),
+        Style::Small,
+        Align::Left,
+    );
+    d
 }
 
 /// Kitchen ticket: big table name, dishes with options and notes;
