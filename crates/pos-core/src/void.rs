@@ -151,6 +151,7 @@ impl Pos {
                 })
                 .collect();
             crate::shifts::record_all(conn, shift.clone(), movements)?;
+            crate::ingredient::return_for_void(conn, sale.id, sale.number, &staff, now)?;
             crate::tax::credit_note(
                 conn,
                 &sale,

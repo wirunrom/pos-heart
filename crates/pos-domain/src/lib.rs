@@ -1,6 +1,7 @@
 //! POS business values and validation. No UI, filesystem, or database dependencies.
 mod dining;
 mod discount;
+mod ingredient;
 mod money;
 mod options;
 mod payment;
@@ -17,6 +18,10 @@ mod void;
 
 pub use dining::{DiningTable, KitchenTicket, SentItem, TicketLine, kitchen_changes};
 pub use discount::{BillPrice, Discount, LinePrice, price_bill, price_sale, refund_share};
+pub use ingredient::{
+    Ingredient, IngredientKind, IngredientMovement, IngredientRequest, MAX_RECIPE, MILLI,
+    RecipeItem, ingredient_use, validate_recipe,
+};
 pub use money::{Money, SignedMoney};
 pub use options::{
     LineOption, OptionChoice, OptionGroup, SaleOption, price_with_options, validate_groups,
@@ -101,4 +106,6 @@ pub enum DomainError {
     InvalidBillSplit,
     #[error("โปรโมชันไม่ถูกต้อง: ตรวจชื่อ เงื่อนไข วัน เวลา และคูปอง")]
     InvalidPromotion,
+    #[error("วัตถุดิบหรือสูตรไม่ถูกต้อง: ต้องมีชื่อและหน่วย ปริมาณมากกว่า 0 และไม่ซ้ำกัน")]
+    InvalidIngredient,
 }

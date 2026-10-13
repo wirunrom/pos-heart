@@ -162,6 +162,10 @@ impl Language {
                     "แบ่งจ่ายต้องใช้อย่างน้อย 2 วิธี และยอดรวมต้องเท่ายอดชำระพอดี",
                     "A split needs at least two methods that add up to the exact amount due.",
                 ),
+                DomainError::InvalidIngredient => self.text(
+                    "วัตถุดิบต้องมีชื่อและหน่วย ปริมาณในสูตรต้องมากกว่า 0 และไม่ใส่ซ้ำ",
+                    "Ingredients need a name and unit; recipe amounts must be above 0 and not repeated.",
+                ),
                 DomainError::InvalidPromotion => self.text(
                     "โปรโมชันไม่ถูกต้อง: ตรวจชื่อ เงื่อนไข วัน เวลา วันที่ และคูปอง",
                     "Check the promotion's name, rule, days, hours, dates and coupon.",
@@ -185,6 +189,14 @@ impl Language {
             },
             Error::PaymentTotalChanged => self.text("ยอดสินค้าเปลี่ยนแล้ว ตรวจยอดใหม่และตรวจรับชำระอีกครั้ง", "The total changed. Review the refreshed amount and verify payment again."),
             Error::InvalidRefundMethod => self.text("ต้องคืนเงินตามช่องทางที่ชำระในบิลเดิม", "Refund using the original payment method."),
+            Error::IngredientNotFound => self.text(
+                "ไม่พบวัตถุดิบนี้ หรือถูกปิดใช้งานแล้ว",
+                "That ingredient no longer exists or is switched off.",
+            ),
+            Error::DuplicateIngredient => self.text(
+                "มีวัตถุดิบชื่อนี้แล้ว",
+                "Another ingredient already has this name.",
+            ),
             Error::DuplicateCoupon => self.text(
                 "มีโปรโมชันอื่นใช้รหัสคูปองนี้แล้ว",
                 "Another promotion already uses this coupon code.",

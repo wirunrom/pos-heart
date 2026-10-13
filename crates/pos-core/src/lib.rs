@@ -5,6 +5,7 @@ mod checkout;
 mod database;
 mod dining;
 mod import;
+mod ingredient;
 mod promotion;
 mod recovery;
 mod refund;
@@ -74,6 +75,10 @@ pub enum Error {
     RefundExceedsMethod,
     #[error("Another promotion already uses this coupon code")]
     DuplicateCoupon,
+    #[error("Ingredient not found or switched off")]
+    IngredientNotFound,
+    #[error("Another ingredient already has this name")]
+    DuplicateIngredient,
     #[error("Open a shift before taking or refunding payment")]
     NoOpenShift,
     #[error("A shift is already open")]

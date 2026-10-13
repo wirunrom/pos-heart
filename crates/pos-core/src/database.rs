@@ -12,7 +12,7 @@ use std::path::Path;
 use uuid::Uuid;
 
 /// Highest supported business schema. Backups and recovery use the same gate.
-pub const SCHEMA_VERSION: i32 = 17;
+pub const SCHEMA_VERSION: i32 = 18;
 
 /// Owned by the database worker. Diesel and raw SQL share this one connection.
 pub struct Pos {
@@ -100,6 +100,9 @@ impl Pos {
             }
             if version < 17 {
                 conn.batch_execute(include_str!("../migrations/017_promotions.sql"))?;
+            }
+            if version < 18 {
+                conn.batch_execute(include_str!("../migrations/018_ingredients.sql"))?;
             }
             crate::staff::ensure_roles(conn)?;
             Ok(())

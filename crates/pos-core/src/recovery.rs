@@ -135,6 +135,7 @@ impl crate::Pos {
                     options: p.options,
                     service_charge: p.service_charge,
                     kitchen: p.kitchen,
+                    recipe: p.recipe,
                     keep_tracked_stock: true,
                 }
                 .validate()?;
@@ -207,6 +208,15 @@ impl crate::Pos {
             &mut self.conn,
             "kitchen_tickets",
             "ticket_json",
+            |_| Ok(()),
+        )?;
+        for ingredient in self.ingredients()? {
+            ingredient.validate()?;
+        }
+        validate_json::<pos_domain::IngredientMovement>(
+            &mut self.conn,
+            "ingredient_movements",
+            "movement_json",
             |_| Ok(()),
         )?;
         for promo in self.promotions()? {

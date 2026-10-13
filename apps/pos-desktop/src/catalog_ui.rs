@@ -112,6 +112,9 @@ pub struct Editor {
     original: Option<Box<Editor>>,
     pub previous_price: Option<pos_domain::Money>,
     pub options: Vec<GroupDraft>,
+    /// Recipe rows: ingredient and amount per unit sold (typed).
+    pub recipe: Vec<(Uuid, String)>,
+    pub recipe_search: String,
 }
 impl Default for Editor {
     fn default() -> Self {
@@ -131,6 +134,8 @@ impl Default for Editor {
             original: None,
             previous_price: None,
             options: Vec::new(),
+            recipe: Vec::new(),
+            recipe_search: String::new(),
         }
     }
 }
@@ -152,6 +157,12 @@ impl From<Product> for Editor {
             original: None,
             previous_price: Some(p.price),
             options: p.options.iter().map(GroupDraft::from).collect(),
+            recipe: p
+                .recipe
+                .iter()
+                .map(|r| (r.ingredient_id, format::qty(r.amount)))
+                .collect(),
+            recipe_search: String::new(),
         };
         e.original = Some(Box::new(e.clone()));
         e
@@ -175,6 +186,7 @@ impl Editor {
             Some(o) => {
                 o.fields() != self.fields()
                     || o.options != self.options
+                    || o.recipe != self.recipe
                     || o.service_charge != self.service_charge
                     || o.kitchen != self.kitchen
                     || o.cost != self.cost
@@ -186,7 +198,8 @@ impl Editor {
                     && self.price.is_empty()
                     && self.cost.is_empty()
                     && self.barcode.is_empty()
-                    && self.options.is_empty())
+                    && self.options.is_empty()
+                    && self.recipe.is_empty())
             }
         }
     }
@@ -221,6 +234,19 @@ impl Editor {
             service_charge: self.service_charge,
             kitchen: self.kitchen,
             keep_tracked_stock: true,
+            recipe: self
+                .recipe
+                .iter()
+                .map(|(id, amount)| {
+                    format::parse_qty(amount).filter(|a| *a > 0).map(|amount| {
+                        pos_domain::RecipeItem {
+                            ingredient_id: *id,
+                            amount,
+                        }
+                    })
+                })
+                .collect::<Option<Vec<_>>>()
+                .ok_or_else(|| "recipe".to_owned())?,
             options: self
                 .options
                 .iter()
@@ -607,6 +633,14 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
     );
     keys(app, ui.ctx());
     panel(ui, &t, nav, space::S2, |ui| side_nav(app, ui));
+    if app.ingredients.open {
+        // Ingredients replace the product table; the product editor stays closed.
+        let main = Rect::from_min_max(main.min, pos2(full.right(), full.bottom()));
+        panel(ui, &t, main, space::S4, |ui| {
+            crate::ingredients_ui::panel(app, ui)
+        });
+        return;
+    }
     panel(ui, &t, main, space::S4, |ui| table_panel(app, ui));
     if inspector_w > 0.0 {
         let rect = Rect::from_min_max(pos2(full.right() - inspector_w, full.top()), full.max);
@@ -695,8 +729,11 @@ fn side_nav(app: &mut App, ui: &mut egui::Ui) {
                 )
             }));
             for (value, label, n) in entries {
-                let active = app.catalog.category == value && app.catalog.view == ProductView::All;
+                let active = app.catalog.category == value
+                    && app.catalog.view == ProductView::All
+                    && !app.ingredients.open;
                 if nav_item(ui, &t, &label, n, active).clicked() {
+                    app.ingredients.open = false;
                     app.catalog.category = value;
                     app.catalog.view = ProductView::All;
                     refresh_from_start(app);
@@ -728,12 +765,34 @@ fn side_nav(app: &mut App, ui: &mut egui::Ui) {
                     w::Tone::Neutral,
                 ),
             ] {
-                let active = app.catalog.view == view;
+                let active = app.catalog.view == view && !app.ingredients.open;
                 if view_item(ui, &t, label, n, tone, active).clicked() {
+                    app.ingredients.open = false;
                     app.catalog.view = view;
                     app.catalog.category = None;
                     refresh_from_start(app);
                 }
+            }
+            ui.add_space(space::S4);
+            ui.horizontal(|ui| {
+                ui.add_space(space::S3);
+                w::eyebrow(ui, lang.text("ครัว", "Kitchen"));
+            });
+            ui.add_space(space::S1);
+            let low = crate::ingredients_ui::low_count(app) as u64;
+            if view_item(
+                ui,
+                &t,
+                lang.text("วัตถุดิบ", "Ingredients"),
+                low,
+                w::Tone::Warning,
+                app.ingredients.open,
+            )
+            .clicked()
+                && !app.catalog.dirty()
+            {
+                app.ingredients.open = true;
+                app.catalog.editor = None;
             }
         });
 }
@@ -1445,6 +1504,7 @@ fn inspector(app: &mut App, ui: &mut egui::Ui) {
     let lang = app.lang;
     let service_on = app.data.pricing.service_bp > 0;
     let kitchen_on = !app.data.tables.is_empty();
+    let ingredients = app.data.ingredients.clone();
     let Some(editor) = app.catalog.editor.as_mut() else {
         return;
     };
@@ -1689,6 +1749,8 @@ fn inspector(app: &mut App, ui: &mut egui::Ui) {
                 );
                 ui.add_space(space::S2);
                 options_editor(ui, &t, lang, &mut editor.options, errors);
+                ui.add_space(space::S2);
+                recipe_editor(ui, &t, lang, editor, &ingredients, errors);
                 ui.add_space(space::S2);
                 ui.horizontal(|ui| {
                     ui.vertical(|ui| {
@@ -2075,6 +2137,133 @@ pub fn dialogs(app: &mut App, ctx: &egui::Context) {
 }
 
 /// Option groups (sweetness, toppings) with per-choice extra prices.
+/// Recipe: ingredients one unit uses, with the recipe cost when every
+/// ingredient has a cost ("Use as cost" copies it to the product cost).
+fn recipe_editor(
+    ui: &mut egui::Ui,
+    t: &Theme,
+    lang: crate::i18n::Language,
+    editor: &mut Editor,
+    ingredients: &[pos_domain::Ingredient],
+    errors: bool,
+) {
+    ui.horizontal(|ui| {
+        ui.label(t.text(
+            lang.text("สูตร (วัตถุดิบต่อ 1 ชิ้น)", "Recipe (per unit sold)"),
+            type_scale::BODY_STRONG,
+        ));
+        ui.label(t.muted(lang.text("(ไม่บังคับ)", "(optional)"), type_scale::LABEL));
+    });
+    if ingredients.is_empty() {
+        w::help_text(
+            ui,
+            lang.text(
+                "เพิ่มวัตถุดิบได้ที่ สินค้า → วัตถุดิบ แล้วกลับมาใส่สูตร ขายแล้วระบบตัดวัตถุดิบให้",
+                "Add ingredients in Products → Ingredients first; sales then deduct them.",
+            ),
+        );
+        return;
+    }
+    let mut remove = None;
+    let mut cost = Some(pos_domain::Money::ZERO);
+    for (i, (id, amount)) in editor.recipe.iter_mut().enumerate() {
+        let found = ingredients.iter().find(|x| x.id == *id);
+        let parsed = format::parse_qty(amount).filter(|a| *a > 0);
+        cost = match (cost, found.zip(parsed).and_then(|(x, a)| x.cost_of(a))) {
+            (Some(sum), Some(c)) => sum.checked_add(c).ok(),
+            _ => None,
+        };
+        ui.horizontal(|ui| {
+            let name_w = (ui.available_width() - 190.0).max(90.0);
+            ui.allocate_ui_with_layout(
+                egui::vec2(name_w, 0.0),
+                egui::Layout::top_down(Align::Min),
+                |ui| {
+                    ui.set_width(name_w);
+                    w::name_label(
+                        ui,
+                        found.map_or(
+                            lang.text("วัตถุดิบที่ลบแล้ว", "Removed ingredient"),
+                            |x| x.name.as_str(),
+                        ),
+                        type_scale::BODY,
+                        t.p.fg_default,
+                    );
+                },
+            );
+            w::text_input(
+                ui,
+                amount,
+                w::FieldOpts {
+                    hint: "0",
+                    limit: 12,
+                    width: Some(90.0),
+                    invalid: parsed.is_none() && (errors || !amount.is_empty()),
+                    ..Default::default()
+                },
+            );
+            ui.label(t.muted(found.map_or("", |x| x.unit.as_str()), type_scale::LABEL));
+            if w::icon_button(
+                ui,
+                Icon::Close,
+                lang.text("เอาออกจากสูตร", "Remove from recipe"),
+            )
+            .clicked()
+            {
+                remove = Some(i);
+            }
+        });
+    }
+    if let Some(i) = remove {
+        editor.recipe.remove(i);
+    }
+    if editor.recipe.len() < pos_domain::MAX_RECIPE {
+        w::text_input(
+            ui,
+            &mut editor.recipe_search,
+            w::FieldOpts {
+                hint: lang.text("ค้นหาวัตถุดิบเพื่อเพิ่ม", "Search ingredients to add"),
+                limit: 60,
+                ..Default::default()
+            },
+        );
+        let q = editor.recipe_search.trim().to_lowercase();
+        let choices: Vec<&pos_domain::Ingredient> = ingredients
+            .iter()
+            .filter(|x| x.active && !editor.recipe.iter().any(|(id, _)| *id == x.id))
+            .filter(|x| q.is_empty() || x.name.to_lowercase().contains(&q))
+            .take(10)
+            .collect();
+        ui.horizontal_wrapped(|ui| {
+            for x in choices {
+                if w::chip(ui, &format!("+ {}", x.name), false, false).clicked() {
+                    editor.recipe.push((x.id, String::new()));
+                    editor.recipe_search.clear();
+                }
+            }
+        });
+    }
+    if let Some(cost) = cost.filter(|_| !editor.recipe.is_empty()) {
+        ui.horizontal(|ui| {
+            ui.label(t.muted(
+                format!(
+                    "{} {}",
+                    lang.text("ต้นทุนตามสูตร", "Recipe cost"),
+                    format::baht(cost)
+                ),
+                type_scale::LABEL,
+            ));
+            if w::button(lang.text("ใช้เป็นต้นทุน", "Use as cost"))
+                .ghost()
+                .size(w::Size::Sm)
+                .show(ui)
+                .clicked()
+            {
+                editor.cost = format::money(cost);
+            }
+        });
+    }
+}
 fn options_editor(
     ui: &mut egui::Ui,
     t: &Theme,

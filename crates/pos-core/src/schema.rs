@@ -14,6 +14,7 @@ diesel::table! {
         options_json -> Text,
         service_charge -> Bool,
         kitchen -> Bool,
+        recipe_json -> Text,
     }
 }
 diesel::table! {
@@ -157,7 +158,27 @@ diesel::table! {
         updated_at -> BigInt,
     }
 }
+diesel::table! {
+    ingredients (id) {
+        id -> Text,
+        ingredient_json -> Text,
+        stock_milli -> BigInt,
+        updated_at -> BigInt,
+    }
+}
+diesel::table! {
+    ingredient_movements (id) {
+        id -> Text,
+        ingredient_id -> Text,
+        created_at -> BigInt,
+        kind -> Text,
+        sale_id -> Nullable<Text>,
+        movement_json -> Text,
+    }
+}
 diesel::allow_tables_to_appear_in_same_query!(
+    ingredients,
+    ingredient_movements,
     promotions,
     credit_notes,
     products,

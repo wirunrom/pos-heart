@@ -451,6 +451,73 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     }
+    // `--ingredients`: rice, eggs, pork, basil (low) and a recipe for the
+    // basil rice; then one plate sold so the history shows a sale.
+    if std::env::args().any(|a| a == "--ingredients") {
+        use pos_domain::{Ingredient, MILLI, RecipeItem};
+        let real_now = time::OffsetDateTime::now_utc().unix_timestamp();
+        let mut add = |name: &str,
+                       unit: &str,
+                       stock: i64,
+                       low: i64,
+                       cost: &str|
+         -> Result<Ingredient, Box<dyn std::error::Error>> {
+            Ok(pos.save_ingredient(
+                &Ingredient {
+                    id: uuid::Uuid::new_v4(),
+                    name: name.into(),
+                    unit: unit.into(),
+                    stock,
+                    low,
+                    cost: Some(cost.parse()?),
+                    active: true,
+                },
+                real_now - 3600,
+            )?)
+        };
+        let rice = add("ข้าวสวย", "กรัม", 5000 * MILLI, 1000 * MILLI, "0.04")?;
+        let egg = add("ไข่ไก่", "ฟอง", 24 * MILLI, 10 * MILLI, "4.50")?;
+        let pork = add("หมูสับ", "กรัม", 1800 * MILLI, 500 * MILLI, "0.18")?;
+        let basil = add("ใบกะเพรา", "กรัม", 120 * MILLI, 300 * MILLI, "0.10")?;
+        let products = pos.products("", 0)?;
+        if let Some(p) = products.iter().find(|p| p.name.contains("Basil")) {
+            let mut input = pos_domain::ProductInput {
+                id: Some(p.id),
+                sku: p.sku.clone(),
+                name: p.name.clone(),
+                category: p.category.clone(),
+                price: p.price,
+                cost: p.cost,
+                stock: p.stock,
+                barcode: p.barcode.clone(),
+                on_sale: p.on_sale,
+                options: p.options.clone(),
+                service_charge: p.service_charge,
+                kitchen: p.kitchen,
+                keep_tracked_stock: true,
+                recipe: Vec::new(),
+            };
+            input.recipe = vec![
+                RecipeItem {
+                    ingredient_id: rice.id,
+                    amount: 150 * MILLI,
+                },
+                RecipeItem {
+                    ingredient_id: egg.id,
+                    amount: MILLI,
+                },
+                RecipeItem {
+                    ingredient_id: pork.id,
+                    amount: 100 * MILLI,
+                },
+                RecipeItem {
+                    ingredient_id: basil.id,
+                    amount: 10 * MILLI,
+                },
+            ];
+            pos.save_product(input)?;
+        }
+    }
     // `--promos`: a buy-2-get-1 tea, 10% off drinks 14:00–17:00, spend 500
     // save 50, and a WELCOME coupon (10%, 100 bills).
     if std::env::args().any(|a| a == "--promos") {

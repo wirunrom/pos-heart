@@ -31,6 +31,9 @@ pub struct Product {
     /// Prepared by the kitchen (sent on kitchen tickets).
     #[serde(default = "on_sale_default")]
     pub kitchen: bool,
+    /// Ingredients one unit uses; deducted at checkout.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub recipe: Vec<crate::RecipeItem>,
 }
 fn on_sale_default() -> bool {
     true
@@ -63,6 +66,7 @@ pub struct ProductInput {
     pub options: Vec<crate::OptionGroup>,
     pub service_charge: bool,
     pub kitchen: bool,
+    pub recipe: Vec<crate::RecipeItem>,
     /// When the product already tracks stock and keeps tracking it, leave the
     /// stored count alone (changes go through stock movements). The desktop
     /// sets this so saving an edit never overwrites sales made meanwhile.
@@ -83,6 +87,7 @@ impl Default for ProductInput {
             options: Vec::new(),
             service_charge: true,
             kitchen: true,
+            recipe: Vec::new(),
             keep_tracked_stock: false,
         }
     }
@@ -102,6 +107,7 @@ impl ProductInput {
         {
             return Err(DomainError::TextTooLong);
         }
+        crate::validate_recipe(&self.recipe)?;
         crate::validate_groups(&self.options)
     }
 }

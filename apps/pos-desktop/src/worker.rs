@@ -43,6 +43,7 @@ pub struct Data {
     pub pricing: pos_domain::PricingSettings,
     pub tables: Vec<pos_domain::DiningTable>,
     pub promotions: Vec<pos_domain::Promotion>,
+    pub ingredients: Vec<pos_domain::Ingredient>,
     /// Open kitchen tickets oldest first, then recently bumped ones.
     pub kitchen: Vec<pos_domain::KitchenTicket>,
 }
@@ -105,6 +106,9 @@ pub enum Command {
     SetPricing(pos_domain::PricingSettings),
     SaveTable(pos_domain::DiningTable),
     SavePromotion(pos_domain::Promotion),
+    SaveIngredient(pos_domain::Ingredient),
+    AdjustIngredient(pos_domain::IngredientRequest),
+    IngredientHistory(Uuid),
     DeletePromotion(Uuid),
     SendKitchen(Cart),
     /// Kitchen screen: bump (Some time) or recall (None) a ticket.
@@ -170,6 +174,8 @@ pub enum Event {
     PricingSaved,
     TableSaved,
     PromotionSaved,
+    IngredientSaved,
+    IngredientHistory(Uuid, Vec<pos_domain::IngredientMovement>),
     KitchenSent(Cart, Option<Box<pos_domain::KitchenTicket>>),
     Kitchen(Vec<pos_domain::KitchenTicket>),
     InvoiceIssued(pos_domain::TaxInvoice),
@@ -517,6 +523,17 @@ fn run(pos: &mut Pos, command: Command) -> pos_core::Result<Event> {
             Event::SignedOut
         }
         Command::SaveStaff(input) => Event::StaffSaved(pos.save_staff(&input, now())?),
+        Command::SaveIngredient(i) => {
+            pos.save_ingredient(&i, now())?;
+            Event::IngredientSaved
+        }
+        Command::AdjustIngredient(r) => {
+            pos.adjust_ingredient(&r, now())?;
+            Event::IngredientSaved
+        }
+        Command::IngredientHistory(id) => {
+            Event::IngredientHistory(id, pos.ingredient_movements(id, 0)?)
+        }
         Command::SavePromotion(p) => {
             pos.save_promotion(&p, now())?;
             Event::PromotionSaved
@@ -613,6 +630,7 @@ fn load(pos: &mut Pos, q: &Query) -> pos_core::Result<Data> {
         pricing: pos.pricing_settings()?,
         tables: pos.dining_tables()?,
         promotions: pos.promotions()?,
+        ingredients: pos.ingredients()?,
         kitchen: pos.kitchen_tickets()?,
         stock_history,
         shift,

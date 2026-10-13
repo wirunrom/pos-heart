@@ -349,6 +349,28 @@ pub fn apply(app: &mut App, ctx: &egui::Context) {
             t.receipt.logo = app.logo.is_some();
             app.templates.draft = Some(t);
         }
+        "ingredients" | "ingredient-history" => {
+            app.page = crate::app::Page::Products;
+            app.ingredients.open = true;
+            if name == "ingredient-history"
+                && let Some(id) = app.data.ingredients.first().map(|i| i.id)
+            {
+                app.ingredients.history = Some((id, Vec::new()));
+                app.send(crate::worker::Command::IngredientHistory(id));
+            }
+        }
+        "product-recipe" => {
+            app.page = crate::app::Page::Products;
+            if let Some(p) = app
+                .data
+                .products
+                .iter()
+                .find(|p| !p.recipe.is_empty())
+                .cloned()
+            {
+                app.catalog.editor = Some(crate::catalog_ui::Editor::from(p));
+            }
+        }
         "promo-editor" => {
             app.page = crate::app::Page::Settings;
             app.settings_section = crate::settings_ui::Section::Promotions;

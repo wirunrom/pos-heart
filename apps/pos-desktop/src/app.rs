@@ -86,6 +86,7 @@ pub struct App {
     pub templates: crate::templates_ui::TemplatesState,
     pub settings_section: crate::settings_ui::Section,
     pub promotions: crate::promo_ui::PromoState,
+    pub ingredients: crate::ingredients_ui::IngredientsState,
     pub kitchen: crate::kitchen_ui::KitchenState,
     /// The kitchen screen window is open.
     pub kitchen_open: bool,
@@ -247,6 +248,7 @@ impl App {
             templates: crate::templates_ui::TemplatesState::default(),
             settings_section: crate::settings_ui::Section::default(),
             promotions: crate::promo_ui::PromoState::default(),
+            ingredients: crate::ingredients_ui::IngredientsState::default(),
             kitchen: crate::kitchen_ui::KitchenState::default(),
             kitchen_open: false,
             pricing_draft: None,
@@ -993,6 +995,26 @@ impl App {
                     ));
                     self.refresh();
                 }
+                Event::IngredientSaved => {
+                    self.ingredients.editor = None;
+                    self.ingredients.adjust = None;
+                    self.toast(self.lang.text("บันทึกวัตถุดิบแล้ว", "Ingredient saved."));
+                    if let Some((id, _)) = &self.ingredients.history {
+                        let id = *id;
+                        self.send(Command::IngredientHistory(id));
+                    }
+                    self.refresh();
+                }
+                Event::IngredientHistory(id, moves) => {
+                    if self
+                        .ingredients
+                        .history
+                        .as_ref()
+                        .is_some_and(|(open, _)| *open == id)
+                    {
+                        self.ingredients.history = Some((id, moves));
+                    }
+                }
                 Event::PromotionSaved => {
                     self.promotions.editor = None;
                     self.toast(self.lang.text("บันทึกโปรโมชันแล้ว", "Promotions saved."));
@@ -1648,6 +1670,7 @@ impl eframe::App for App {
         sale_ui::bill_split_dialog(self, &ctx);
         if crate::staff_ui::may(self, pos_domain::Permission::Settings) {
             crate::promo_ui::editor_dialog(self, &ctx);
+            crate::ingredients_ui::dialogs(self, &ctx);
         }
         crate::promo_ui::coupon_dialog(self, &ctx);
         sale_ui::options_sheet(self, &ctx);

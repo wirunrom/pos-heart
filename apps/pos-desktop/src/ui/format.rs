@@ -81,6 +81,40 @@ pub fn count(value: u64) -> String {
     }
     out
 }
+/// Ingredient quantity from thousandths: grouped, up to three decimals,
+/// trailing zeros dropped ("1,250.5", "−0.25").
+pub fn qty(milli: i64) -> String {
+    let whole = signed_count(milli / 1000);
+    let frac = (milli % 1000).unsigned_abs();
+    let whole = if milli < 0 && milli > -1000 {
+        format!("{MINUS}0")
+    } else {
+        whole
+    };
+    if frac == 0 {
+        return whole;
+    }
+    let digits = format!("{frac:03}");
+    format!("{whole}.{}", digits.trim_end_matches('0'))
+}
+/// "1,250.5" → 1_250_500 thousandths; at most three decimals, not negative.
+pub fn parse_qty(text: &str) -> Option<i64> {
+    let text = text.trim().replace(',', "");
+    let (whole, frac) = text.split_once('.').unwrap_or((&text, ""));
+    if whole.is_empty() && frac.is_empty() || frac.len() > 3 {
+        return None;
+    }
+    if !whole.chars().all(|c| c.is_ascii_digit()) || !frac.chars().all(|c| c.is_ascii_digit()) {
+        return None;
+    }
+    let whole: i64 = if whole.is_empty() {
+        0
+    } else {
+        whole.parse().ok()?
+    };
+    let frac: i64 = format!("{frac:0<3}").parse().ok()?;
+    whole.checked_mul(1000)?.checked_add(frac)
+}
 pub fn signed_count(value: i64) -> String {
     let text = count(value.unsigned_abs());
     if value < 0 {
@@ -153,6 +187,17 @@ pub fn receipt_number(number: u64) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn ingredient_quantities_round_trip() {
+        assert_eq!(qty(1_250_500), "1,250.5");
+        assert_eq!(qty(-250), "\u{2212}0.25");
+        assert_eq!(qty(-3000), "\u{2212}3");
+        assert_eq!(parse_qty("1,250.5"), Some(1_250_500));
+        assert_eq!(parse_qty(".25"), Some(250));
+        assert_eq!(parse_qty("0.0005"), None);
+        assert_eq!(parse_qty("-1"), None);
+        assert_eq!(parse_qty(""), None);
+    }
     #[test]
     fn discount_rules_read_naturally() {
         use pos_domain::Discount;

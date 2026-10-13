@@ -30,6 +30,7 @@ pub(crate) struct ProductRow {
     pub options_json: String,
     pub service_charge: bool,
     pub kitchen: bool,
+    pub recipe_json: String,
 }
 impl TryFrom<ProductRow> for Product {
     type Error = Error;
@@ -51,6 +52,7 @@ impl TryFrom<ProductRow> for Product {
             options: serde_json::from_str(&row.options_json)?,
             service_charge: row.service_charge,
             kitchen: row.kitchen,
+            recipe: serde_json::from_str(&row.recipe_json)?,
         })
     }
 }
@@ -288,6 +290,11 @@ impl Pos {
                 )?),
                 None => None,
             };
+            crate::ingredient::check_recipe(
+                conn,
+                &input.recipe,
+                previous.as_ref().map_or(&[][..], |p| &p.recipe[..]),
+            )?;
             let was_tracked = previous.as_ref().and_then(|p| p.stock);
             let stock = match (was_tracked, input.stock) {
                 (Some(current), Some(_)) if input.keep_tracked_stock => Some(current),
@@ -308,6 +315,7 @@ impl Pos {
                 options_json: serde_json::to_string(&input.options)?,
                 service_charge: input.service_charge,
                 kitchen: input.kitchen,
+                recipe_json: serde_json::to_string(&input.recipe)?,
             };
             diesel::insert_into(products::table)
                 .values(&row)
@@ -546,6 +554,7 @@ impl Pos {
                 options,
                 service_charge: !category.starts_with("ของใช้"),
                 kitchen: category.starts_with("อาหาร") || category.starts_with("เครื่องดื่ม"),
+                recipe: Vec::new(),
                 keep_tracked_stock: false,
             })?;
         }
