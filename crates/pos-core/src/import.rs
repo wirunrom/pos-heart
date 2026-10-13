@@ -283,6 +283,7 @@ impl Pos {
                     kitchen: p.kitchen,
                     recipe_json: "[]".into(),
                     option_recipe_json: "[]".into(),
+                    image_rev: None,
                 };
                 diesel::insert_into(products::table)
                     .values(&row)

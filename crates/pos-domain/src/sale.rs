@@ -37,6 +37,10 @@ pub struct Product {
     /// Recipe changes by option choice ("+ egg", "no egg").
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub option_recipe: Vec<crate::OptionRecipe>,
+    /// Revision of the product's picture (None = no picture); pictures are
+    /// loaded separately.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub image: Option<i64>,
 }
 fn on_sale_default() -> bool {
     true

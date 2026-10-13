@@ -253,3 +253,11 @@ Automated on macOS: `ingredient.rs::option_recipes_add_and_remove_without_going_
 Native captures on macOS (debug build, `seed_screens DIR --restaurant --ingredients --promos`, which now sells two basil-rice plates and one spend-over bill): `product-recipe` in Dark Thai 1280×820 scrolled to the recipe and its "Adjust by option" rows; `report-promos` in Dark Thai 1280×820; `report-ingredients` in Light English 1000×700.
 
 Not verified: Touch density for these; Windows. Seen, not changed: at 1000×700 the report's profit rows touch the right edge next to the page scrollbar (existing layout).
+
+## Product pictures — 2026-10-14
+
+Automated on macOS: `tests/catalog.rs::product_pictures_are_stored_apart_and_survive_edits` (non-PNG refused; revision bumps within one second; product saves keep the picture; removal). Full workspace: 180 tests; the schema-version test expects 20 and refuses 21.
+
+Native captures on macOS (debug build, `seed_screens DIR --restaurant --pictures`, generated coloured samples): Sell at 1280×820 Dark Thai and 1000×700 Light English Touch (picture bands, placeholders, unavailable tiles dimmed, count badge on the corner), and the product editor's Picture field.
+
+Not verified: importing real photos from disk and drag-and-drop on Windows; memory use with thousands of pictures (the cache bound is by design, not measured).

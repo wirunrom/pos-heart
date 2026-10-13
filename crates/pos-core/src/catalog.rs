@@ -32,6 +32,7 @@ pub(crate) struct ProductRow {
     pub kitchen: bool,
     pub recipe_json: String,
     pub option_recipe_json: String,
+    pub image_rev: Option<i64>,
 }
 impl TryFrom<ProductRow> for Product {
     type Error = Error;
@@ -55,6 +56,7 @@ impl TryFrom<ProductRow> for Product {
             kitchen: row.kitchen,
             recipe: serde_json::from_str(&row.recipe_json)?,
             option_recipe: serde_json::from_str(&row.option_recipe_json)?,
+            image: row.image_rev,
         })
     }
 }
@@ -327,6 +329,8 @@ impl Pos {
                 kitchen: input.kitchen,
                 recipe_json: serde_json::to_string(&input.recipe)?,
                 option_recipe_json: serde_json::to_string(&input.option_recipe)?,
+                // Pictures change only through set_product_image.
+                image_rev: previous.as_ref().and_then(|p| p.image),
             };
             diesel::insert_into(products::table)
                 .values(&row)
@@ -591,5 +595,75 @@ impl Pos {
             .map(|line| self.product(line.product_id))
             .collect::<Result<Vec<_>>>()?;
         Ok((cart, products))
+    }
+}
+
+/// Largest stored picture; the desktop stores ≤ 256 px PNGs (far smaller).
+pub const MAX_IMAGE_BYTES: usize = 512 * 1024;
+const PNG_SIGNATURE: &[u8] = b"\x89PNG\r\n\x1a\n";
+impl Pos {
+    /// Sets (Some) or removes (None) a product's picture, a small PNG.
+    /// Returns the new revision. Needs the Catalog permission.
+    pub fn set_product_image(
+        &mut self,
+        id: Uuid,
+        png: Option<&[u8]>,
+        now: i64,
+    ) -> Result<Option<i64>> {
+        if let Some(png) = png
+            && (png.len() > MAX_IMAGE_BYTES || !png.starts_with(PNG_SIGNATURE))
+        {
+            return Err(Error::InvalidImage);
+        }
+        let session = self.session.clone();
+        self.conn.immediate_transaction(|conn| {
+            crate::staff::authorize(conn, &session, Some(pos_domain::Permission::Catalog))?;
+            let previous = find_product(conn, id)?;
+            // A strictly newer revision, even for two changes in one second.
+            let rev = png.map(|_| now.max(previous.image.map_or(i64::MIN, |r| r + 1)));
+            match png {
+                Some(png) => {
+                    diesel::insert_into(crate::schema::product_images::table)
+                        .values((
+                            crate::schema::product_images::product_id.eq(id.to_string()),
+                            crate::schema::product_images::png.eq(png),
+                            crate::schema::product_images::updated_at.eq(now),
+                        ))
+                        .on_conflict(crate::schema::product_images::product_id)
+                        .do_update()
+                        .set((
+                            crate::schema::product_images::png.eq(png),
+                            crate::schema::product_images::updated_at.eq(now),
+                        ))
+                        .execute(conn)?;
+                }
+                None => {
+                    diesel::delete(crate::schema::product_images::table.find(id.to_string()))
+                        .execute(conn)?;
+                }
+            }
+            diesel::update(products::table.find(id.to_string()))
+                .set(products::image_rev.eq(rev))
+                .execute(conn)?;
+            Ok(rev)
+        })
+    }
+    /// A product's picture and its revision.
+    pub fn product_image(&mut self, id: Uuid) -> Result<Option<(i64, Vec<u8>)>> {
+        let rev = products::table
+            .find(id.to_string())
+            .select(products::image_rev)
+            .first::<Option<i64>>(&mut self.conn)
+            .optional()?
+            .flatten();
+        let Some(rev) = rev else {
+            return Ok(None);
+        };
+        Ok(crate::schema::product_images::table
+            .find(id.to_string())
+            .select(crate::schema::product_images::png)
+            .first::<Vec<u8>>(&mut self.conn)
+            .optional()?
+            .map(|png| (rev, png)))
     }
 }

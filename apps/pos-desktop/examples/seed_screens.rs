@@ -571,6 +571,31 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     }
+    // `--pictures`: generated sample pictures (coloured bands, no photos)
+    // for most products, so Sell tiles and the editor show pictures.
+    if std::env::args().any(|a| a == "--pictures") {
+        let real_now = time::OffsetDateTime::now_utc().unix_timestamp();
+        for (n, p) in pos.products("", 0)?.into_iter().enumerate() {
+            if n % 4 == 3 {
+                continue;
+            }
+            let hue = (n as u32 * 47) % 255;
+            let img = image::RgbaImage::from_fn(256, 192, |x, y| {
+                let band = (x / 32 + y / 32) % 2 == 0;
+                let base = [hue as u8, (255 - hue) as u8, ((hue * 3) % 255) as u8];
+                let k = if band { 1.0 } else { 0.8 };
+                image::Rgba([
+                    (f32::from(base[0]) * k) as u8,
+                    (f32::from(base[1]) * k) as u8,
+                    (f32::from(base[2]) * k) as u8,
+                    255,
+                ])
+            });
+            let mut png = std::io::Cursor::new(Vec::new());
+            img.write_to(&mut png, image::ImageFormat::Png)?;
+            pos.set_product_image(p.id, Some(&png.into_inner()), real_now - 100)?;
+        }
+    }
     // `--promos`: a buy-2-get-1 tea, 10% off drinks 14:00–17:00, spend 500
     // save 50, and a WELCOME coupon (10%, 100 bills).
     if std::env::args().any(|a| a == "--promos") {

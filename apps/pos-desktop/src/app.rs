@@ -87,6 +87,9 @@ pub struct App {
     pub settings_section: crate::settings_ui::Section,
     pub promotions: crate::promo_ui::PromoState,
     pub ingredients: crate::ingredients_ui::IngredientsState,
+    pub images: crate::images::ImageCache,
+    /// Pictures on Sell tiles (device preference, `product-images.txt`).
+    pub tile_images: bool,
     pub kitchen: crate::kitchen_ui::KitchenState,
     /// The kitchen screen window is open.
     pub kitchen_open: bool,
@@ -249,6 +252,8 @@ impl App {
             settings_section: crate::settings_ui::Section::default(),
             promotions: crate::promo_ui::PromoState::default(),
             ingredients: crate::ingredients_ui::IngredientsState::default(),
+            images: crate::images::ImageCache::default(),
+            tile_images: read("product-images.txt").trim() != "off",
             kitchen: crate::kitchen_ui::KitchenState::default(),
             kitchen_open: false,
             pricing_draft: None,
@@ -352,7 +357,7 @@ impl App {
             self.send(Command::SendKitchen(self.cart.clone()));
         }
     }
-    fn send_background(&mut self, command: Command) -> bool {
+    pub(crate) fn send_background(&mut self, command: Command) -> bool {
         !self.fatal && self.worker.send(command)
     }
     /// Manual and idle locks use the same immediate gate and queue revocation.
@@ -995,6 +1000,14 @@ impl App {
                     ));
                     self.refresh();
                 }
+                Event::ProductImage(id, image) => {
+                    let ctx = self.ctx.clone();
+                    self.image_loaded(&ctx, id, image);
+                }
+                Event::ImageSaved => {
+                    self.toast(self.lang.text("บันทึกรูปแล้ว", "Picture saved."));
+                    self.refresh();
+                }
                 Event::IngredientSaved => {
                     self.ingredients.editor = None;
                     self.ingredients.adjust = None;
@@ -1261,6 +1274,15 @@ impl App {
         }
     }
     /// Full screen is a per-device preference, applied immediately.
+    pub fn set_tile_images(&mut self, on: bool) {
+        self.tile_images = on;
+        if let Err(e) = std::fs::write(
+            self.data_dir.join("product-images.txt"),
+            if on { "on" } else { "off" },
+        ) {
+            self.error = Some(e.to_string());
+        }
+    }
     pub fn set_fullscreen(&mut self, fullscreen: bool) {
         self.fullscreen = fullscreen;
         if let Err(e) = std::fs::write(

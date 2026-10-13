@@ -245,3 +245,7 @@ This round remains development work with synthetic data and native macOS checks.
 ## Ingredients and recipes (2026-10-14)
 
 Products → Ingredients lists each ingredient with its stock in its own unit, a low-stock warning level and an optional cost per unit; Receive, Remove (with a reason), Count and History record every change. In the product editor, Recipe lists what one unit sold uses (up to three decimals) and shows the recipe cost when every ingredient has a cost (Use as cost copies it). Each sale deducts its recipes automatically; ingredient stock may go below zero and never blocks a sale. Voiding a whole bill gives the ingredients back; partial refunds do not, as the food was made. In Adjust by option, a choice can add or remove ingredients per unit (e.g. + fried egg: +1 egg; no egg: −1 egg); totals never go below zero. Reports have Promos (bills and amount per promotion; whole voids subtract) and Ingredients (used by recipes net of voids, removed by hand, cost at today's unit cost) tabs; the CSV export does not include them yet.
+
+## Product pictures (2026-10-14)
+
+In the product editor, Picture takes a PNG or JPG (paste its path or drop the file on the window) for a saved product; it is shrunk to 256 px and saved immediately, and Remove deletes it. Sell tiles show the picture above the name and price; Settings → Language & display → Product pictures turns them off on this device for smaller tiles. Pictures load only for products on screen.

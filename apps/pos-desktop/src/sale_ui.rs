@@ -2167,17 +2167,41 @@ fn products(app: &mut App, ui: &mut egui::Ui) {
                 .floor()
                 .max(1.0) as usize;
             let tile_w = ((width - gap * (cols as f32 - 1.0)) / cols as f32).floor();
+            // Rows with a picture get a picture band above the names.
+            let band = (tile_w * 0.5)
+                .clamp(56.0, if t.touch() { 120.0 } else { 100.0 })
+                .floor();
             for (row, chunk) in list.chunks(cols).enumerate() {
                 let heights: Vec<f32> = chunk
                     .iter()
                     .map(|p| tile_height(ui, &t, p, tile_w))
                     .collect();
-                let row_h = heights.iter().copied().fold(t.m.tile_min_height, f32::max);
+                let pictures = app.tile_images && chunk.iter().any(|p| p.image.is_some());
+                let image_h = if pictures { band } else { 0.0 };
+                let row_h = heights.iter().copied().fold(t.m.tile_min_height, f32::max) + image_h;
+                // Only rows on screen load their pictures.
+                let visible = ui.is_rect_visible(egui::Rect::from_min_size(
+                    ui.cursor().min,
+                    vec2(width, row_h),
+                ));
+                let textures: Vec<Option<(egui::TextureId, egui::Vec2)>> = chunk
+                    .iter()
+                    .map(|p| {
+                        (visible && pictures)
+                            .then(|| app.product_texture(p.id, p.image))
+                            .flatten()
+                    })
+                    .collect();
                 ui.horizontal(|ui| {
                     ui.spacing_mut().item_spacing.x = gap;
                     for (i, p) in chunk.iter().enumerate() {
                         let n = counts[row * cols + i];
-                        if product_tile(ui, &t, lang, p, vec2(tile_w, row_h), n, app.busy) {
+                        let picture = Picture {
+                            texture: textures[i],
+                            height: image_h,
+                        };
+                        if product_tile(ui, &t, lang, p, vec2(tile_w, row_h), n, app.busy, picture)
+                        {
                             add = Some(p.clone());
                         }
                     }
@@ -2301,6 +2325,12 @@ fn tile_height(ui: &egui::Ui, t: &Theme, p: &Product, width: f32) -> f32 {
     );
     pad.y * 2.0 + g.size().y + 6.0 + 22.0
 }
+/// A tile's picture band: its height (0 = none in this row) and texture.
+struct Picture {
+    texture: Option<(egui::TextureId, egui::Vec2)>,
+    height: f32,
+}
+#[allow(clippy::too_many_arguments)]
 fn product_tile(
     ui: &mut egui::Ui,
     t: &Theme,
@@ -2309,6 +2339,7 @@ fn product_tile(
     size: egui::Vec2,
     in_cart: u32,
     busy: bool,
+    picture: Picture,
 ) -> bool {
     let out = p.stock == Some(0);
     let unavailable = out || !p.on_sale;
@@ -2354,6 +2385,31 @@ fn product_tile(
     } else {
         t.p.fg_default
     };
+    if picture.height > 0.0 {
+        let band = egui::Rect::from_min_size(
+            r.min + vec2(pad.x / 2.0, pad.y / 2.0),
+            vec2(r.width() - pad.x, picture.height - pad.y / 2.0),
+        );
+        match picture.texture {
+            Some(tex) => {
+                crate::images::paint_cover(ui.painter(), band, tex, CornerRadius::same(6));
+                if unavailable {
+                    ui.painter().rect_filled(
+                        band,
+                        CornerRadius::same(6),
+                        t.p.bg_sunken.gamma_multiply(0.6),
+                    );
+                }
+            }
+            None => {
+                ui.painter()
+                    .rect_filled(band, CornerRadius::same(6), t.p.bg_sunken);
+            }
+        }
+    }
+    // The in-cart count stays on the tile's top-right corner.
+    let badge_at = pos2(r.right() - 18.0, r.top() + 18.0);
+    let r = egui::Rect::from_min_max(r.min + vec2(0.0, picture.height), r.max);
     let (g, truncated) = crate::ui::text::wrapped(
         ui.painter(),
         &p.name,
@@ -2364,7 +2420,7 @@ fn product_tile(
     );
     ui.painter().galley(r.min + pad, g, text_color);
     if in_cart > 0 {
-        w::paint_count(ui, pos2(r.right() - 18.0, r.top() + 18.0), in_cart, false);
+        w::paint_count(ui, badge_at, in_cart, false);
     }
     let foot_y = r.bottom() - pad.y - 10.0;
     let price = ui.painter().text(

@@ -115,6 +115,8 @@ pub struct Editor {
     /// Recipe rows: ingredient and amount per unit sold (typed).
     pub recipe: Vec<(Uuid, String)>,
     pub recipe_search: String,
+    /// Picture file path typed in the editor.
+    pub picture_path: String,
     /// Option rows: choice, ingredient and signed amount per unit (typed).
     pub option_recipe: Vec<(Uuid, Uuid, String)>,
     /// Choice picked for the next option row.
@@ -142,6 +144,7 @@ impl Default for Editor {
             options: Vec::new(),
             recipe: Vec::new(),
             recipe_search: String::new(),
+            picture_path: String::new(),
             option_recipe: Vec::new(),
             recipe_choice: None,
             scroll_to_recipe: false,
@@ -172,6 +175,7 @@ impl From<Product> for Editor {
                 .map(|r| (r.ingredient_id, format::qty(r.amount)))
                 .collect(),
             recipe_search: String::new(),
+            picture_path: String::new(),
             option_recipe: p
                 .option_recipe
                 .iter()
@@ -1540,6 +1544,27 @@ fn inspector(app: &mut App, ui: &mut egui::Ui) {
     let service_on = app.data.pricing.service_bp > 0;
     let kitchen_on = !app.data.tables.is_empty();
     let ingredients = app.data.ingredients.clone();
+    // The saved product's picture (pictures save on their own, not with Save).
+    let saved = app
+        .catalog
+        .editor
+        .as_ref()
+        .and_then(|e| e.id)
+        .and_then(|id| app.known.get(&id).map(|p| (id, p.image)));
+    let picture = saved.and_then(|(id, rev)| app.product_texture(id, rev));
+    let may_catalog = crate::staff_ui::may(app, pos_domain::Permission::Catalog);
+    // A picture dropped on the window goes to the open saved product.
+    let dropped = ui.ctx().input(|i| {
+        i.raw
+            .dropped_files
+            .iter()
+            .map(|f| f.path().to_path_buf())
+            .find(|p| crate::images::is_image(p))
+    });
+    let mut picture_action: Option<Option<std::path::PathBuf>> = None;
+    if let (Some(path), Some(_)) = (dropped, saved) {
+        picture_action = Some(Some(path));
+    }
     let Some(editor) = app.catalog.editor.as_mut() else {
         return;
     };
@@ -1601,6 +1626,7 @@ fn inspector(app: &mut App, ui: &mut egui::Ui) {
                         None,
                     );
                 }
+                picture_field(ui, &t, lang, editor, saved, picture, may_catalog && !busy, &mut picture_action);
                 w::field_label(ui, lang.text("ชื่อสินค้า", "Name"), None);
                 w::text_area(
                     ui,
@@ -1906,6 +1932,16 @@ fn inspector(app: &mut App, ui: &mut egui::Ui) {
     if archive {
         app.catalog.archive_confirm = true;
     }
+    match (picture_action, saved) {
+        (Some(Some(path)), Some((id, _))) => {
+            app.set_picture_from(id, &path);
+            if let Some(e) = app.catalog.editor.as_mut() {
+                e.picture_path.clear();
+            }
+        }
+        (Some(None), Some((id, _))) => app.send(Command::SetProductImage(id, None)),
+        _ => {}
+    }
     if open_stock.is_some() {
         app.catalog.stock_dialog = open_stock;
     }
@@ -2172,6 +2208,98 @@ pub fn dialogs(app: &mut App, ctx: &egui::Context) {
 }
 
 /// Option groups (sweetness, toppings) with per-choice extra prices.
+/// Picture: a preview, a path field or a dropped file, and Remove. Pictures
+/// save immediately for saved products (new products save first).
+#[allow(clippy::too_many_arguments)]
+fn picture_field(
+    ui: &mut egui::Ui,
+    t: &Theme,
+    lang: crate::i18n::Language,
+    editor: &mut Editor,
+    saved: Option<(Uuid, Option<i64>)>,
+    texture: Option<(egui::TextureId, egui::Vec2)>,
+    enabled: bool,
+    action: &mut Option<Option<std::path::PathBuf>>,
+) {
+    w::field_label(
+        ui,
+        lang.text("รูปสินค้า", "Picture"),
+        Some(lang.text("(ไม่บังคับ)", "(optional)")),
+    );
+    let Some((_, rev)) = saved else {
+        w::help_text(
+            ui,
+            lang.text(
+                "บันทึกสินค้าก่อน แล้วจึงใส่รูปได้",
+                "Save the product first, then add a picture.",
+            ),
+        );
+        return;
+    };
+    ui.horizontal_top(|ui| {
+        let side = if t.touch() { 96.0 } else { 80.0 };
+        let (rect, _) = ui.allocate_exact_size(vec2(side, side), Sense::hover());
+        match texture {
+            Some(tex) => crate::images::paint_cover(ui.painter(), rect, tex, CornerRadius::same(8)),
+            None => {
+                ui.painter()
+                    .rect_filled(rect, CornerRadius::same(8), t.p.bg_sunken);
+                crate::ui::icons::paint_sized(
+                    ui.painter(),
+                    Icon::Products,
+                    rect.center(),
+                    24.0,
+                    t.p.fg_subtle,
+                );
+            }
+        }
+        ui.vertical(|ui| {
+            ui.spacing_mut().item_spacing.y = space::S1;
+            ui.add_enabled_ui(enabled, |ui| {
+                w::text_input(
+                    ui,
+                    &mut editor.picture_path,
+                    w::FieldOpts {
+                        hint: lang.text(
+                            "วางตำแหน่งไฟล์ .png/.jpg หรือลากไฟล์มาวาง",
+                            "Paste a .png/.jpg path or drop a file",
+                        ),
+                        limit: 1024,
+                        ..Default::default()
+                    },
+                );
+                ui.horizontal(|ui| {
+                    let path =
+                        std::path::PathBuf::from(editor.picture_path.trim().trim_matches('"'));
+                    if w::button(lang.text("ใช้รูปนี้", "Use picture"))
+                        .size(w::Size::Sm)
+                        .enabled(crate::images::is_image(&path))
+                        .show(ui)
+                        .clicked()
+                    {
+                        *action = Some(Some(path));
+                    }
+                    if rev.is_some()
+                        && w::button(lang.text("ลบรูป", "Remove"))
+                            .ghost()
+                            .size(w::Size::Sm)
+                            .show(ui)
+                            .clicked()
+                    {
+                        *action = Some(None);
+                    }
+                });
+            });
+            w::help_text(
+                ui,
+                lang.text(
+                    "ย่อเหลือ 256 px ให้อัตโนมัติ · บันทึกทันที",
+                    "Shrunk to 256 px · saved immediately",
+                ),
+            );
+        });
+    });
+}
 /// Recipe: ingredients one unit uses, with the recipe cost when every
 /// ingredient has a cost ("Use as cost" copies it to the product cost).
 fn recipe_editor(

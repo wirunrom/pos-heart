@@ -16,6 +16,7 @@ diesel::table! {
         kitchen -> Bool,
         recipe_json -> Text,
         option_recipe_json -> Text,
+        image_rev -> Nullable<BigInt>,
     }
 }
 diesel::table! {
@@ -177,7 +178,15 @@ diesel::table! {
         movement_json -> Text,
     }
 }
+diesel::table! {
+    product_images (product_id) {
+        product_id -> Text,
+        png -> Binary,
+        updated_at -> BigInt,
+    }
+}
 diesel::allow_tables_to_appear_in_same_query!(
+    product_images,
     ingredients,
     ingredient_movements,
     promotions,

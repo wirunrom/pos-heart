@@ -66,10 +66,10 @@ fn version_four_products_migrate_on_sale_without_barcodes() -> Result {
     drop(pos);
     // Reopening a current database is a no-op; a future version is refused.
     let mut db = SqliteConnection::establish(path.to_str().ok_or("path")?)?;
-    db.batch_execute("PRAGMA user_version=20")?;
+    db.batch_execute("PRAGMA user_version=21")?;
     assert!(matches!(
         Pos::open(&path),
-        Err(Error::UnsupportedSchema(20))
+        Err(Error::UnsupportedSchema(21))
     ));
     Ok(())
 }
@@ -479,5 +479,37 @@ fn invalid_or_stale_options_roll_back_checkout() -> Result {
         }),
         Err(Error::Domain(DomainError::InvalidOptions))
     ));
+    Ok(())
+}
+
+#[test]
+fn product_pictures_are_stored_apart_and_survive_edits() -> Result {
+    let dir = tempfile::tempdir()?;
+    let mut pos = Pos::open(dir.path().join("db"))?;
+    let p = product(&mut pos, "P1", "Food", None, None)?;
+    assert_eq!(p.image, None);
+    assert!(matches!(
+        pos.set_product_image(p.id, Some(b"not a png"), 10),
+        Err(Error::InvalidImage)
+    ));
+    let png = b"\x89PNG\r\n\x1a\nfake-but-signed".to_vec();
+    let rev = pos.set_product_image(p.id, Some(&png), 10)?;
+    assert_eq!(rev, Some(10));
+    // A second change in the same second still gets a newer revision.
+    assert_eq!(pos.set_product_image(p.id, Some(&png), 10)?, Some(11));
+    assert_eq!(pos.product(p.id)?.image, Some(11));
+    assert_eq!(pos.product_image(p.id)?, Some((11, png.clone())));
+    // Saving the product keeps its picture.
+    pos.save_product(ProductInput {
+        id: Some(p.id),
+        sku: p.sku.clone(),
+        name: "renamed".into(),
+        price: p.price,
+        ..Default::default()
+    })?;
+    assert_eq!(pos.product(p.id)?.image, Some(11));
+    pos.set_product_image(p.id, None, 12)?;
+    assert_eq!(pos.product(p.id)?.image, None);
+    assert_eq!(pos.product_image(p.id)?, None);
     Ok(())
 }

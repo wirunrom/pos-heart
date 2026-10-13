@@ -12,6 +12,7 @@ mod discount_ui;
 mod history_ui;
 mod home_ui;
 mod i18n;
+mod images;
 mod import_ui;
 mod ingredients_ui;
 mod kitchen_ui;

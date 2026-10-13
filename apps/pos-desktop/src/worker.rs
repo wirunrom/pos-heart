@@ -107,6 +107,9 @@ pub enum Command {
     SaveTable(pos_domain::DiningTable),
     SavePromotion(pos_domain::Promotion),
     SaveIngredient(pos_domain::Ingredient),
+    /// Background: a product picture for the cache.
+    ProductImage(Uuid),
+    SetProductImage(Uuid, Option<Vec<u8>>),
     AdjustIngredient(pos_domain::IngredientRequest),
     IngredientHistory(Uuid),
     DeletePromotion(Uuid),
@@ -175,6 +178,8 @@ pub enum Event {
     TableSaved,
     PromotionSaved,
     IngredientSaved,
+    ProductImage(Uuid, Option<(i64, Vec<u8>)>),
+    ImageSaved,
     IngredientHistory(Uuid, Vec<pos_domain::IngredientMovement>),
     KitchenSent(Cart, Option<Box<pos_domain::KitchenTicket>>),
     Kitchen(Vec<pos_domain::KitchenTicket>),
@@ -523,6 +528,11 @@ fn run(pos: &mut Pos, command: Command) -> pos_core::Result<Event> {
             Event::SignedOut
         }
         Command::SaveStaff(input) => Event::StaffSaved(pos.save_staff(&input, now())?),
+        Command::ProductImage(id) => Event::ProductImage(id, pos.product_image(id)?),
+        Command::SetProductImage(id, png) => {
+            pos.set_product_image(id, png.as_deref(), now())?;
+            Event::ImageSaved
+        }
         Command::SaveIngredient(i) => {
             pos.save_ingredient(&i, now())?;
             Event::IngredientSaved

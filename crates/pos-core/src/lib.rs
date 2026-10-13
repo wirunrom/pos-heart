@@ -18,6 +18,7 @@ mod tax;
 mod void;
 
 pub use audit::{ActivityEvent, ActivityKind, ActivityQuery};
+pub use catalog::MAX_IMAGE_BYTES;
 pub use catalog::{CatalogCounts, ProductQuery, ProductView};
 pub use database::{Pos, SCHEMA_VERSION};
 pub use import::{ImportIssue, ImportPreview, ImportRow, MAX_IMPORT_BYTES, MAX_IMPORT_ROWS};
@@ -75,6 +76,8 @@ pub enum Error {
     RefundExceedsMethod,
     #[error("Another promotion already uses this coupon code")]
     DuplicateCoupon,
+    #[error("The picture must be a PNG of at most 512 KB")]
+    InvalidImage,
     #[error("Ingredient not found or switched off")]
     IngredientNotFound,
     #[error("Another ingredient already has this name")]

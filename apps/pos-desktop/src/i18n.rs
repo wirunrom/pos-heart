@@ -189,6 +189,10 @@ impl Language {
             },
             Error::PaymentTotalChanged => self.text("ยอดสินค้าเปลี่ยนแล้ว ตรวจยอดใหม่และตรวจรับชำระอีกครั้ง", "The total changed. Review the refreshed amount and verify payment again."),
             Error::InvalidRefundMethod => self.text("ต้องคืนเงินตามช่องทางที่ชำระในบิลเดิม", "Refund using the original payment method."),
+            Error::InvalidImage => self.text(
+                "รูปต้องเป็น PNG ไม่เกิน 512 KB",
+                "The picture must be a PNG of at most 512 KB.",
+            ),
             Error::IngredientNotFound => self.text(
                 "ไม่พบวัตถุดิบนี้ หรือถูกปิดใช้งานแล้ว",
                 "That ingredient no longer exists or is switched off.",

@@ -303,6 +303,7 @@ pub fn prepare(pos: &mut Pos, data: &Path, reviewed: &Review) -> pos_core::Resul
             "density.txt",
             "language.txt",
             "window.txt",
+            "product-images.txt",
             "auto-backup.json",
             "auto-lock.json",
         ] {

@@ -483,6 +483,32 @@ fn display_card(app: &mut App, ui: &mut egui::Ui) {
             type_scale::CAPTION,
         ));
     });
+    let mut pictures = app.tile_images;
+    ui.horizontal(|ui| {
+        ui.add_sized(
+            vec2(160.0, 24.0),
+            egui::Label::new(t.text(
+                lang.text("รูปสินค้าในหน้าขาย", "Product pictures"),
+                type_scale::BODY,
+            )),
+        );
+        if w::switch(
+            ui,
+            &mut pictures,
+            lang.text("รูปสินค้าในหน้าขาย", "Product pictures"),
+        )
+        .changed()
+        {
+            app.set_tile_images(pictures);
+        }
+        ui.label(t.muted(
+            lang.text(
+                "ปิดเพื่อให้ปุ่มสินค้าเล็กลงและเห็นได้มากขึ้น",
+                "Off: smaller tiles, more on screen",
+            ),
+            type_scale::CAPTION,
+        ));
+    });
     let mut density = app.density;
     ui.horizontal(|ui| {
         ui.add_sized(
