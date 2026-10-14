@@ -14,8 +14,8 @@ pub fn show(ui: &mut Ui, payload: &str, size: f32) -> Option<Response> {
     let painter = ui.painter_at(rect);
     painter.rect(
         rect,
-        CornerRadius::same(radius::SM),
-        primitive::STONE_0,
+        CornerRadius::same(super::Theme::of(ui).radius(radius::SM)),
+        primitive::PAPER_0,
         Stroke::new(1.0, super::Theme::of(ui).p.border_default),
         StrokeKind::Inside,
     );
@@ -44,7 +44,7 @@ pub fn show(ui: &mut Ui, payload: &str, size: f32) -> Option<Response> {
             painter.rect_filled(
                 Rect::from_min_size(min, vec2((x - start) as f32 * cell, cell)),
                 CornerRadius::ZERO,
-                primitive::STONE_975,
+                primitive::GRAPHITE_950,
             );
         }
     }

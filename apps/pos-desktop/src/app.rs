@@ -68,11 +68,10 @@ pub struct App {
     pub payment_method: pos_domain::PaymentMethod,
     pub payment_review: Option<sale_ui::PaymentReview>,
     pub lang: Language,
-    pub appearance: ds_theme::Appearance,
+    pub look: ds_theme::Look,
     pub density: Density,
     pub fullscreen: bool,
     window: crate::window::WindowFit,
-    pub theme_is_dark: bool,
     pub shop: crate::shop::ShopSettings,
     pub shop_draft: crate::shop::ShopSettings,
     pub onboarding: bool,
@@ -157,11 +156,14 @@ impl App {
         start_page: Option<Page>,
     ) -> std::io::Result<Self> {
         let read = |name: &str| std::fs::read_to_string(data_dir.join(name)).unwrap_or_default();
-        let appearance = ds_theme::Appearance::from_saved(&read("theme.txt"));
+        let look = ds_theme::Look {
+            accent: ds_theme::accent_from_saved(&read("accent.txt")),
+            shape: ds_theme::shape_from_saved(&read("shape.txt")),
+        };
         let density = ds_theme::density_from_saved(&read("density.txt"));
         let fullscreen = crate::window::fullscreen_from_saved(&read("window.txt"));
         ds_theme::install_fonts(&cc.egui_ctx);
-        ds_theme::apply(&cc.egui_ctx, appearance, density);
+        ds_theme::apply(&cc.egui_ctx, look, density);
         let lang = if read("language.txt") == "en" {
             Language::English
         } else {
@@ -240,11 +242,10 @@ impl App {
             payment_method: pos_domain::PaymentMethod::Cash,
             payment_review: None,
             lang,
-            appearance,
+            look,
             density,
             fullscreen,
             window: crate::window::WindowFit::default(),
-            theme_is_dark: cc.egui_ctx.theme() == egui::Theme::Dark,
             page,
             shop_draft: shop.clone(),
             shop,
@@ -1359,12 +1360,13 @@ impl App {
             self.error = Some(e.to_string());
         }
     }
-    pub fn set_display(&mut self, appearance: ds_theme::Appearance, density: Density) {
-        self.appearance = appearance;
+    pub fn set_display(&mut self, look: ds_theme::Look, density: Density) {
+        self.look = look;
         self.density = density;
         self.display_dirty = true;
         for (file, value) in [
-            ("theme.txt", appearance.saved()),
+            ("accent.txt", ds_theme::accent_saved(look.accent)),
+            ("shape.txt", ds_theme::shape_saved(look.shape)),
             ("density.txt", ds_theme::density_saved(density)),
         ] {
             if let Err(e) = std::fs::write(self.data_dir.join(file), value) {
@@ -1619,10 +1621,9 @@ impl eframe::App for App {
     fn ui(&mut self, root: &mut egui::Ui, _frame: &mut eframe::Frame) {
         let ctx = root.ctx().clone();
         if self.display_dirty {
-            ds_theme::apply(&ctx, self.appearance, self.density);
+            ds_theme::apply(&ctx, self.look, self.density);
             self.display_dirty = false;
         }
-        self.theme_is_dark = ctx.theme() == egui::Theme::Dark;
         self.window.update(&ctx, self.fullscreen);
         self.frames += 1;
         self.idle_input(&ctx);
@@ -1680,10 +1681,11 @@ impl eframe::App for App {
         }
         let t = Theme::current(&ctx);
         egui::Panel::top("topbar")
-            .exact_size(t.m.topbar)
+            .exact_size(t.m.titlebar_h + space::S2)
+            .show_separator_line(false)
             .frame(
                 egui::Frame::new()
-                    .fill(t.p.bg_canvas)
+                    .fill(t.p.bg_chrome)
                     .inner_margin(egui::Margin::symmetric(10, 0)),
             )
             .show(root, |ui| shell::topbar(self, ui));
@@ -1691,11 +1693,15 @@ impl eframe::App for App {
             .frame(
                 egui::Frame::new()
                     .fill(t.p.bg_canvas)
-                    .inner_margin(egui::Margin {
-                        left: 10,
-                        right: 10,
-                        top: 4,
-                        bottom: 10,
+                    .inner_margin(if t.soft() {
+                        egui::Margin {
+                            left: space::PANE_GAP as i8,
+                            right: space::PANE_GAP as i8,
+                            top: space::PANE_GAP as i8,
+                            bottom: space::PANE_GAP as i8,
+                        }
+                    } else {
+                        egui::Margin::ZERO
                     }),
             )
             .show(root, |ui| {
@@ -1741,6 +1747,13 @@ impl eframe::App for App {
                         // screens they stay centred at a readable width.
                         page => {
                             let full = ui.available_rect_before_wrap();
+                            // Square shape has no canvas margin; keep page
+                            // headings off the window edge.
+                            let full = if t.soft() {
+                                full
+                            } else {
+                                full.shrink(space::S2)
+                            };
                             let width = full.width().min(READING_WIDTH);
                             let rect = egui::Rect::from_min_size(
                                 egui::pos2(full.center().x - width / 2.0, full.top()),
@@ -1768,12 +1781,19 @@ impl eframe::App for App {
                                         );
                                         return;
                                     }
-                                    if crate::activity_ui::show(
-                                        &mut page_ui,
-                                        &t,
-                                        self.lang,
-                                        &mut self.activity,
-                                    ) {
+                                    let refresh = t
+                                        .surface()
+                                        .show(&mut page_ui, |ui| {
+                                            ui.set_min_size(ui.available_size());
+                                            crate::activity_ui::show(
+                                                ui,
+                                                &t,
+                                                self.lang,
+                                                &mut self.activity,
+                                            )
+                                        })
+                                        .inner;
+                                    if refresh {
                                         self.send(Command::Activity(self.activity.query.clone()));
                                     }
                                 }

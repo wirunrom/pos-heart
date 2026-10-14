@@ -154,7 +154,7 @@ impl Button {
             Size::Sm => t.m.control_sm,
             Size::Md => t.m.control_md,
             Size::Lg => t.m.control_lg,
-            Size::Xl => t.m.control_xl,
+            Size::Xl => t.m.control_lg,
         };
         let height = if t.touch() {
             height.max(Metrics::TOUCH_TARGET_MIN)
@@ -166,10 +166,14 @@ impl Button {
             Size::Sm => type_scale::LABEL,
             _ => type_scale::BODY,
         };
+        // A disabled commit/destructive button is grey, never a faded
+        // accent (design/docs/02: disabled states).
+        let solid = matches!(self.kind, Kind::Primary | Kind::Danger);
         let (bg, fg, stroke) = match self.kind {
+            _ if solid && !enabled => (p.bg_sunken, p.fg_subtle, Stroke::NONE),
             Kind::Primary => (p.accent_bg, p.fg_on_accent, Stroke::NONE),
             Kind::Secondary => (
-                p.bg_surface,
+                p.bg_raised,
                 p.fg_default,
                 Stroke::new(1.0, p.border_control),
             ),
@@ -253,19 +257,20 @@ impl Button {
                 match self.kind {
                     Kind::Primary => p.accent_bg_hover,
                     Kind::Danger => p.danger_solid.gamma_multiply(0.9),
-                    _ => p.bg_hover,
+                    _ => p.bg_sunken,
                 }
             } else {
                 bg
             };
+            let fade = enabled || solid;
             ui.painter().rect(
                 rect,
                 rounding,
-                faded(bg, enabled),
-                Stroke::new(stroke.width, faded(stroke.color, enabled)),
+                faded(bg, fade),
+                Stroke::new(stroke.width, faded(stroke.color, fade)),
                 StrokeKind::Inside,
             );
-            let fg = faded(fg, enabled);
+            let fg = faded(fg, fade);
             let mut x = rect.center().x - content / 2.0;
             if self.loading {
                 spinner(ui, rect.center(), height * 0.36, fg);
@@ -294,7 +299,7 @@ impl Button {
                     );
                     ui.painter().rect_stroke(
                         box_rect,
-                        radius::XS,
+                        t.radius(radius::XS),
                         Stroke::new(1.0, fg.gamma_multiply(0.55)),
                         StrokeKind::Inside,
                     );
@@ -676,12 +681,12 @@ pub fn segmented<T: Copy + PartialEq>(ui: &mut Ui, value: &mut T, options: &[(T,
                 StrokeKind::Inside,
             );
         } else if response.hovered() {
-            ui.painter().rect_filled(rect, 4, t.p.bg_hover);
+            ui.painter().rect_filled(rect, t.radius(4), t.p.bg_hover);
         }
         let color = if active { t.p.fg_default } else { t.p.fg_muted };
         ui.painter()
             .galley_with_override_text_color(rect.center() - g.size() / 2.0, g, color);
-        focus_ring(ui, rect, CornerRadius::same(4), &response);
+        focus_ring(ui, rect, CornerRadius::same(t.radius(4)), &response);
         if response.clicked() && !active {
             *value = *option;
             changed = true;
@@ -741,7 +746,8 @@ pub fn tabs<T: Copy + PartialEq>(
                     ),
                     vec2(count_w - 6.0, 20.0),
                 );
-                ui.painter().rect_filled(r, radius::XS, t.p.bg_inverse);
+                ui.painter()
+                    .rect_filled(r, t.radius(radius::XS), t.p.bg_inverse);
                 ui.painter()
                     .galley(r.center() - c.size() / 2.0, c, t.p.fg_inverse);
             }
@@ -762,7 +768,7 @@ pub fn tabs<T: Copy + PartialEq>(
                     Stroke::new(1.0, t.p.border_control),
                 );
             }
-            focus_ring(ui, rect, CornerRadius::same(4), &response);
+            focus_ring(ui, rect, CornerRadius::same(t.radius(4)), &response);
             if response.clicked() && !active {
                 *value = *option;
                 changed = true;
@@ -797,7 +803,7 @@ pub fn chip(ui: &mut Ui, label: &str, selected: bool, money: bool) -> Response {
     } else if response.hovered() {
         t.p.bg_hover
     } else {
-        t.p.bg_surface
+        t.p.bg_raised
     };
     ui.painter().rect(
         rect,
@@ -813,6 +819,64 @@ pub fn chip(ui: &mut Ui, label: &str, selected: bool, money: bool) -> Response {
     ui.painter().galley(rect.center() - g.size() / 2.0, g, fg);
     focus_ring(ui, rect, CornerRadius::same(radius::FULL), &response);
     response
+}
+/// Brand accent presets as colour swatches with names; true when changed.
+pub fn accent_picker(
+    ui: &mut Ui,
+    value: &mut crate::ui::theme::AccentPreset,
+    name: impl Fn(crate::ui::theme::AccentPreset) -> String,
+) -> bool {
+    let t = Theme::of(ui);
+    let mut changed = false;
+    ui.horizontal_wrapped(|ui| {
+        ui.spacing_mut().item_spacing.x = space::S2;
+        for accent in crate::ui::theme::ACCENTS {
+            let label = name(accent);
+            let selected = *value == accent;
+            let g = galley(ui, &label, t.strong_font(type_scale::LABEL), t.p.fg_default);
+            let dot = if t.touch() { 18.0 } else { 14.0 };
+            let height = if t.touch() {
+                Metrics::TOUCH_TARGET_MIN
+            } else {
+                t.m.control_md
+            };
+            let width = space::S3 + dot + space::S2 + g.size().x + space::S3;
+            let (rect, response) = ui.allocate_exact_size(vec2(width, height), Sense::click());
+            response.widget_info(|| {
+                WidgetInfo::selected(WidgetType::RadioButton, true, selected, &label)
+            });
+            let r = CornerRadius::same(t.radius(radius::MD));
+            let (bg, stroke) = if selected {
+                (t.p.bg_selected, Stroke::new(2.0, t.p.border_selected))
+            } else if response.hovered() {
+                (t.p.bg_hover, Stroke::new(1.0, t.p.border_default))
+            } else {
+                (t.p.bg_raised, Stroke::new(1.0, t.p.border_default))
+            };
+            ui.painter().rect(rect, r, bg, stroke, StrokeKind::Inside);
+            let c = egui::pos2(rect.left() + space::S3 + dot / 2.0, rect.center().y);
+            ui.painter().circle(
+                c,
+                dot / 2.0,
+                crate::ui::theme::accent_color(accent),
+                Stroke::new(1.0, t.p.border_default),
+            );
+            ui.painter().galley(
+                egui::pos2(
+                    c.x + dot / 2.0 + space::S2,
+                    rect.center().y - g.size().y / 2.0,
+                ),
+                g,
+                t.p.fg_default,
+            );
+            focus_ring(ui, rect, r, &response);
+            if response.clicked() && !selected {
+                *value = accent;
+                changed = true;
+            }
+        }
+    });
+    changed
 }
 /// Chips that share the row width equally (quick cash).
 pub fn chip_row(ui: &mut Ui, labels: &[(String, bool)]) -> Option<usize> {
@@ -916,7 +980,7 @@ pub fn checkbox(ui: &mut Ui, state: Check, label: &str) -> Response {
     let filled = state != Check::Off;
     ui.painter().rect(
         r,
-        CornerRadius::same(radius::XS),
+        CornerRadius::same(t.radius(radius::XS)),
         if filled {
             t.p.bg_inverse
         } else {
@@ -938,7 +1002,7 @@ pub fn checkbox(ui: &mut Ui, state: Check, label: &str) -> Response {
         }
         Check::Off => {}
     }
-    focus_ring(ui, r, CornerRadius::same(radius::XS), &response);
+    focus_ring(ui, r, CornerRadius::same(t.radius(radius::XS)), &response);
     response.on_hover_text(label)
 }
 /// Checkbox followed by a clickable text label.
@@ -1029,25 +1093,26 @@ pub fn paint_count(ui: &Ui, center: Pos2, n: u32, inverted: bool) -> Rect {
     rect
 }
 /// Dot + text pill for always-visible status (shift, offline).
+/// A status item on the graphite top bar (shift, staff, offline).
 pub fn status_pill(ui: &mut Ui, text: &str, dot: Option<Color32>, hollow: bool) -> Response {
     let t = Theme::of(ui);
-    let g = galley(ui, text, t.font(type_scale::LABEL), t.p.fg_default);
+    let g = galley(ui, text, t.font(type_scale::LABEL), t.p.fg_chrome);
     let height = (t.m.control_sm + 4.0).max(32.0);
     let (rect, response) = ui.allocate_exact_size(vec2(g.size().x + 40.0, height), Sense::click());
     response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, text));
     ui.painter().rect(
         rect,
-        CornerRadius::same(radius::FULL),
+        CornerRadius::same(t.radius(radius::FULL)),
         if response.hovered() {
-            t.p.bg_hover
+            t.p.bg_chrome_hover
         } else {
-            t.p.bg_surface
+            t.p.bg_chrome_raised
         },
-        Stroke::new(1.0, t.p.border_default),
+        Stroke::new(1.0, t.p.border_chrome),
         StrokeKind::Inside,
     );
     let dot_center = pos2(rect.left() + 17.0, rect.center().y);
-    let color = dot.unwrap_or(t.p.fg_muted);
+    let color = dot.unwrap_or(t.p.fg_chrome_muted);
     if hollow {
         ui.painter()
             .circle_stroke(dot_center, 4.0, Stroke::new(1.5, color));
@@ -1057,10 +1122,36 @@ pub fn status_pill(ui: &mut Ui, text: &str, dot: Option<Color32>, hollow: bool) 
     ui.painter().galley(
         pos2(rect.left() + 28.0, rect.center().y - g.size().y / 2.0),
         g,
-        t.p.fg_default,
+        t.p.fg_chrome,
     );
     focus_ring(ui, rect, CornerRadius::same(radius::FULL), &response);
     response
+}
+/// Icon-only button on the graphite top bar.
+pub fn chrome_icon_button(ui: &mut Ui, icon: Icon, label: &str) -> Response {
+    let t = Theme::of(ui);
+    let side = if t.touch() {
+        Metrics::TOUCH_TARGET_MIN
+    } else {
+        t.m.control_md
+    };
+    let (rect, response) = ui.allocate_exact_size(vec2(side, side), Sense::click());
+    response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, label));
+    let r = t.control_radius();
+    ui.painter().rect(
+        rect,
+        r,
+        if response.hovered() {
+            t.p.bg_chrome_hover
+        } else {
+            Color32::TRANSPARENT
+        },
+        Stroke::new(1.0, t.p.border_chrome),
+        StrokeKind::Inside,
+    );
+    icons::paint_sized(ui.painter(), icon, rect.center(), t.m.icon, t.p.fg_chrome);
+    focus_ring(ui, rect, r, &response);
+    response.on_hover_text(label)
 }
 
 // ───────────────────────────── Layout helpers ─────────────────────────────
@@ -1071,7 +1162,12 @@ pub fn title(ui: &mut Ui, text: &str) -> Response {
 }
 pub fn page_title(ui: &mut Ui, text: &str) -> Response {
     let t = Theme::of(ui);
-    ui.add(egui::Label::new(t.text(text, type_scale::TITLE_LG)).wrap())
+    ui.add(egui::Label::new(t.text(text, type_scale::TITLE)).wrap())
+}
+/// A page heading drawn straight on the graphite canvas (outside a pane).
+pub fn canvas_title(ui: &mut Ui, text: &str) -> Response {
+    let t = Theme::of(ui);
+    ui.add(egui::Label::new(t.chrome(text, type_scale::TITLE)).wrap())
 }
 /// Small uppercase-like section label (`หมวดหมู่`, `มุมมอง`).
 pub fn eyebrow(ui: &mut Ui, text: &str) -> Response {
@@ -1238,7 +1334,7 @@ pub fn banner(ui: &mut Ui, tone: Tone, text: &str, action: Option<&str>) -> bool
     let mut clicked = false;
     egui::Frame::new()
         .fill(bg)
-        .corner_radius(radius::MD)
+        .corner_radius(t.radius(radius::MD))
         .inner_margin(egui::Margin::symmetric(space::S3 as i8, space::S2 as i8))
         .show(ui, |ui| {
             ui.set_width(ui.available_width());
@@ -1278,7 +1374,8 @@ pub fn state_view(ui: &mut Ui, icon: Icon, title: &str, body: &str) {
     ui.vertical_centered(|ui| {
         ui.add_space(space::S8);
         let (rect, _) = ui.allocate_exact_size(vec2(48.0, 48.0), Sense::hover());
-        ui.painter().rect_filled(rect, radius::MD, t.p.bg_sunken);
+        ui.painter()
+            .rect_filled(rect, t.radius(radius::MD), t.p.bg_sunken);
         icons::paint_sized(ui.painter(), icon, rect.center(), 24.0, t.p.fg_muted);
         ui.add_space(space::S3);
         ui.label(t.text(title, type_scale::TITLE));

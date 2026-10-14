@@ -36,6 +36,20 @@
 3. เก็บไว้อย่างน้อย 1 minor version แล้วจึงลบ
 4. บันทึกใน CHANGELOG ทั้งตอนประกาศและตอนลบ
 
+## CHANGELOG
+
+```
+## 0.2.0 — 2026-10-14
+### Changed   Single theme (graphite chrome + paper panes); Light/Dark removed. Soft shape default (panes 10, controls 8).
+              App chrome: workspace tabs in title bar, contextual toolbar with scope, status bar with actions.
+              Payment is a two-step flow. Disabled primary = grey + reason. Line actions moved into LineEditor.
+### Added     Tokens: bg-chrome*, fg-chrome*, border-chrome, cat-*, pane-gap, radius-window, titlebar/toolbar/statusbar sizes.
+              Components: TitleBar, Toolbar, Pane, SaveBar, StatusBar, CommandBar, PinPad, ActivityTimeline, DenominationCounter, TableCard.
+              Feedback cues (flash, count bump, sounds). Pinned products. Accent presets.
+### Removed   v0.1 screen cards (ScreenSell, ScreenProducts, ScreenShiftClose, ScreenTableOrders, ScreenReports), PrototypeSell → see AppConcept.
+              Tokens: per-theme values, stone-* / old saffron ramp names.
+```
+
 ## CHANGELOG (รูปแบบ)
 
 ```
@@ -54,9 +68,9 @@
 - [ ] เป้าการกดในโหมด touch ≥ 44×44 · ไม่มีอะไรที่ต้อง hover ถึงจะใช้ได้
 - [ ] ไม่พึ่งสีอย่างเดียว · icon-only มี label · AccessKit role/label ครบ
 
-**Theme parity**
-- [ ] ดู Light และ Dark คู่กัน: ไม่มีอะไรหายไป (พื้นผิวที่ต่างจากพื้นหลังน้อยกว่าไม่กี่ %) · เงาใน dark ใช้ขอบ highlight แทน
-- [ ] ไม่มีค่าสีตรง ๆ ในโค้ด (grep หา `#`/`Color32::from_rgb` ใน widget)
+**Density & shape parity**
+- [ ] ตรวจทั้ง compact และ touch: เป้ากด touch ≥ 44, ไม่มีอะไรถูกตัด, คำใบ้คีย์ลัดซ่อนใน touch
+- [ ] ไม่มีค่าสีตรง ๆ ในโค้ด (grep หา `#`/`Color32::from_rgb` ใน widget) · ปุ่มที่กดไม่ได้บอกเหตุผล
 
 **Localization**
 - [ ] ทดสอบไทยและอังกฤษด้วย*ข้อความยาวจริง* (ชื่อสินค้ายาว 80 ตัวอักษร, ปุ่มภาษาอังกฤษ)
@@ -68,10 +82,10 @@
 - [ ] มีปุ่ม accent ไม่เกิน 1 ปุ่มต่อมุมมอง · ระยะทั้งหมดเป็น `space-*`
 - [ ] เทียบกับหน้าจอตัวอย่างที่ใกล้เคียงที่สุด
 
-## สถานะของระบบตอนนี้ (v0.1)
+## สถานะของระบบตอนนี้ (v0.2)
 
 | พร้อมใช้ (Ready) | ทดลอง (Experimental) | ต้องพิสูจน์เพิ่ม |
 |---|---|---|
-| Foundations, tokens, primitives, Feedback, Overlay, DataTable, ProductTile, CartLine, OrderSummary, StatusLine | density switch, quick cash, command bar, StatTile/Chart, DateRange | Thai shaping ใน egui · ขนาด touch บนจอจริง · การหาพักบิล/ยกเลิกบิลของคนใหม่ · dark ในร้านแสงจ้า · TableCard, KitchenTicket, จ่ายผสม (Future) |
+| Tokens v0.2, app chrome, primitives, Feedback, Overlay, DataTable, ProductTile, CartLine, OrderSummary, ชำระ 2 ขั้น | เสียง, Ctrl K, PIN, หมวดแถวปุ่ม, ชุดสีหลัก, StatTile/Chart | Thai shaping/ตัดคำใน egui · unified title bar บน Windows · เป้ากดบนจอจริง · KDS/จอลูกค้า v0.2 |
 
 **ผู้ดูแล:** ตอนนี้ 1 คน (ผู้ดูแลผลิตภัณฑ์) อนุมัติการเปลี่ยนแปลงทั้งหมด · ทบทวนระบบทุกครั้งที่เพิ่มฟีเจอร์ใหญ่ หรือทุก 3 เดือน

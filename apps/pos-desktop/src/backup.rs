@@ -300,6 +300,8 @@ pub fn prepare(pos: &mut Pos, data: &Path, reviewed: &Review) -> pos_core::Resul
         for name in [
             "printer.json",
             "theme.txt",
+            "accent.txt",
+            "shape.txt",
             "density.txt",
             "language.txt",
             "window.txt",

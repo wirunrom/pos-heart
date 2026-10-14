@@ -34,7 +34,7 @@ pub fn panel(app: &mut App, ui: &mut egui::Ui) {
         .collect();
     ui.spacing_mut().item_spacing.y = space::S2;
     ui.horizontal(|ui| {
-        ui.label(t.text(lang.text("หมวดหมู่", "Categories"), type_scale::TITLE_LG));
+        ui.label(t.text(lang.text("หมวดหมู่", "Categories"), type_scale::TITLE));
         ui.label(t.muted(format::count(list.len() as u64), type_scale::BODY));
     });
     w::help_text(

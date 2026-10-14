@@ -134,7 +134,7 @@ pub fn onboard(app: &mut App, ui: &mut egui::Ui) {
                 w::help_text(
                     ui,
                     lang.text(
-                        "แก้ไขได้ภายหลังที่ตั้งค่า · ภาษา ธีม และขนาดปุ่ม ปรับได้จากปุ่มมุมขวาบน",
+                        "แก้ไขได้ภายหลังที่ตั้งค่า · ภาษา สีหลัก และขนาดปุ่ม ปรับได้จากปุ่มมุมขวาบน",
                         "Change this later in Settings · language, theme and density are in the top-right button.",
                     ),
                 );
@@ -246,7 +246,7 @@ fn section_item(
     } else {
         egui::Color32::TRANSPARENT
     };
-    let corner = egui::CornerRadius::same(8);
+    let corner = egui::CornerRadius::same(t.radius(8));
     ui.painter().rect_filled(rect, corner, bg);
     ui.painter().galley(
         egui::pos2(rect.left() + pad, rect.center().y - g.size().y / 2.0),
@@ -271,7 +271,7 @@ fn section_item(
 pub fn show(app: &mut App, ui: &mut egui::Ui) {
     let t = Theme::of(ui);
     let lang = app.lang;
-    w::page_title(ui, lang.text("ตั้งค่า", "Settings"));
+    w::canvas_title(ui, lang.text("ตั้งค่า", "Settings"));
     ui.add_space(space::S2);
     let full = ui.available_width();
     let nav_w = if full < 1100.0 { 196.0 } else { 220.0 };
@@ -430,7 +430,7 @@ fn display_card(app: &mut App, ui: &mut egui::Ui) {
     let lang = app.lang;
     w::title(
         ui,
-        lang.text("ภาษา ธีม และขนาด", "Language, theme & density"),
+        lang.text("ภาษา สีหลัก และขนาด", "Language, colour & density"),
     );
     w::help_text(
         ui,
@@ -453,23 +453,50 @@ fn display_card(app: &mut App, ui: &mut egui::Ui) {
             app.set_language(next);
         }
     });
-    let mut appearance = app.appearance;
+    let mut look = app.look;
     ui.horizontal(|ui| {
         ui.add_sized(
             vec2(160.0, 24.0),
-            egui::Label::new(t.text(lang.text("ธีม", "Theme"), type_scale::BODY)),
+            egui::Label::new(t.text(lang.text("สีหลัก", "Accent colour"), type_scale::BODY)),
+        );
+        ui.vertical(|ui| {
+            if w::accent_picker(ui, &mut look.accent, |a| {
+                let (th, en) = ds_theme::accent_name(a);
+                lang.text(th, en).to_owned()
+            }) {
+                app.set_display(look, app.density);
+            }
+            ui.label(t.muted(
+                lang.text(
+                    "สีของปุ่มยืนยัน (ชำระเงิน บันทึก) และแถบที่เลือก",
+                    "Colour of commit buttons (Pay, Save) and the active tab",
+                ),
+                type_scale::CAPTION,
+            ));
+        });
+    });
+    ui.horizontal(|ui| {
+        ui.add_sized(
+            vec2(160.0, 24.0),
+            egui::Label::new(t.text(lang.text("ขอบ", "Corners"), type_scale::BODY)),
         );
         if w::segmented(
             ui,
-            &mut appearance,
+            &mut look.shape,
             &[
-                (ds_theme::Appearance::Light, lang.text("สว่าง", "Light")),
-                (ds_theme::Appearance::Dark, lang.text("มืด", "Dark")),
-                (ds_theme::Appearance::System, lang.text("ตามระบบ", "System")),
+                (ds_theme::Shape::Soft, lang.text("โค้ง", "Rounded")),
+                (ds_theme::Shape::Square, lang.text("เหลี่ยม", "Square")),
             ],
         ) {
-            app.set_display(appearance, app.density);
+            app.set_display(look, app.density);
         }
+        ui.label(t.muted(
+            lang.text(
+                "เหลี่ยม: แผงชิดกัน ได้พื้นที่มากขึ้น",
+                "Square: panes edge to edge, a little more room",
+            ),
+            type_scale::CAPTION,
+        ));
     });
     ui.horizontal(|ui| {
         ui.add_sized(
@@ -531,7 +558,7 @@ fn display_card(app: &mut App, ui: &mut egui::Ui) {
                 (Density::Touch, lang.text("จอสัมผัส", "Touch")),
             ],
         ) {
-            app.set_display(app.appearance, density);
+            app.set_display(app.look, density);
         }
     });
 }

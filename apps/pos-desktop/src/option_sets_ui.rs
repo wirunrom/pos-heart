@@ -56,7 +56,7 @@ pub fn panel(app: &mut App, ui: &mut egui::Ui) {
     let sets = app.data.option_sets.clone();
     ui.spacing_mut().item_spacing.y = space::S2;
     ui.horizontal(|ui| {
-        ui.label(t.text(lang.text("ชุดตัวเลือก", "Option sets"), type_scale::TITLE_LG));
+        ui.label(t.text(lang.text("ชุดตัวเลือก", "Option sets"), type_scale::TITLE));
         ui.label(t.muted(format::count(sets.len() as u64), type_scale::BODY));
         ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
             if may

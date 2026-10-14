@@ -3,7 +3,7 @@
 use crate::{
     app::{App, Page},
     i18n::Language,
-    ui::{Icon, Theme, format, icons, space, theme as ds_theme, type_scale, w},
+    ui::{Icon, Theme, format, icons, space, theme as ds_theme, tokens::radius, type_scale, w},
     worker::Command,
 };
 use eframe::egui::{self, Align, Key, Modifiers, RichText, Sense, Stroke, StrokeKind, vec2};
@@ -118,7 +118,7 @@ pub fn toasts(app: &mut App, ctx: &egui::Context) {
             for (i, toast) in app.toasts.iter().enumerate() {
                 egui::Frame::new()
                     .fill(t.p.bg_inverse)
-                    .corner_radius(8)
+                    .corner_radius(t.radius(8))
                     .shadow(t.shadow(2))
                     .inner_margin(egui::Margin::symmetric(space::S4 as i8, space::S2 as i8))
                     .show(ui, |ui| {
@@ -180,18 +180,21 @@ pub fn topbar(app: &mut App, ui: &mut egui::Ui) {
             page_label(lang, app.page)
         };
         let switcher = egui::Frame::new()
-            .fill(t.p.bg_surface)
-            .corner_radius(8)
-            .stroke(Stroke::new(1.0, t.p.border_default))
+            .fill(t.p.bg_chrome_hover)
+            .corner_radius(t.radius(radius::MD))
             .inner_margin(egui::Margin::symmetric(space::S3 as i8, 0))
             .show(ui, |ui| {
                 ui.set_height(t.m.control_md + 4.0);
                 ui.horizontal_centered(|ui| {
                     ui.spacing_mut().item_spacing.x = space::S2;
-                    icons::show(ui, page_icon(app.page), 18.0, t.p.fg_default);
-                    ui.label(RichText::new(label).font(t.strong_font(type_scale::BODY)));
+                    icons::show(ui, page_icon(app.page), 18.0, t.p.fg_chrome);
+                    ui.label(
+                        RichText::new(label)
+                            .font(t.strong_font(type_scale::BODY))
+                            .color(t.p.fg_chrome),
+                    );
                     if !app.onboarding {
-                        icons::show(ui, Icon::ChevronDown, 14.0, t.p.fg_muted);
+                        icons::show(ui, Icon::ChevronDown, 14.0, t.p.fg_chrome_muted);
                     }
                 });
             })
@@ -221,17 +224,15 @@ pub fn topbar(app: &mut App, ui: &mut egui::Ui) {
             app.shop.name.clone()
         };
         if !narrow || app.onboarding {
-            ui.add(egui::Label::new(t.muted(context, type_scale::LABEL)).truncate())
+            ui.add(egui::Label::new(t.chrome_muted(context, type_scale::LABEL)).truncate())
                 .on_hover_text(&app.shop.name);
         }
         ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
             ui.spacing_mut().item_spacing.x = space::S2;
-            if w::icon_button_sized(
+            if w::chrome_icon_button(
                 ui,
                 Icon::Sliders,
-                lang.text("ภาษา ธีม และขนาด", "Language, theme & density"),
-                Some(t.m.control_md),
-                true,
+                lang.text("ภาษา สีหลัก และขนาด", "Language, colour & density"),
             )
             .clicked()
             {
@@ -277,7 +278,7 @@ pub fn topbar(app: &mut App, ui: &mut egui::Ui) {
                         ui,
                         ui.cursor().left_center() + vec2(-12.0, 0.0),
                         7.0,
-                        t.p.fg_muted,
+                        t.p.fg_chrome_muted,
                     );
                     ui.add_space(24.0);
                 }
@@ -348,7 +349,7 @@ pub fn menu_row(
     } else {
         egui::Color32::TRANSPARENT
     };
-    ui.painter().rect_filled(rect, 6, bg);
+    ui.painter().rect_filled(rect, t.radius(radius::SM), bg);
     icons::paint_sized(
         ui.painter(),
         icon,
@@ -399,15 +400,16 @@ fn command_field(app: &mut App, ui: &mut egui::Ui, t: Theme) {
             lang.text("ค้นหาหรือสั่งงาน", "Search or run a command"),
         )
     });
+    let r8 = t.radius(radius::MD);
     ui.painter().rect(
         rect,
-        8,
+        r8,
         if response.hovered() {
-            t.p.bg_hover
+            t.p.bg_chrome_hover
         } else {
-            t.p.bg_sunken
+            t.p.bg_chrome_raised
         },
-        Stroke::NONE,
+        Stroke::new(1.0, t.p.border_chrome),
         StrokeKind::Inside,
     );
     icons::paint_sized(
@@ -415,20 +417,20 @@ fn command_field(app: &mut App, ui: &mut egui::Ui, t: Theme) {
         Icon::Search,
         egui::pos2(rect.left() + 20.0, rect.center().y),
         16.0,
-        t.p.fg_muted,
+        t.p.fg_chrome_muted,
     );
     ui.painter().text(
         egui::pos2(rect.left() + 38.0, rect.center().y),
         egui::Align2::LEFT_CENTER,
         lang.text("ค้นหาหรือสั่งงาน", "Search or run a command"),
         t.font(type_scale::BODY),
-        t.p.fg_muted,
+        t.p.fg_chrome_muted,
     );
     if t.m.show_shortcut_hints {
         let g = ui.painter().layout_no_wrap(
             "Ctrl K".into(),
             t.font(type_scale::MONEY_SM),
-            t.p.fg_muted,
+            t.p.fg_chrome_muted,
         );
         let r = egui::Rect::from_min_size(
             egui::pos2(
@@ -439,14 +441,15 @@ fn command_field(app: &mut App, ui: &mut egui::Ui, t: Theme) {
         );
         ui.painter().rect(
             r,
-            4,
-            t.p.bg_surface,
-            Stroke::new(1.0, t.p.border_default),
+            t.radius(radius::XS),
+            t.p.bg_chrome,
+            Stroke::new(1.0, t.p.border_chrome),
             StrokeKind::Inside,
         );
-        ui.painter().galley(r.min + vec2(4.0, 2.0), g, t.p.fg_muted);
+        ui.painter()
+            .galley(r.min + vec2(4.0, 2.0), g, t.p.fg_chrome_muted);
     }
-    w::focus_ring(ui, rect, egui::CornerRadius::same(8), &response);
+    w::focus_ring(ui, rect, egui::CornerRadius::same(r8), &response);
     if response.clicked() {
         app.palette.open();
     }
@@ -463,7 +466,7 @@ fn display_popover(app: &mut App, ctx: &egui::Context) {
     let mut open = true;
     let response = egui::Area::new(egui::Id::new("display-prefs"))
         .order(egui::Order::Foreground)
-        .anchor(egui::Align2::RIGHT_TOP, vec2(-space::S3, t.m.topbar))
+        .anchor(egui::Align2::RIGHT_TOP, vec2(-space::S3, t.m.titlebar_h))
         .show(ctx, |ui| {
             t.raised(2)
                 .inner_margin(egui::Margin::same(space::S4 as i8))
@@ -495,18 +498,24 @@ fn display_popover(app: &mut App, ctx: &egui::Context) {
                     ) {
                         app.set_language(next);
                     }
-                    w::field_label(ui, lang.text("ธีม", "Theme"), None);
-                    let mut appearance = app.appearance;
+                    w::field_label(ui, lang.text("สีหลัก", "Accent colour"), None);
+                    let mut look = app.look;
+                    if w::accent_picker(ui, &mut look.accent, |a| {
+                        let (th, en) = ds_theme::accent_name(a);
+                        lang.text(th, en).to_owned()
+                    }) {
+                        app.set_display(look, app.density);
+                    }
+                    w::field_label(ui, lang.text("ขอบ", "Corners"), None);
                     if w::segmented(
                         ui,
-                        &mut appearance,
+                        &mut look.shape,
                         &[
-                            (ds_theme::Appearance::Light, lang.text("สว่าง", "Light")),
-                            (ds_theme::Appearance::Dark, lang.text("มืด", "Dark")),
-                            (ds_theme::Appearance::System, lang.text("ตามระบบ", "System")),
+                            (ds_theme::Shape::Soft, lang.text("โค้ง", "Rounded")),
+                            (ds_theme::Shape::Square, lang.text("เหลี่ยม", "Square")),
                         ],
                     ) {
-                        app.set_display(appearance, app.density);
+                        app.set_display(look, app.density);
                     }
                     w::field_label(ui, lang.text("ขนาดปุ่มและตัวอักษร", "Density"), None);
                     let mut density = app.density;
@@ -518,7 +527,7 @@ fn display_popover(app: &mut App, ctx: &egui::Context) {
                             (crate::ui::Density::Touch, lang.text("จอสัมผัส", "Touch")),
                         ],
                     ) {
-                        app.set_display(app.appearance, density);
+                        app.set_display(app.look, density);
                     }
                     ui.horizontal(|ui| {
                         w::field_label(ui, lang.text("เต็มจอ (F11)", "Full screen (F11)"), None);
@@ -543,7 +552,7 @@ fn display_popover(app: &mut App, ctx: &egui::Context) {
     let clicked_outside = ctx.input(|i| i.pointer.any_pressed())
         && ctx
             .input(|i| i.pointer.interact_pos())
-            .is_some_and(|p| !response.rect.contains(p) && p.y > t.m.topbar);
+            .is_some_and(|p| !response.rect.contains(p) && p.y > t.m.titlebar_h);
     if !open || clicked_outside || ctx.input(|i| i.key_pressed(Key::Escape)) {
         app.display_open = false;
     }
@@ -575,7 +584,7 @@ enum Action {
     Hold,
     OpenShift,
     Backup,
-    ToggleTheme,
+    ToggleShape,
     ToggleLanguage,
     ToggleDensity,
     ToggleFullscreen,
@@ -685,10 +694,10 @@ fn entries(app: &App) -> Vec<Entry> {
         app.ready,
     );
     command(
-        "สลับธีมสว่าง/มืด",
-        "Toggle light/dark theme",
+        "สลับขอบโค้ง/เหลี่ยม",
+        "Toggle rounded/square corners",
         Icon::Sliders,
-        Action::ToggleTheme,
+        Action::ToggleShape,
         true,
     );
     command(
@@ -909,23 +918,20 @@ fn run(app: &mut App, action: Action) {
             app.navigate(Page::Shift);
         }
         Action::Backup => app.backup(),
-        Action::ToggleTheme => {
-            let dark = app.theme_is_dark;
-            app.set_display(
-                if dark {
-                    ds_theme::Appearance::Light
-                } else {
-                    ds_theme::Appearance::Dark
-                },
-                app.density,
-            );
+        Action::ToggleShape => {
+            let mut look = app.look;
+            look.shape = match look.shape {
+                ds_theme::Shape::Soft => ds_theme::Shape::Square,
+                ds_theme::Shape::Square => ds_theme::Shape::Soft,
+            };
+            app.set_display(look, app.density);
         }
         Action::ToggleLanguage => app.set_language(match app.lang {
             Language::Thai => Language::English,
             Language::English => Language::Thai,
         }),
         Action::ToggleDensity => app.set_display(
-            app.appearance,
+            app.look,
             match app.density {
                 crate::ui::Density::Compact => crate::ui::Density::Touch,
                 crate::ui::Density::Touch => crate::ui::Density::Compact,

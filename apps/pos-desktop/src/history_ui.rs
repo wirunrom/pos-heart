@@ -45,7 +45,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
     let main = Rect::from_min_max(
         full.min,
         pos2(
-            full.right() - if wide { detail_w + 10.0 } else { 0.0 },
+            full.right() - if wide { detail_w + t.pane_gap() } else { 0.0 },
             full.bottom(),
         ),
     );
@@ -92,7 +92,7 @@ fn list(app: &mut App, ui: &mut egui::Ui, dialog_detail: bool) {
     let lang = app.lang;
     ui.spacing_mut().item_spacing.y = space::S3;
     ui.horizontal(|ui| {
-        ui.label(t.text(lang.text("ประวัติขาย", "Sales history"), type_scale::TITLE_LG));
+        ui.label(t.text(lang.text("ประวัติขาย", "Sales history"), type_scale::TITLE));
         ui.label(t.muted(
             lang.text("ล่าสุดก่อน · เวลาไทย", "Newest first · Bangkok time"),
             type_scale::LABEL,
@@ -220,7 +220,7 @@ fn list(app: &mut App, ui: &mut egui::Ui, dialog_detail: bool) {
                 } else {
                     Color32::TRANSPARENT
                 };
-                ui.painter().rect_filled(rect, 0, bg);
+                ui.painter().rect_filled(rect, t.radius(0), bg);
                 ui.painter().line_segment(
                     [rect.left_bottom(), rect.right_bottom()],
                     Stroke::new(1.0, t.p.border_subtle),
@@ -294,7 +294,7 @@ fn list(app: &mut App, ui: &mut egui::Ui, dialog_detail: bool) {
                     pos2(x + space::S3, cy - 11.0),
                     vec2(g.size().x + 12.0, 22.0),
                 );
-                ui.painter().rect_filled(r, 4, bg);
+                ui.painter().rect_filled(r, t.radius(4), bg);
                 ui.painter().galley(r.center() - g.size() / 2.0, g, fg);
                 x += cols[4];
                 // The receipt total never changes; the status badge shows the refund.
@@ -382,7 +382,7 @@ pub fn receipt(ui: &mut egui::Ui, record: &SaleRecord, lang: Language) {
         let (bg, fg) = w::Tone::Danger.colors(&t);
         egui::Frame::new()
             .fill(bg)
-            .corner_radius(8)
+            .corner_radius(t.radius(8))
             .inner_margin(egui::Margin::same(space::S3 as i8))
             .show(ui, |ui| {
                 ui.set_width(ui.available_width());
@@ -416,7 +416,7 @@ pub fn receipt(ui: &mut egui::Ui, record: &SaleRecord, lang: Language) {
         let (bg, fg) = w::Tone::Warning.colors(&t);
         egui::Frame::new()
             .fill(bg)
-            .corner_radius(8)
+            .corner_radius(t.radius(8))
             .inner_margin(egui::Margin::same(space::S3 as i8))
             .show(ui, |ui| {
                 ui.set_width(ui.available_width());

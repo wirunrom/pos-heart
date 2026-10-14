@@ -234,11 +234,11 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
     ui.horizontal(|ui| {
         match &shift {
             Some(s) => {
-                ui.label(t.text(
+                ui.label(t.chrome(
                     format!("{} {}", lang.text("กะ", "Shift"), number(app, s)),
-                    type_scale::TITLE_LG,
+                    type_scale::TITLE,
                 ));
-                ui.label(t.muted(
+                ui.label(t.chrome_muted(
                     format!(
                         "{} {} · {}",
                         lang.text("เปิด", "opened"),
@@ -249,10 +249,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
                 ));
             }
             None => {
-                ui.label(t.text(
-                    lang.text("กะและลิ้นชัก", "Shift & drawer"),
-                    type_scale::TITLE_LG,
-                ));
+                ui.label(t.chrome(lang.text("กะและลิ้นชัก", "Shift & drawer"), type_scale::TITLE));
             }
         }
         if app.drawer.tab == Tab::Close && shift.is_some() {
@@ -290,7 +287,8 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
     if shift.is_none() && tab == Tab::Close {
         tab = Tab::Overview;
     }
-    if w::tabs(ui, &mut tab, &options) {
+    let options: Vec<(Tab, &str)> = options.iter().map(|(v, l, _)| (*v, *l)).collect();
+    if w::segmented(ui, &mut tab, &options) {
         app.drawer.selected = None;
         app.drawer.movement_offset = 0;
         app.refresh();
@@ -978,7 +976,7 @@ fn reconcile_footer(app: &mut App, ui: &mut egui::Ui, s: &Shift, counted: Option
         let (bg, fg) = tone.colors(&t);
         egui::Frame::new()
             .fill(bg)
-            .corner_radius(8)
+            .corner_radius(t.radius(8))
             .inner_margin(egui::Margin::same(space::S3 as i8))
             .show(ui, |ui| {
                 ui.set_width(ui.available_width());
@@ -1149,7 +1147,7 @@ fn history(app: &mut App, ui: &mut egui::Ui) {
                         });
                         ui.painter().rect_filled(
                             rect,
-                            6,
+                            t.radius(6),
                             if active {
                                 t.p.bg_selected
                             } else if response.hovered() {

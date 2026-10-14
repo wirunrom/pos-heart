@@ -125,9 +125,10 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
     let t = Theme::of(ui);
     keys(app, ui.ctx());
     let full = ui.available_rect_before_wrap();
-    let cart_w = t.m.cart_width(full.width() + 20.0);
+    let cart_w = t.cart_width(full.width() + 20.0);
     let cart_rect = Rect::from_min_size(full.min, vec2(cart_w, full.height()));
-    let right_rect = Rect::from_min_max(pos2(cart_rect.right() + 10.0, full.top()), full.max);
+    let right_rect =
+        Rect::from_min_max(pos2(cart_rect.right() + t.pane_gap(), full.top()), full.max);
     ui.allocate_rect(full, Sense::hover());
     let mut cart_ui = ui.new_child(
         egui::UiBuilder::new()
@@ -566,7 +567,7 @@ fn current_bill(app: &mut App, ui: &mut egui::Ui) {
     // Keep room for scrollable bill lines. A split has more fields than can
     // fit on a short touch screen, so only its payment details may scroll.
     let footer_limit = (ui.available_height() - t.m.row_height * 2.0 - space::S2)
-        .max(t.m.control_xl + t.m.control_md * 2.0 + space::S4)
+        .max(t.m.control_lg + t.m.control_md * 2.0 + space::S4)
         .min(ui.available_height());
     let panel = egui::Panel::bottom("cart-footer").max_size(footer_limit);
     let panel = if !app.cart.lines.is_empty() {
@@ -929,11 +930,12 @@ fn cart_line(app: &mut App, ui: &mut egui::Ui, index: usize) {
     } else {
         Color32::TRANSPARENT
     };
-    ui.painter().rect_filled(rect, CornerRadius::same(6), bg);
+    ui.painter()
+        .rect_filled(rect, CornerRadius::same(t.radius(6)), bg);
     if let Some(f) = flash {
         ui.painter().rect_filled(
             rect,
-            CornerRadius::same(6),
+            CornerRadius::same(t.radius(6)),
             t.p.accent_soft.gamma_multiply(f),
         );
     }
@@ -949,7 +951,7 @@ fn cart_line(app: &mut App, ui: &mut egui::Ui, index: usize) {
     let qty_rect = Rect::from_min_size(rect.min + vec2(pad, pad), vec2(qty_w, 26.0));
     ui.painter().rect_filled(
         qty_rect,
-        CornerRadius::same(6),
+        CornerRadius::same(t.radius(6)),
         if current {
             t.p.bg_inverse
         } else {
@@ -1501,7 +1503,7 @@ fn footer(app: &mut App, ui: &mut egui::Ui) {
         });
     });
     let action_height = if app.data.shift.is_some() {
-        t.m.control_xl
+        t.m.control_lg
     } else {
         t.m.control_lg * 2.0 + space::S2
     };
@@ -2110,7 +2112,8 @@ pub fn nav_item(ui: &mut egui::Ui, t: &Theme, label: &str, n: u64, active: bool)
     } else {
         Color32::TRANSPARENT
     };
-    ui.painter().rect_filled(rect, CornerRadius::same(8), bg);
+    ui.painter()
+        .rect_filled(rect, CornerRadius::same(t.radius(8)), bg);
     ui.painter().galley(
         pos2(rect.left() + pad, rect.center().y - g.size().y / 2.0),
         g,
@@ -2127,7 +2130,7 @@ pub fn nav_item(ui: &mut egui::Ui, t: &Theme, label: &str, n: u64, active: bool)
         },
         if active { t.p.fg_default } else { t.p.fg_muted },
     );
-    w::focus_ring(ui, rect, CornerRadius::same(8), &response);
+    w::focus_ring(ui, rect, CornerRadius::same(t.radius(8)), &response);
     response
 }
 
@@ -2403,8 +2406,13 @@ fn product_tile(
     } else {
         (t.p.bg_raised, Stroke::new(1.0, t.p.border_default))
     };
-    ui.painter()
-        .rect(r, CornerRadius::same(8), bg, stroke, StrokeKind::Inside);
+    ui.painter().rect(
+        r,
+        CornerRadius::same(t.radius(8)),
+        bg,
+        stroke,
+        StrokeKind::Inside,
+    );
     let pad = tile_pad(t);
     let text_color = if unavailable {
         t.p.fg_muted
@@ -2418,18 +2426,23 @@ fn product_tile(
         );
         match picture.texture {
             Some(tex) => {
-                crate::images::paint_cover(ui.painter(), band, tex, CornerRadius::same(6));
+                crate::images::paint_cover(
+                    ui.painter(),
+                    band,
+                    tex,
+                    CornerRadius::same(t.radius(6)),
+                );
                 if unavailable {
                     ui.painter().rect_filled(
                         band,
-                        CornerRadius::same(6),
+                        CornerRadius::same(t.radius(6)),
                         t.p.bg_sunken.gamma_multiply(0.6),
                     );
                 }
             }
             None => {
                 ui.painter()
-                    .rect_filled(band, CornerRadius::same(6), t.p.bg_sunken);
+                    .rect_filled(band, CornerRadius::same(t.radius(6)), t.p.bg_sunken);
             }
         }
     }
@@ -2521,7 +2534,7 @@ fn product_tile(
         ui.painter()
             .galley(pos2(r.left() + pad.x + icon_w, foot_y - h / 2.0), g, color);
     }
-    w::focus_ring(ui, r, CornerRadius::same(8), &response);
+    w::focus_ring(ui, r, CornerRadius::same(t.radius(8)), &response);
     let tip = if !p.on_sale {
         format!(
             "{}\n{}",
@@ -3132,7 +3145,8 @@ pub fn options_sheet(app: &mut App, ctx: &egui::Context) {
         .fixed_pos(screen.min)
         .show(ctx, |ui| {
             let (rect, response) = ui.allocate_exact_size(screen.size(), Sense::click());
-            ui.painter().rect_filled(rect, 0, t.p.overlay_scrim);
+            ui.painter()
+                .rect_filled(rect, t.radius(0), t.p.overlay_scrim);
             if response.clicked() {
                 close = true;
             }
@@ -3185,7 +3199,7 @@ pub fn options_sheet(app: &mut App, ctx: &egui::Context) {
                         });
                     });
                     w::divider(ui);
-                    let footer_h = t.m.control_xl + t.m.control_md + space::S6 * 2.0;
+                    let footer_h = t.m.control_lg + t.m.control_md + space::S6 * 2.0;
                     egui::ScrollArea::vertical()
                         .id_salt("options-body")
                         .auto_shrink([false, false])

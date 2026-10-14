@@ -52,8 +52,8 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
     scan(app);
     let today = worker::today();
     ui.horizontal(|ui| {
-        ui.add(egui::Label::new(t.text(&app.shop.name, type_scale::TITLE_LG)).truncate());
-        ui.label(t.muted(format::date(lang, today), type_scale::BODY));
+        ui.add(egui::Label::new(t.chrome(&app.shop.name, type_scale::TITLE)).truncate());
+        ui.label(t.chrome_muted(format::date(lang, today), type_scale::BODY));
     });
     ui.add_space(space::S2);
     egui::ScrollArea::vertical()
@@ -106,6 +106,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
         });
 }
 fn today_tiles(app: &mut App, ui: &mut egui::Ui) {
+    let t = Theme::of(ui);
     let lang = app.lang;
     let s = app.data.today_summary.clone();
     if s.date != worker::today().to_string() {
@@ -117,7 +118,7 @@ fn today_tiles(app: &mut App, ui: &mut egui::Ui) {
         );
         return;
     }
-    let gap = 10.0;
+    let gap = t.pane_gap();
     let width = ((ui.available_width() - gap * 3.0) / 4.0).floor();
     ui.horizontal_top(|ui| {
         ui.spacing_mut().item_spacing.x = gap;

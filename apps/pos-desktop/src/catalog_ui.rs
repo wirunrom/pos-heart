@@ -674,11 +674,11 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
     };
     let nav = Rect::from_min_size(full.min, vec2(nav_w, full.height()));
     let main = Rect::from_min_max(
-        pos2(nav.right() + 10.0, full.top()),
+        pos2(nav.right() + t.pane_gap(), full.top()),
         pos2(
             full.right()
                 - if inspector_w > 0.0 {
-                    inspector_w + 10.0
+                    inspector_w + t.pane_gap()
                 } else {
                     0.0
                 },
@@ -967,7 +967,8 @@ fn view_item(
     } else {
         Color32::TRANSPARENT
     };
-    ui.painter().rect_filled(rect, CornerRadius::same(8), bg);
+    ui.painter()
+        .rect_filled(rect, CornerRadius::same(t.radius(8)), bg);
     ui.painter().text(
         pos2(rect.left() + space::S3, rect.center().y),
         Align2::LEFT_CENTER,
@@ -995,9 +996,9 @@ fn view_item(
         ),
         vec2((g.size().x + 10.0).max(20.0), 20.0),
     );
-    ui.painter().rect_filled(badge, 4, bg);
+    ui.painter().rect_filled(badge, t.radius(4), bg);
     ui.painter().galley(badge.center() - g.size() / 2.0, g, fg);
-    w::focus_ring(ui, rect, CornerRadius::same(8), &response);
+    w::focus_ring(ui, rect, CornerRadius::same(t.radius(8)), &response);
     response
 }
 
@@ -1032,7 +1033,7 @@ fn table_panel(app: &mut App, ui: &mut egui::Ui) {
     };
     ui.spacing_mut().item_spacing.y = space::S3;
     ui.horizontal(|ui| {
-        ui.label(t.text(title_text(app), type_scale::TITLE_LG));
+        ui.label(t.text(title_text(app), type_scale::TITLE));
         ui.label(t.muted(format::count(total), type_scale::BODY));
         ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
             ui.spacing_mut().item_spacing.x = space::S2;
@@ -1187,7 +1188,7 @@ fn bulk_bar(app: &mut App, ui: &mut egui::Ui) {
     let height = t.m.control_lg;
     let (rect, _) = ui.allocate_exact_size(vec2(ui.available_width(), height), Sense::hover());
     ui.painter()
-        .rect_filled(rect, CornerRadius::same(8), t.p.bg_inverse);
+        .rect_filled(rect, CornerRadius::same(t.radius(8)), t.p.bg_inverse);
     let mut child = ui.new_child(
         egui::UiBuilder::new()
             .max_rect(rect.shrink2(vec2(space::S3, 0.0)))
@@ -1210,7 +1211,8 @@ fn bulk_bar(app: &mut App, ui: &mut egui::Ui) {
                 ui.allocate_exact_size(vec2(g.size().x + 42.0, height - 10.0), Sense::click());
             resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, label));
             if resp.hovered() {
-                ui.painter().rect_filled(r, 6, fg.gamma_multiply(0.15));
+                ui.painter()
+                    .rect_filled(r, t.radius(6), fg.gamma_multiply(0.15));
             }
             crate::ui::icons::paint_sized(
                 ui.painter(),
@@ -1224,7 +1226,7 @@ fn bulk_bar(app: &mut App, ui: &mut egui::Ui) {
                 g,
                 fg,
             );
-            w::focus_ring(ui, r, CornerRadius::same(6), &resp);
+            w::focus_ring(ui, r, CornerRadius::same(t.radius(6)), &resp);
             resp
         };
         if inverse_button(ui, Icon::Close, lang.text("ล้าง", "Clear")).clicked() {
@@ -1493,7 +1495,7 @@ fn row(app: &mut App, ui: &mut egui::Ui, c: &Columns, index: usize, p: &Product)
     } else {
         Color32::TRANSPARENT
     };
-    ui.painter().rect_filled(rect, 0, bg);
+    ui.painter().rect_filled(rect, t.radius(0), bg);
     ui.painter().line_segment(
         [rect.left_bottom(), rect.right_bottom()],
         Stroke::new(1.0, t.p.border_subtle),
@@ -1585,7 +1587,7 @@ fn row(app: &mut App, ui: &mut egui::Ui, c: &Columns, index: usize, p: &Product)
                 pos2(x - space::S3 - g.size().x - 12.0, cy - 11.0),
                 vec2(g.size().x + 12.0, 22.0),
             );
-            ui.painter().rect_filled(r, 4, bg);
+            ui.painter().rect_filled(r, t.radius(4), bg);
             ui.painter().galley(r.center() - g.size() / 2.0, g, fg);
         }
         Some(n) => {
@@ -1619,7 +1621,7 @@ fn row(app: &mut App, ui: &mut egui::Ui, c: &Columns, index: usize, p: &Product)
         pos2(x + space::S3, cy - 11.0),
         vec2(g.size().x + 12.0, 22.0),
     );
-    ui.painter().rect_filled(r, 4, bg);
+    ui.painter().rect_filled(r, t.radius(4), bg);
     ui.painter().galley(r.center() - g.size() / 2.0, g, fg);
     let _ = c.status;
 }
@@ -2143,7 +2145,8 @@ fn sheet(app: &mut App, ctx: &egui::Context) {
         .fixed_pos(screen.min)
         .show(ctx, |ui| {
             let (rect, response) = ui.allocate_exact_size(screen.size(), Sense::click());
-            ui.painter().rect_filled(rect, 0, t.p.overlay_scrim);
+            ui.painter()
+                .rect_filled(rect, t.radius(0), t.p.overlay_scrim);
             if response.clicked() && !app.catalog.dirty() {
                 close = true;
             }
@@ -2371,10 +2374,12 @@ fn picture_field(
         let side = if t.touch() { 96.0 } else { 80.0 };
         let (rect, _) = ui.allocate_exact_size(vec2(side, side), Sense::hover());
         match texture {
-            Some(tex) => crate::images::paint_cover(ui.painter(), rect, tex, CornerRadius::same(8)),
+            Some(tex) => {
+                crate::images::paint_cover(ui.painter(), rect, tex, CornerRadius::same(t.radius(8)))
+            }
             None => {
                 ui.painter()
-                    .rect_filled(rect, CornerRadius::same(8), t.p.bg_sunken);
+                    .rect_filled(rect, CornerRadius::same(t.radius(8)), t.p.bg_sunken);
                 crate::ui::icons::paint_sized(
                     ui.painter(),
                     Icon::Products,

@@ -170,13 +170,13 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
         _ => Quick::Other,
     };
     ui.horizontal(|ui| {
-        ui.label(t.text(
+        ui.label(t.chrome(
             if app.report.single() {
                 lang.text("รายงานประจำวัน", "Daily report")
             } else {
                 lang.text("รายงานช่วงเวลา", "Period report")
             },
-            type_scale::TITLE_LG,
+            type_scale::TITLE,
         ));
         ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
             ui.spacing_mut().item_spacing.x = space::S2;
@@ -286,9 +286,9 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
 fn date_picker(app: &mut App, ui: &mut egui::Ui) {
     let t = Theme::of(ui);
     let lang = app.lang;
+    // Secondary (paper) so it reads on the graphite page header.
     let response = w::button(app.report.label(lang))
         .icon(Icon::Calendar)
-        .ghost()
         .show(ui);
     egui::Popup::menu(&response)
         .frame(
@@ -535,7 +535,7 @@ fn hourly(app: &App, ui: &mut egui::Ui, s: &DailySummary, c: &DailySummary) {
             ] {
                 ui.label(t.muted(label, type_scale::CAPTION));
                 let (r, _) = ui.allocate_exact_size(vec2(10.0, 10.0), Sense::hover());
-                ui.painter().rect_filled(r, 2, color);
+                ui.painter().rect_filled(r, t.radius(2), color);
                 ui.add_space(space::S2);
             }
         });
@@ -621,7 +621,7 @@ fn hourly(app: &App, ui: &mut egui::Ui, s: &DailySummary, c: &DailySummary) {
     }
     if let Some((h, column)) = hovered {
         ui.painter()
-            .rect_filled(column, 4, t.p.bg_hover.gamma_multiply(0.5));
+            .rect_filled(column, t.radius(4), t.p.bg_hover.gamma_multiply(0.5));
         egui::Tooltip::always_open(
             ui.ctx().clone(),
             ui.layer_id(),
@@ -671,7 +671,7 @@ fn daily(app: &App, ui: &mut egui::Ui, s: &DailySummary, c: &DailySummary) {
             ] {
                 ui.label(t.muted(label, type_scale::CAPTION));
                 let (r, _) = ui.allocate_exact_size(vec2(10.0, 10.0), Sense::hover());
-                ui.painter().rect_filled(r, 2, color);
+                ui.painter().rect_filled(r, t.radius(2), color);
                 ui.add_space(space::S2);
             }
         });
@@ -767,7 +767,7 @@ fn daily(app: &App, ui: &mut egui::Ui, s: &DailySummary, c: &DailySummary) {
         && let Some(day) = s.days.get(i)
     {
         ui.painter()
-            .rect_filled(column, 4, t.p.bg_hover.gamma_multiply(0.5));
+            .rect_filled(column, t.radius(4), t.p.bg_hover.gamma_multiply(0.5));
         egui::Tooltip::always_open(
             ui.ctx().clone(),
             ui.layer_id(),
@@ -1339,6 +1339,13 @@ fn top_products(app: &mut App, ui: &mut egui::Ui, s: &DailySummary) {
 fn profit_section(ui: &mut egui::Ui, lang: Language, p: &pos_domain::ProfitSummary) {
     let t = Theme::of(ui);
     ui.add_space(space::S3);
+    t.surface().show(ui, |ui| {
+        ui.set_width(ui.available_width());
+        profit_body(ui, lang, p);
+    });
+}
+fn profit_body(ui: &mut egui::Ui, lang: Language, p: &pos_domain::ProfitSummary) {
+    let t = Theme::of(ui);
     egui::CollapsingHeader::new(lang.text("กำไรขั้นต้นโดยประมาณ", "Estimated gross profit"))
         .id_salt("gross-profit")
         .default_open(true)

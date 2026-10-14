@@ -751,7 +751,7 @@ pub fn paper(app: &mut App, ui: &mut egui::Ui, doc: &print::render::Doc, key: u6
     let scale = width / w as f32;
     let size = egui::vec2(width, h as f32 * scale);
     egui::Frame::new()
-        .fill(crate::ui::tokens::primitive::STONE_0)
+        .fill(crate::ui::tokens::primitive::PAPER_0)
         .stroke(egui::Stroke::new(1.0, t.p.border_default))
         .shadow(t.shadow(1))
         .inner_margin(egui::Margin::same(space::S3 as i8))

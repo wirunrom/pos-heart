@@ -24,7 +24,7 @@ pub fn dialog(app: &mut App, ctx: &egui::Context) {
         return;
     };
     let lang = app.lang;
-    let r = w::dialog(ctx, "csv-import", space::S12 * 10.0, |ui| {
+    let r = w::dialog(ctx, "csv-import", space::S8 * 15.0, |ui| {
         let t = Theme::of(ui);
         w::dialog_title(
             ui,

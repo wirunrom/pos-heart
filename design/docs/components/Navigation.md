@@ -1,13 +1,11 @@
 # Navigation
-Topbar (WorkspaceSwitcher · บริบทสาขา/เครื่อง · CommandBar · StatusPill), Tabs, SideNav และ Rail · **Ready** (CommandBar: Experimental)
+แอปมีโครงเดียวทุกหน้า: **TitleBar** (ปุ่มหน้าต่าง + แท็บ workspace + Ctrl K) → **Toolbar** ตามหน้า → **Panes** ที่ลอยบนพื้นกราไฟต์ → **StatusBar** · **Ready**
 
-- **WorkspaceSwitcher** ปุ่มแรกในแถบบน แสดง workspace ปัจจุบัน → เมนูจัดกลุ่ม “งานประจำวัน / จัดการร้าน” พร้อมคีย์ลัด `Alt 1–7` · ฟีเจอร์ที่ไม่ได้เปิดใช้จะไม่อยู่ในเมนู
-- **CommandBar** (`Ctrl K`) ค้นหาได้ทั้ง สินค้า บิล คำสั่ง (“ปิดกะ”, “เปิดลิ้นชัก”) และหน้าตั้งค่า · ผลลัพธ์จัดกลุ่ม · ไม่ใช่ทางเดียวในการเข้าถึง
-- **StatusPill** สถานะที่ต้องเห็นตลอด: กะ, ออฟไลน์, sync · จุดสี + ข้อความเสมอ · กดเพื่อดูรายละเอียด/action · offline ใช้จุดกลวงสีกลาง (ไม่ใช่ error)
-- **Tabs** สลับมุมมองของเนื้อหาเดียวกัน (บิลปัจจุบัน / พักไว้) · active = ตัวหนา + เส้นใต้ · แสดงจำนวนด้วย Count
-- **SideNav** หมวดหมู่/มุมมองที่บันทึกไว้ พร้อมจำนวน · หน้าจัดการและหมวดหมู่ในหน้าขาย
-- **Rail** ทางเลือกสำหรับจอสัมผัส ≥ 1280 ที่อยากให้เห็น workspace ตลอด · icon + ป้ายเสมอ
+- **WorkspaceTabs** อยู่ในแถบชื่อโปรแกรม (unified title bar) · แท็บที่เลือก: พื้น `bg-chrome-hover` + เส้น `accent-bg` 2px ด้านล่าง · `Alt 1–7`
+- **Toolbar** มีเฉพาะการกระทำของหน้านั้น จัดกลุ่มด้วยเส้นคั่น และ **ระบุขอบเขต** — กลุ่ม “ทั้งบิล” ใช้กับทั้งบิล; การกระทำของรายการเดียวอยู่ในแถบแก้ไขใต้บรรทัด ไม่อยู่ใน toolbar · ด้านขวาใช้ Segmented สลับมุมมอง (สินค้า / โต๊ะ)
+- **Pane** = พื้นผิวทำงาน (`bg-surface`, `radius-lg`) หัวแผง 28px · เนื้อหาเลื่อนในตัว · ปุ่มยืนยันอยู่ใน **SaveBar** ตรึงล่างแผงเสมอ
+- **StatusBar** ทุกช่อง **กดได้**: พนักงาน (สลับด้วย PIN), ออฟไลน์/sync (ดูรายการที่รอ), กะ/ลิ้นชัก (ไปหน้ากะ), เครื่องพิมพ์ (พิมพ์ทดสอบ), เสียงยืนยัน
+- **CommandBar** (`Ctrl K`) ค้นได้ทั้งคำสั่ง หน้า และสินค้า · Enter = ผลลัพธ์แรก
 
-**Keyboard** Tabs `←→` · เมนู `↑↓ Enter Esc` · `Ctrl K` เปิด command bar จากทุกที่
-**Overflow** breadcrumb ตัด ellipsis ก่อน · CommandBar หดก่อน pill · บนจอ < 1100 pill กะย่อเป็น “กะ #12” · Tabs ที่เกินเลื่อนแนวนอนได้
-**egui** `TopBottomPanel::top` + custom widgets · เมนูใช้ `menu_button`/`Popup` · Tabs custom (`selectable_label` + เส้นใต้ด้วย painter)
+**Touch** titlebar 48 / toolbar 58 / statusbar 32 · ซ่อนคำใบ้คีย์ลัด · ปุ่ม toolbar สูง 48
+**egui** TitleBar: macOS `ViewportBuilder::with_fullsize_content_view(true).with_titlebar_shown(false).with_title_shown(false)` แล้ววาดแท็บเอง (เว้นที่ปุ่มหน้าต่าง ~70px); Windows: `with_decorations(false)` + ลากด้วย `ViewportCommand::StartDrag` และวาดปุ่มย่อ/ขยาย/ปิดเอง · Toolbar/StatusBar = `TopBottomPanel` · Pane = `Frame::new().fill(bg_surface).corner_radius(10)`

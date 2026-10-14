@@ -1,66 +1,54 @@
 # 07 egui handoff
 
 ระบบนี้ไม่ผูกกับ Rust: ต้นฉบับคือ `tokens/tokens.dtcg.json` + สเปกในเอกสาร ส่วน HTML ในการ์ดเป็นแค่ reference
-หน้านี้บอกวิธีทำให้ได้จริงใน **egui + eframe** โดยไม่เปลี่ยน stack · ชื่อ API อ้างอิง egui 0.29–0.32 (บางชื่อเปลี่ยนตามเวอร์ชัน เช่น `rounding` → `corner_radius`, `Frame::none()` → `Frame::new()`) **ต้องตรวจกับเวอร์ชันที่ใช้จริง**
+หน้านี้บอกวิธีทำให้ได้จริงใน **egui + eframe** โดยไม่เปลี่ยน stack · ชื่อ API อ้างอิง egui 0.29–0.32 · v0.2 ใช้ธีมเดียว ไม่ต้องรองรับ Dark (บางชื่อเปลี่ยนตามเวอร์ชัน เช่น `rounding` → `corner_radius`, `Frame::none()` → `Frame::new()`) **ต้องตรวจกับเวอร์ชันที่ใช้จริง**
 
-## 1. โครงสร้าง theme / token
+## 1. โครงสร้าง theme / token (v0.2 ธีมเดียว)
 
 ```
-crates/ui/
-  build.rs              ← อ่าน tokens.dtcg.json แล้วสร้าง src/tokens_gen.rs
-  src/tokens_gen.rs     ← primitive const + fn palette(theme) (สร้างอัตโนมัติ ห้ามแก้เอง)
-  src/theme.rs          ← Theme { palette, metrics, type_scale }, apply(ctx)
-  src/widgets/*.rs      ← button.rs, money_field.rs, product_tile.rs, cart_line.rs …
-  src/format.rs         ← money(), qty(), date() — สเปกเดียวกับ PosDS.money
+crates/ui/src/tokens.rs   ← สร้างจาก tokens.dtcg.json (อยู่ใน zip) — Palette::DEFAULT, Metrics::{COMPACT,TOUCH}, radius, space, type_scale, motion
+crates/ui/src/theme.rs    ← Theme { palette, metrics, shape, accent }, apply(ctx)
+crates/ui/src/chrome/*.rs ← title_bar.rs, toolbar.rs, status_bar.rs, pane.rs, save_bar.rs
+crates/ui/src/widgets/*   ← button, money_field, cart_line, product_tile …
 ```
 
 ```rust
-#[derive(Clone, Copy, PartialEq)] pub enum ThemeMode { Light, Dark }
-#[derive(Clone, Copy, PartialEq)] pub enum Density { Compact, Touch }
-
-pub struct Palette {            // semantic tokens เท่านั้น — widget ห้ามเห็น primitive
-    pub bg_canvas: Color32, pub bg_surface: Color32, pub bg_raised: Color32, pub bg_sunken: Color32,
-    pub bg_hover: Color32, pub bg_pressed: Color32, pub bg_selected: Color32, pub bg_inverse: Color32,
-    pub fg_default: Color32, pub fg_muted: Color32, pub fg_subtle: Color32, pub fg_inverse: Color32,
-    pub fg_accent: Color32, pub fg_on_accent: Color32,
-    pub border_subtle: Color32, pub border_default: Color32, pub border_control: Color32,
-    pub border_selected: Color32, pub focus_ring: Color32,
-    pub accent_bg: Color32, pub accent_bg_hover: Color32, pub accent_bg_pressed: Color32, pub accent_soft: Color32,
-    pub success: StatusColors, pub warning: StatusColors, pub danger: StatusColors, pub info: StatusColors,
-}
-pub struct StatusColors { pub fg: Color32, pub bg: Color32, pub solid: Color32 }
-
-pub struct Metrics { pub control_sm: f32, pub control_md: f32, pub control_lg: f32, pub control_xl: f32,
-                     pub row_height: f32, pub icon: f32, pub radius_sm: u8, pub radius_md: u8, pub radius_lg: u8 }
-impl Metrics {
-    pub fn for_density(d: Density) -> Self { match d {
-        Density::Compact => Self { control_sm: 28., control_md: 36., control_lg: 44., control_xl: 52., row_height: 40., icon: 20., radius_sm: 6, radius_md: 8, radius_lg: 12 },
-        Density::Touch   => Self { control_sm: 40., control_md: 48., control_lg: 56., control_xl: 64., row_height: 56., icon: 24., radius_sm: 8, radius_md: 8, radius_lg: 12 },
-    }}
-}
-
+pub struct Theme { pub p: Palette, pub m: Metrics, pub soft: bool, pub accent: AccentPreset }
 impl Theme {
     pub fn apply(&self, ctx: &egui::Context) {
-        let p = &self.palette;
-        let mut v = if self.mode == ThemeMode::Dark { egui::Visuals::dark() } else { egui::Visuals::light() };
-        v.panel_fill = p.bg_canvas;  v.window_fill = p.bg_raised;  v.extreme_bg_color = p.bg_surface;
-        v.faint_bg_color = p.bg_sunken;  v.selection.bg_fill = p.bg_selected;
-        v.widgets.inactive.weak_bg_fill = p.bg_surface;  v.widgets.inactive.bg_stroke = Stroke::new(1.0, p.border_default);
-        v.widgets.hovered.weak_bg_fill  = p.bg_hover;    v.widgets.active.weak_bg_fill  = p.bg_pressed;
+        let p = &self.p;
+        let mut v = egui::Visuals::light();
+        v.panel_fill = p.bg_canvas;                 // พื้นใต้แผง = กราไฟต์
+        v.window_fill = p.bg_raised; v.extreme_bg_color = p.bg_raised; v.faint_bg_color = p.bg_sunken;
+        v.selection.bg_fill = p.bg_selected; v.selection.stroke = Stroke::new(1.0, p.border_selected);
+        let r = if self.soft { radius::MD } else { 3 };
+        for w in [&mut v.widgets.inactive, &mut v.widgets.hovered, &mut v.widgets.active] { w.corner_radius = r.into(); }
+        v.widgets.inactive.weak_bg_fill = p.bg_raised; v.widgets.inactive.bg_stroke = Stroke::new(1.0, p.border_default);
+        v.widgets.hovered.weak_bg_fill = p.bg_sunken; v.widgets.active.weak_bg_fill = p.bg_pressed;
         v.widgets.noninteractive.fg_stroke = Stroke::new(1.0, p.fg_default);
-        v.window_shadow = self.shadow(3);  v.popup_shadow = self.shadow(2);
         ctx.set_visuals(v);
-        ctx.style_mut(|s| {
-            s.spacing.interact_size.y = self.metrics.control_md;
-            s.spacing.button_padding = egui::vec2(16.0, 0.0);
-            s.spacing.item_spacing = egui::vec2(8.0, 8.0);
-            s.text_styles = self.type_scale.to_egui();   // รวม TextStyle::Name("money_xl") ฯลฯ
-        });
+        ctx.style_mut(|s| { s.spacing.interact_size.y = self.m.control_md; s.spacing.item_spacing = egui::vec2(8.0, 8.0); });
+    }
+    pub fn pane_frame(&self) -> egui::Frame {
+        egui::Frame::new().fill(self.p.bg_surface).corner_radius(if self.soft { radius::LG } else { 0 })
     }
 }
 ```
 
-เก็บ `Theme` ใน app state แล้วส่ง `&Theme` ให้ widget (ชัดเจนและทดสอบง่าย) · เมื่อผู้ใช้เปลี่ยน theme/density ให้สร้าง `Theme` ใหม่แล้ว `apply()` ครั้งเดียว ไม่ต้องรีสตาร์ท · **System** mode: อ่าน `ctx.system_theme()` (หรือ `frame.info().system_theme` ในบางเวอร์ชัน)
+**โครงหน้าต่าง:**
+
+```rust
+TopBottomPanel::top("titlebar").exact_height(m.titlebar_h).frame(Frame::new().fill(p.bg_chrome)).show(ctx, |ui| title_bar(ui, &t, &mut st));
+TopBottomPanel::top("toolbar").exact_height(m.toolbar_h).frame(Frame::new().fill(p.bg_chrome_raised)).show(ctx, |ui| toolbar(ui, &t, &mut st));
+TopBottomPanel::bottom("status").exact_height(m.statusbar_h).frame(Frame::new().fill(p.bg_chrome)).show(ctx, |ui| status_bar(ui, &t, &mut st));
+CentralPanel::default().frame(Frame::new().fill(p.bg_canvas).inner_margin(Margin { left: 6, right: 6, top: 0, bottom: 6 })).show(ctx, |ui| {
+    // แต่ละแผง = ui.allocate_ui_at_rect(rect, |ui| t.pane_frame().show(ui, ...)) โดยแบ่ง rect เอง เว้น space::PANE_GAP
+});
+```
+
+**Unified title bar:** macOS — `ViewportBuilder::default().with_fullsize_content_view(true).with_titlebar_shown(false).with_title_shown(false)` แล้วเว้นที่ปุ่มหน้าต่างซ้าย ~70px; ลากหน้าต่างด้วย `ctx.send_viewport_cmd(ViewportCommand::StartDrag)` เมื่อกดบนพื้นที่ว่างของ title bar · Windows/Linux — `with_decorations(false)` และวาดปุ่มย่อ/ขยาย/ปิดเองทางขวา (`ViewportCommand::Minimized/Maximized/Close`) · **ทางสำรอง** ถ้ายังไม่พร้อม: ใช้ title bar ของ OS แล้ววางแท็บเป็นแถวแรกของแอป (เสียพื้นที่ ~30px)
+
+**เสียง feedback:** ไม่มีใน egui — ใช้ crate เล็ก เช่น `rodio` เล่นไฟล์ wav สั้น 2 ไฟล์ (สำเร็จ / ผิดพลาด) บน thread แยก · ปิดได้จากค่าที่เก็บใน `eframe::Storage`
 
 ## 2. ฟอนต์
 
@@ -130,4 +118,4 @@ pub fn button(ui: &mut Ui, t: &Theme, label: &str) -> ButtonBuilder   // .primar
 |---|---|---|
 | Panel, ScrollArea, Button พื้นฐาน, TextEdit, ComboBox (Select), Checkbox, Tooltip, Window/Modal, Grid, `TableBuilder`, Frame + shadow + corner radius, AccessKit, `pixels_per_point` (UI scale) | ProductTile, CartLine, OrderSummary (`ds-kv`), Segmented, Chip, Badge, StatusPill, Count, Steps, BulkBar, Sheet (เลื่อนเข้าด้วย `animate_value_with_time`), Skeleton, ขอบจางท้าย scroll, Toast stack, focus ring แบบมีระยะห่าง | Thai shaping + ตัดคำ (ข้อ 2) · ไม่มี OpenType features → ใช้ฟอนต์ mono สำหรับเงิน · ไม่มี CSS mask → ใช้ gradient mesh · กราฟ: `egui_plot` (เร็ว) หรือวาดเองเพื่อให้ตรงสเปก · ไม่มี hover บนจอสัมผัส → ออกแบบไม่ให้พึ่ง hover อยู่แล้ว |
 
-**สิ่งที่แนะนำให้ทำก่อน (prototype ใน egui):** 1) ทดสอบฟอนต์ไทย 2) `Theme::apply` + สลับ Light/Dark/density 3) Button, MoneyField, CartLine, ProductTile 4) หน้าขายเต็มหน้าที่ 1000×700 — ถ้า 4 ข้อนี้ผ่าน ระบบที่เหลือคือการทำซ้ำรูปแบบเดิม
+**สิ่งที่แนะนำให้ทำก่อน (prototype ใน egui):** 1) ทดสอบฟอนต์ไทย 2) `Theme::apply` + โครงหน้าต่าง (title bar · toolbar · panes · status bar) + สลับ density 3) Button, MoneyField, CartLine + LineEditor, ProductTile, OrderSummary 4) หน้าขายเต็มหน้าที่ 1280×820 และ 1000×700 — ถ้า 4 ข้อนี้ผ่าน ระบบที่เหลือคือการทำซ้ำรูปแบบเดิม

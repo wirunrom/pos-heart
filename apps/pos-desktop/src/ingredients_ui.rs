@@ -60,7 +60,7 @@ pub fn panel(app: &mut App, ui: &mut egui::Ui) {
     let may = crate::staff_ui::may(app, Permission::Stock);
     ui.spacing_mut().item_spacing.y = space::S2;
     ui.horizontal(|ui| {
-        ui.label(t.text(lang.text("วัตถุดิบ", "Ingredients"), type_scale::TITLE_LG));
+        ui.label(t.text(lang.text("วัตถุดิบ", "Ingredients"), type_scale::TITLE));
         ui.label(t.muted(
             format::count(app.data.ingredients.len() as u64),
             type_scale::BODY,

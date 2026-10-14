@@ -1,147 +1,159 @@
-//! POS Design System — design tokens for egui.
-//! GENERATED from tokens/tokens.dtcg.json (v0.1). Do not edit by hand: change the tokens and regenerate.
-//! Widgets must use `Palette`, `Metrics`, `space`, `radius` and `type_scale` only — never `primitive` directly.
+//! POS Design System v0.2 — design tokens for egui (single theme: graphite chrome + paper panes).
+//! GENERATED from tokens/tokens.dtcg.json. Do not edit by hand.
+//! Widgets use `Palette`, `Metrics`, `space`, `radius`, `type_scale`, `motion` — never `primitive`.
 #![allow(dead_code)]
 
 use eframe::egui::Color32;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ThemeMode { Light, Dark }
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Density { Compact, Touch }
 
-/// Tier 1 — raw ramps. Brand-swappable ramp: SAFFRON (see brand.accent-ramp).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Shape { Soft, Square }
+
 pub mod primitive {
     use eframe::egui::Color32;
-    pub const STONE_0: Color32 = Color32::from_rgb(255, 255, 255);
-    pub const STONE_25: Color32 = Color32::from_rgb(251, 250, 248);
-    pub const STONE_50: Color32 = Color32::from_rgb(245, 244, 240);
-    pub const STONE_100: Color32 = Color32::from_rgb(235, 233, 227);
-    pub const STONE_200: Color32 = Color32::from_rgb(222, 219, 211);
-    pub const STONE_300: Color32 = Color32::from_rgb(201, 197, 187);
-    pub const STONE_400: Color32 = Color32::from_rgb(168, 163, 152);
-    pub const STONE_500: Color32 = Color32::from_rgb(130, 125, 114);
-    pub const STONE_600: Color32 = Color32::from_rgb(98, 94, 85);
-    pub const STONE_700: Color32 = Color32::from_rgb(71, 68, 62);
-    pub const STONE_800: Color32 = Color32::from_rgb(48, 46, 42);
-    pub const STONE_850: Color32 = Color32::from_rgb(39, 37, 34);
-    pub const STONE_900: Color32 = Color32::from_rgb(31, 30, 27);
-    pub const STONE_925: Color32 = Color32::from_rgb(25, 24, 22);
-    pub const STONE_950: Color32 = Color32::from_rgb(18, 17, 16);
-    pub const STONE_975: Color32 = Color32::from_rgb(11, 11, 10);
-    pub const SAFFRON_100: Color32 = Color32::from_rgb(252, 240, 212);
-    pub const SAFFRON_200: Color32 = Color32::from_rgb(249, 223, 159);
-    pub const SAFFRON_300: Color32 = Color32::from_rgb(245, 200, 89);
+    pub const GRAPHITE_950: Color32 = Color32::from_rgb(24, 25, 27);
+    pub const GRAPHITE_900: Color32 = Color32::from_rgb(31, 32, 35);
+    pub const GRAPHITE_850: Color32 = Color32::from_rgb(42, 43, 47);
+    pub const GRAPHITE_800: Color32 = Color32::from_rgb(53, 55, 59);
+    pub const GRAPHITE_700: Color32 = Color32::from_rgb(70, 72, 77);
+    pub const GRAPHITE_400: Color32 = Color32::from_rgb(166, 167, 162);
+    pub const GRAPHITE_50: Color32 = Color32::from_rgb(236, 235, 231);
+    pub const PAPER_0: Color32 = Color32::from_rgb(255, 255, 255);
+    pub const PAPER_50: Color32 = Color32::from_rgb(242, 242, 239);
+    pub const PAPER_100: Color32 = Color32::from_rgb(233, 233, 229);
+    pub const PAPER_150: Color32 = Color32::from_rgb(224, 224, 219);
+    pub const PAPER_200: Color32 = Color32::from_rgb(205, 205, 199);
+    pub const PAPER_400: Color32 = Color32::from_rgb(134, 135, 130);
+    pub const PAPER_600: Color32 = Color32::from_rgb(92, 94, 90);
+    pub const PAPER_900: Color32 = Color32::from_rgb(28, 29, 31);
+    pub const SLATE_50: Color32 = Color32::from_rgb(238, 241, 245);
+    pub const SLATE_100: Color32 = Color32::from_rgb(220, 227, 237);
+    pub const SLATE_150: Color32 = Color32::from_rgb(226, 230, 236);
+    pub const SLATE_500: Color32 = Color32::from_rgb(79, 117, 170);
+    pub const SAFFRON_100: Color32 = Color32::from_rgb(251, 231, 181);
     pub const SAFFRON_400: Color32 = Color32::from_rgb(240, 178, 50);
     pub const SAFFRON_500: Color32 = Color32::from_rgb(220, 152, 16);
-    pub const SAFFRON_600: Color32 = Color32::from_rgb(180, 122, 6);
-    pub const SAFFRON_700: Color32 = Color32::from_rgb(135, 90, 3);
-    pub const SAFFRON_800: Color32 = Color32::from_rgb(90, 60, 4);
-    pub const SAFFRON_900: Color32 = Color32::from_rgb(58, 40, 6);
-    pub const SAFFRON_950: Color32 = Color32::from_rgb(42, 30, 9);
-    pub const GREEN_100: Color32 = Color32::from_rgb(221, 243, 230);
-    pub const GREEN_300: Color32 = Color32::from_rgb(127, 208, 164);
-    pub const GREEN_500: Color32 = Color32::from_rgb(47, 158, 100);
-    pub const GREEN_600: Color32 = Color32::from_rgb(31, 127, 78);
-    pub const GREEN_700: Color32 = Color32::from_rgb(23, 99, 61);
-    pub const GREEN_900: Color32 = Color32::from_rgb(16, 48, 31);
-    pub const ORANGE_100: Color32 = Color32::from_rgb(254, 235, 220);
-    pub const ORANGE_300: Color32 = Color32::from_rgb(248, 178, 122);
-    pub const ORANGE_500: Color32 = Color32::from_rgb(234, 115, 23);
-    pub const ORANGE_600: Color32 = Color32::from_rgb(194, 90, 12);
-    pub const ORANGE_700: Color32 = Color32::from_rgb(152, 69, 8);
-    pub const ORANGE_900: Color32 = Color32::from_rgb(61, 31, 8);
-    pub const RED_100: Color32 = Color32::from_rgb(253, 229, 226);
-    pub const RED_300: Color32 = Color32::from_rgb(245, 154, 144);
-    pub const RED_500: Color32 = Color32::from_rgb(224, 72, 58);
-    pub const RED_600: Color32 = Color32::from_rgb(192, 53, 42);
-    pub const RED_700: Color32 = Color32::from_rgb(154, 42, 33);
-    pub const RED_900: Color32 = Color32::from_rgb(64, 21, 15);
-    pub const BLUE_100: Color32 = Color32::from_rgb(226, 237, 253);
-    pub const BLUE_300: Color32 = Color32::from_rgb(147, 185, 243);
-    pub const BLUE_500: Color32 = Color32::from_rgb(59, 123, 224);
-    pub const BLUE_600: Color32 = Color32::from_rgb(37, 99, 199);
-    pub const BLUE_700: Color32 = Color32::from_rgb(29, 79, 159);
-    pub const BLUE_900: Color32 = Color32::from_rgb(19, 39, 72);
+    pub const SAFFRON_600: Color32 = Color32::from_rgb(196, 139, 16);
+    pub const SAFFRON_700: Color32 = Color32::from_rgb(176, 124, 12);
+    pub const SAFFRON_800: Color32 = Color32::from_rgb(126, 83, 3);
+    pub const SAFFRON_INK: Color32 = Color32::from_rgb(20, 19, 16);
+    pub const GREEN_100: Color32 = Color32::from_rgb(220, 239, 228);
+    pub const GREEN_600: Color32 = Color32::from_rgb(46, 139, 87);
+    pub const GREEN_700: Color32 = Color32::from_rgb(26, 110, 69);
+    pub const ORANGE_100: Color32 = Color32::from_rgb(248, 231, 210);
+    pub const ORANGE_600: Color32 = Color32::from_rgb(199, 106, 10);
+    pub const ORANGE_700: Color32 = Color32::from_rgb(154, 83, 6);
+    pub const RED_100: Color32 = Color32::from_rgb(247, 223, 220);
+    pub const RED_600: Color32 = Color32::from_rgb(179, 51, 43);
+    pub const RED_700: Color32 = Color32::from_rgb(168, 48, 42);
+    pub const BLUE_100: Color32 = Color32::from_rgb(221, 232, 246);
+    pub const BLUE_600: Color32 = Color32::from_rgb(47, 111, 208);
+    pub const BLUE_700: Color32 = Color32::from_rgb(40, 92, 158);
+    pub const BLUE_500: Color32 = Color32::from_rgb(61, 111, 181);
+    pub const CAT_FOOD: Color32 = Color32::from_rgb(201, 120, 26);
+    pub const CAT_DRINK: Color32 = Color32::from_rgb(63, 120, 181);
+    pub const CAT_GOODS: Color32 = Color32::from_rgb(95, 143, 90);
+    pub const CAT_SNACK: Color32 = Color32::from_rgb(160, 86, 154);
+    pub const CHART_GREY: Color32 = Color32::from_rgb(85, 87, 92);
 }
 
-/// Tier 2 — semantic colours. One instance per theme.
 #[derive(Clone, Copy, Debug)]
 pub struct Palette {
-    /// App background behind surfaces.
+    /// Title bar (window controls + workspace tabs) and status bar.
+    pub bg_chrome: Color32,
+    /// Toolbar and the canvas the panes float on.
+    pub bg_chrome_raised: Color32,
+    /// Hover/active fill for chrome buttons and the selected workspace tab.
+    pub bg_chrome_hover: Color32,
+    /// Separators inside chrome (toolbar groups, status items).
+    pub border_chrome: Color32,
+    /// Text and icons on chrome.
+    pub fg_chrome: Color32,
+    /// Secondary text on chrome, shortcut hints. ≥5.8:1 on chrome.
+    pub fg_chrome_muted: Color32,
+    /// Behind panes (same as toolbar so panes read as floating sheets).
     pub bg_canvas: Color32,
-    /// Panels, cards, cart, tables. Default text ground.
+    /// Pane background (cart, lists, settings).
     pub bg_surface: Color32,
-    /// Popovers, menus, dialogs, tiles that sit above a surface.
+    /// Wells, tiles, table body, inputs, cards inside a pane.
     pub bg_raised: Color32,
-    /// Wells inside a surface: summary blocks, inputs groups, disabled tiles.
+    /// Secondary fills: disabled tiles, segmented tracks, summary blocks.
     pub bg_sunken: Color32,
-    /// Hover fill for rows, tabs, ghost buttons.
+    /// Hover on rows and tiles (pointer only).
     pub bg_hover: Color32,
-    /// Pressed fill for neutral controls.
+    /// Pressed rows.
     pub bg_pressed: Color32,
-    /// Selected row / current cart line.
+    /// Selected row/line/category (2px inset bar in square shape).
     pub bg_selected: Color32,
-    /// Active segment, tooltips, count badges.
+    /// Count badges, active chips, toasts.
     pub bg_inverse: Color32,
     /// Primary text and all money values.
     pub fg_default: Color32,
-    /// Secondary text, labels, metadata. ≥4.5:1 on surface and sunken.
+    /// Labels, metadata. ≥4.5:1 on surface, raised, sunken, selected.
     pub fg_muted: Color32,
-    /// Placeholders and disabled text only (exempt from 4.5:1). Never for information.
+    /// Placeholders, disabled text, decorative numbers only.
     pub fg_subtle: Color32,
     /// Text on bg-inverse.
     pub fg_inverse: Color32,
-    /// Accent text: notes, modifiers, active tab label.
+    /// Modifiers and notes on cart lines.
     pub fg_accent: Color32,
-    /// Text/icons on accent-bg (dark on saffron in both themes).
+    /// Text on accent-bg.
     pub fg_on_accent: Color32,
     /// Text on danger-solid.
     pub fg_on_danger: Color32,
-    /// Dividers between rows inside a surface.
+    /// Row dividers inside a pane.
     pub border_subtle: Color32,
-    /// Card and tile outlines, section dividers.
+    /// Tile, card, input-group outlines.
     pub border_default: Color32,
-    /// Input and control boundaries (≥3:1 on surface).
+    /// Input and icon-button boundaries (≥3:1 on raised).
     pub border_control: Color32,
-    /// Selected tile / chosen option outline (2px).
+    /// Tile already in the bill; selected-row bar.
     pub border_selected: Color32,
-    /// Keyboard focus ring, 2px + 2px offset. Distinct from accent on purpose.
+    /// Keyboard focus ring 2px.
     pub focus_ring: Color32,
-    /// THE commit action: take payment, confirm, primary save. One per view.
+    /// THE commit action — one per view: ชำระเงิน, ยืนยันรับเงิน, บันทึก. Also the active-tab underline.
     pub accent_bg: Color32,
     /// Hover on accent-bg.
     pub accent_bg_hover: Color32,
     /// Pressed on accent-bg.
     pub accent_bg_pressed: Color32,
-    /// Soft accent fill: active nav item, selected chip.
+    /// “Just added” flash on a cart line.
     pub accent_soft: Color32,
-    /// Success text/icon: paid, synced, balanced.
+    /// Paid, balanced, ready.
     pub success_fg: Color32,
     /// Success badge/banner fill.
     pub success_bg: Color32,
-    /// Success dot, chart positive.
+    /// Success dot, switch on.
     pub success_solid: Color32,
-    /// Warning text: low stock, unsaved, over/short within tolerance.
+    /// Low stock, unsaved, needs attention.
     pub warning_fg: Color32,
     /// Warning badge/banner fill.
     pub warning_bg: Color32,
-    /// Warning dot.
+    /// Warning dot/stripe.
     pub warning_solid: Color32,
-    /// Danger text: out of stock, failed, refund amounts, validation errors.
+    /// Out of stock, failed, refunds, validation errors.
     pub danger_fg: Color32,
     /// Danger badge/banner fill.
     pub danger_bg: Color32,
-    /// Destructive button fill (with fg-on-danger).
+    /// Destructive button fill.
     pub danger_solid: Color32,
-    /// Info text: in progress, syncing, sent to kitchen.
+    /// In progress, sent to kitchen, links.
     pub info_fg: Color32,
-    /// Info badge/banner fill.
+    /// Info badge fill.
     pub info_bg: Color32,
-    /// Info dot, chart secondary series.
+    /// Info dot/stripe, seated tables.
     pub info_solid: Color32,
-    /// Chart series 1 (current period / net sales).
+    /// Category color: food (tile stripe, dot). Data color, never a status.
+    pub cat_food: Color32,
+    /// Category color: drinks.
+    pub cat_drink: Color32,
+    /// Category color: household goods.
+    pub cat_goods: Color32,
+    /// Category color: snacks.
+    pub cat_snack: Color32,
+    /// Chart series 1 (current period).
     pub chart_1: Color32,
     /// Chart series 2 (comparison period).
     pub chart_2: Color32,
@@ -149,33 +161,39 @@ pub struct Palette {
     pub chart_3: Color32,
     /// Chart series 4.
     pub chart_4: Color32,
-    /// Chart gridlines.
+    /// Gridlines.
     pub chart_grid: Color32,
-    /// Scrim behind dialogs and sheets (premultiplied alpha).
+    /// Scrim behind dialogs (premultiplied).
     pub overlay_scrim: Color32,
 }
 
 impl Palette {
-    pub const LIGHT: Palette = Palette {
-        bg_canvas: primitive::STONE_50,
-        bg_surface: primitive::STONE_0,
-        bg_raised: primitive::STONE_0,
-        bg_sunken: primitive::STONE_100,
-        bg_hover: primitive::STONE_100,
-        bg_pressed: primitive::STONE_200,
-        bg_selected: primitive::SAFFRON_100,
-        bg_inverse: primitive::STONE_900,
-        fg_default: primitive::STONE_900,
-        fg_muted: primitive::STONE_600,
-        fg_subtle: primitive::STONE_500,
-        fg_inverse: primitive::STONE_0,
-        fg_accent: primitive::SAFFRON_700,
-        fg_on_accent: primitive::STONE_950,
-        fg_on_danger: primitive::STONE_0,
-        border_subtle: primitive::STONE_100,
-        border_default: primitive::STONE_200,
-        border_control: primitive::STONE_500,
-        border_selected: primitive::STONE_900,
+    pub const DEFAULT: Palette = Palette {
+        bg_chrome: primitive::GRAPHITE_900,
+        bg_chrome_raised: primitive::GRAPHITE_850,
+        bg_chrome_hover: primitive::GRAPHITE_800,
+        border_chrome: primitive::GRAPHITE_700,
+        fg_chrome: primitive::GRAPHITE_50,
+        fg_chrome_muted: primitive::GRAPHITE_400,
+        bg_canvas: primitive::GRAPHITE_850,
+        bg_surface: primitive::PAPER_50,
+        bg_raised: primitive::PAPER_0,
+        bg_sunken: primitive::PAPER_100,
+        bg_hover: primitive::SLATE_50,
+        bg_pressed: primitive::SLATE_150,
+        bg_selected: primitive::SLATE_100,
+        bg_inverse: primitive::GRAPHITE_850,
+        fg_default: primitive::PAPER_900,
+        fg_muted: primitive::PAPER_600,
+        fg_subtle: primitive::PAPER_400,
+        fg_inverse: primitive::GRAPHITE_50,
+        fg_accent: primitive::SAFFRON_800,
+        fg_on_accent: primitive::SAFFRON_INK,
+        fg_on_danger: primitive::PAPER_0,
+        border_subtle: primitive::PAPER_150,
+        border_default: primitive::PAPER_200,
+        border_control: primitive::PAPER_400,
+        border_selected: primitive::SLATE_500,
         focus_ring: primitive::BLUE_600,
         accent_bg: primitive::SAFFRON_400,
         accent_bg_hover: primitive::SAFFRON_500,
@@ -192,174 +210,133 @@ impl Palette {
         danger_solid: primitive::RED_600,
         info_fg: primitive::BLUE_700,
         info_bg: primitive::BLUE_100,
-        info_solid: primitive::BLUE_600,
-        chart_1: primitive::SAFFRON_600,
-        chart_2: primitive::STONE_700,
-        chart_3: primitive::BLUE_500,
-        chart_4: primitive::GREEN_500,
-        chart_grid: primitive::STONE_100,
-        overlay_scrim: Color32::from_rgba_premultiplied(9, 8, 8, 122),
-    };
-    pub const DARK: Palette = Palette {
-        bg_canvas: primitive::STONE_950,
-        bg_surface: primitive::STONE_925,
-        bg_raised: primitive::STONE_900,
-        bg_sunken: primitive::STONE_975,
-        bg_hover: primitive::STONE_850,
-        bg_pressed: primitive::STONE_800,
-        bg_selected: primitive::SAFFRON_950,
-        bg_inverse: primitive::STONE_50,
-        fg_default: primitive::STONE_50,
-        fg_muted: primitive::STONE_400,
-        fg_subtle: primitive::STONE_500,
-        fg_inverse: primitive::STONE_925,
-        fg_accent: primitive::SAFFRON_300,
-        fg_on_accent: primitive::STONE_950,
-        fg_on_danger: primitive::STONE_0,
-        border_subtle: primitive::STONE_850,
-        border_default: primitive::STONE_800,
-        border_control: primitive::STONE_500,
-        border_selected: primitive::STONE_50,
-        focus_ring: primitive::BLUE_300,
-        accent_bg: primitive::SAFFRON_400,
-        accent_bg_hover: primitive::SAFFRON_300,
-        accent_bg_pressed: primitive::SAFFRON_500,
-        accent_soft: primitive::SAFFRON_950,
-        success_fg: primitive::GREEN_300,
-        success_bg: primitive::GREEN_900,
-        success_solid: primitive::GREEN_500,
-        warning_fg: primitive::ORANGE_300,
-        warning_bg: primitive::ORANGE_900,
-        warning_solid: primitive::ORANGE_500,
-        danger_fg: primitive::RED_300,
-        danger_bg: primitive::RED_900,
-        danger_solid: primitive::RED_600,
-        info_fg: primitive::BLUE_300,
-        info_bg: primitive::BLUE_900,
         info_solid: primitive::BLUE_500,
-        chart_1: primitive::SAFFRON_400,
-        chart_2: primitive::STONE_300,
-        chart_3: primitive::BLUE_300,
-        chart_4: primitive::GREEN_300,
-        chart_grid: primitive::STONE_850,
-        overlay_scrim: Color32::from_rgba_premultiplied(0, 0, 0, 163),
+        cat_food: primitive::CAT_FOOD,
+        cat_drink: primitive::CAT_DRINK,
+        cat_goods: primitive::CAT_GOODS,
+        cat_snack: primitive::CAT_SNACK,
+        chart_1: primitive::SAFFRON_700,
+        chart_2: primitive::CHART_GREY,
+        chart_3: primitive::SLATE_500,
+        chart_4: primitive::GREEN_600,
+        chart_grid: primitive::PAPER_150,
+        overlay_scrim: Color32::from_rgba_premultiplied(4, 4, 5, 115),
     };
-    pub fn for_mode(mode: ThemeMode) -> &'static Palette {
-        match mode { ThemeMode::Light => &Self::LIGHT, ThemeMode::Dark => &Self::DARK }
-    }
-}
-
-/// Tier 3 — component tokens (aliases of semantic tokens).
-impl Palette {
     /// Primary button fill.
     pub fn button_primary_bg(&self) -> Color32 { self.accent_bg }
     /// Primary button label.
     pub fn button_primary_fg(&self) -> Color32 { self.fg_on_accent }
-    /// Product tile already in cart.
+    /// Tile already in the bill.
     pub fn tile_selected_border(&self) -> Color32 { self.border_selected }
-    /// Current cart line (keyboard target).
+    /// Current cart line.
     pub fn cartline_selected_bg(&self) -> Color32 { self.bg_selected }
-    /// Active item in workspace nav.
-    pub fn nav_item_active_bg(&self) -> Color32 { self.accent_soft }
+    /// Selected workspace tab.
+    pub fn nav_item_active_bg(&self) -> Color32 { self.bg_chrome_hover }
+    /// Apply a brand accent preset (only accent-* , fg-on-accent, accent-soft, chart-1 change).
+    pub fn with_accent(mut self, a: AccentPreset) -> Self { let (bg, hover, pressed, on, soft, chart) = a.colors(); self.accent_bg = bg; self.accent_bg_hover = hover; self.accent_bg_pressed = pressed; self.fg_on_accent = on; self.accent_soft = soft; self.chart_1 = chart; self }
 }
 
-/// Spacing scale (px, 4px base).
-pub mod space {
-    /// No gap.
-    pub const S0: f32 = 0.0;
-    /// Icon–label gap, badge padding.
-    pub const S1: f32 = 4.0;
-    /// Gap inside controls, between chips and tiles.
-    pub const S2: f32 = 8.0;
-    /// Row padding (compact), card inner gap.
-    pub const S3: f32 = 12.0;
-    /// Panel padding, row padding (touch).
-    pub const S4: f32 = 16.0;
-    /// Section gap inside a panel.
-    pub const S5: f32 = 20.0;
-    /// Between groups of fields.
-    pub const S6: f32 = 24.0;
-    /// Between page sections.
-    pub const S8: f32 = 32.0;
-    /// Empty-state spacing.
-    pub const S10: f32 = 40.0;
-    /// Screen margins on large displays.
-    pub const S12: f32 = 48.0;
-}
-
-/// Corner radii (px). egui 0.31+: `CornerRadius::same(radius::LG)`; older: `Rounding::same(radius::LG as f32)`.
-pub mod radius {
-    /// Badges, kbd hints, count bubbles.
-    pub const XS: u8 = 4;
-    /// Inputs and buttons (compact).
-    pub const SM: u8 = 6;
-    /// Buttons (touch), tiles, menus.
-    pub const MD: u8 = 8;
-    /// Surfaces: cart panel, cards, popovers.
-    pub const LG: u8 = 12;
-    /// Dialogs and sheets.
-    pub const XL: u8 = 16;
-    /// Pills, status dots, avatars.
-    pub const FULL: u8 = 255;
-}
-
-/// Sizes that change with density.
-#[derive(Clone, Copy, Debug)]
-pub struct Metrics {
-    pub control_sm: f32, pub control_md: f32, pub control_lg: f32, pub control_xl: f32,
-    pub row_height: f32, pub icon: f32, pub topbar: f32, pub tile_min_width: f32, pub tile_min_height: f32,
-    pub font_body: f32, pub font_label: f32, pub font_money: f32, pub show_shortcut_hints: bool,
-}
-
-impl Metrics {
-    pub const COMPACT: Metrics = Metrics { control_sm: 28.0, control_md: 36.0, control_lg: 44.0, control_xl: 52.0, row_height: 40.0, icon: 20.0, topbar: 52.0, tile_min_width: 136.0, tile_min_height: 84.0, font_body: 14.0, font_label: 13.0, font_money: 14.0, show_shortcut_hints: true };
-    pub const TOUCH: Metrics = Metrics { control_sm: 40.0, control_md: 48.0, control_lg: 56.0, control_xl: 64.0, row_height: 56.0, icon: 24.0, topbar: 64.0, tile_min_width: 176.0, tile_min_height: 104.0, font_body: 16.0, font_label: 15.0, font_money: 16.0, show_shortcut_hints: false };
-    pub fn for_density(d: Density) -> Metrics { match d { Density::Compact => Self::COMPACT, Density::Touch => Self::TOUCH } }
-    /// Minimum hit area in touch density.
-    pub const TOUCH_TARGET_MIN: f32 = 44.0;
-    pub fn cart_width(&self, screen_width: f32) -> f32 {
-        if screen_width < 1100.0 { 360.0 } else if self.row_height > 40.0 { 420.0 } else { 392.0 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AccentPreset { Saffron, Jade, Ocean, Plum, Ink }
+impl AccentPreset {
+    /// (bg, hover, pressed, on_accent, soft, chart_1)
+    pub const fn colors(self) -> (Color32, Color32, Color32, Color32, Color32, Color32) {
+        match self {
+            AccentPreset::Saffron => (Color32::from_rgb(240, 178, 50), Color32::from_rgb(220, 152, 16), Color32::from_rgb(196, 139, 16), Color32::from_rgb(20, 19, 16), Color32::from_rgb(251, 231, 181), Color32::from_rgb(176, 124, 12)),
+            AccentPreset::Jade => (Color32::from_rgb(15, 122, 95), Color32::from_rgb(12, 101, 80), Color32::from_rgb(10, 84, 67), Color32::from_rgb(255, 255, 255), Color32::from_rgb(207, 234, 223), Color32::from_rgb(15, 122, 95)),
+            AccentPreset::Ocean => (Color32::from_rgb(29, 106, 140), Color32::from_rgb(24, 90, 119), Color32::from_rgb(19, 74, 98), Color32::from_rgb(255, 255, 255), Color32::from_rgb(207, 227, 238), Color32::from_rgb(29, 106, 140)),
+            AccentPreset::Plum => (Color32::from_rgb(123, 60, 143), Color32::from_rgb(104, 50, 122), Color32::from_rgb(86, 41, 102), Color32::from_rgb(255, 255, 255), Color32::from_rgb(234, 215, 241), Color32::from_rgb(123, 60, 143)),
+            AccentPreset::Ink => (Color32::from_rgb(44, 45, 49), Color32::from_rgb(31, 32, 35), Color32::from_rgb(17, 18, 20), Color32::from_rgb(255, 255, 255), Color32::from_rgb(226, 226, 222), Color32::from_rgb(69, 71, 76)),
+        }
     }
 }
 
-/// Type scale. `Family::Ui` = IBM Plex Sans Thai + IBM Plex Sans; `Family::Num` = IBM Plex Mono (all money).
+pub mod space {
+    /// None.
+    pub const S0: f32 = 0.0;
+    /// Icon–label gap.
+    pub const S1: f32 = 4.0;
+    /// Control gaps, tile gaps.
+    pub const S2: f32 = 8.0;
+    /// Row padding (compact), pane padding.
+    pub const S3: f32 = 12.0;
+    /// Row padding (touch), section padding.
+    pub const S4: f32 = 16.0;
+    /// Settings page padding.
+    pub const S5: f32 = 20.0;
+    /// Between field groups.
+    pub const S6: f32 = 24.0;
+    /// Between page sections.
+    pub const S8: f32 = 32.0;
+    /// Gap between floating panes and around them.
+    pub const PANE_GAP: f32 = 6.0;
+}
+
+pub mod radius {
+    /// Kbd hints.
+    pub const XS: u8 = 4;
+    /// Badges, count bubbles, small chips inside rows.
+    pub const SM: u8 = 6;
+    /// Buttons, inputs, rows (selection), tabs, toolbar buttons.
+    pub const MD: u8 = 8;
+    /// Panes, tiles, cards, quick-cash keys.
+    pub const LG: u8 = 10;
+    /// Dialogs, command palette, PIN pad.
+    pub const XL: u8 = 14;
+    /// App window corners (when the OS allows).
+    pub const WINDOW: u8 = 12;
+    /// Pills, chips, dots, avatars.
+    pub const FULL: u8 = 255;
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct Metrics {
+    pub titlebar_h: f32, pub toolbar_h: f32, pub statusbar_h: f32,
+    pub control_sm: f32, pub control_md: f32, pub control_lg: f32, pub row_height: f32, pub icon: f32,
+    pub cart_width: f32, pub category_width: f32, pub details_width: f32, pub tile_min_width: f32, pub tile_min_height: f32,
+    pub font_body: f32, pub font_label: f32, pub font_money: f32, pub font_money_xl: f32,
+    pub show_shortcut_hints: bool, pub categories_as_chips: bool,
+}
+impl Metrics {
+    pub const COMPACT: Metrics = Metrics { titlebar_h: 40.0, toolbar_h: 40.0, statusbar_h: 24.0, control_sm: 26.0, control_md: 30.0, control_lg: 44.0, row_height: 30.0, icon: 16.0, cart_width: 392.0, category_width: 168.0, details_width: 360.0, tile_min_width: 150.0, tile_min_height: 78.0, font_body: 13.0, font_label: 12.0, font_money: 13.0, font_money_xl: 30.0, show_shortcut_hints: true, categories_as_chips: false };
+    pub const TOUCH: Metrics = Metrics { titlebar_h: 48.0, toolbar_h: 58.0, statusbar_h: 32.0, control_sm: 44.0, control_md: 44.0, control_lg: 62.0, row_height: 52.0, icon: 20.0, cart_width: 430.0, category_width: 0.0, details_width: 380.0, tile_min_width: 172.0, tile_min_height: 104.0, font_body: 15.0, font_label: 13.5, font_money: 16.0, font_money_xl: 34.0, show_shortcut_hints: false, categories_as_chips: true };
+    pub const TOUCH_TARGET_MIN: f32 = 44.0;
+    pub fn for_density(d: Density) -> Metrics { match d { Density::Compact => Self::COMPACT, Density::Touch => Self::TOUCH } }
+}
+
 pub mod type_scale {
     #[derive(Clone, Copy, Debug, PartialEq, Eq)]
     pub enum Family { Ui, Num }
     #[derive(Clone, Copy, Debug)]
     pub struct Style { pub size: f32, pub line_height: f32, pub weight: u16, pub family: Family }
-    /// One per screen at most: dashboard/summary headline.
-    pub const DISPLAY: Style = Style { size: 30.0, line_height: 40.0, weight: 600, family: Family::Ui };
-    /// Page title.
-    pub const TITLE_LG: Style = Style { size: 22.0, line_height: 32.0, weight: 600, family: Family::Ui };
-    /// Panel / dialog / section title, bill name.
-    pub const TITLE: Style = Style { size: 17.0, line_height: 26.0, weight: 600, family: Family::Ui };
-    /// Default text (compact). Touch: 16/26.
-    pub const BODY: Style = Style { size: 14.0, line_height: 22.0, weight: 400, family: Family::Ui };
-    /// Emphasis inside body, labels of key values.
-    pub const BODY_STRONG: Style = Style { size: 14.0, line_height: 22.0, weight: 600, family: Family::Ui };
-    /// Field labels, buttons (compact), tabs.
-    pub const LABEL: Style = Style { size: 13.0, line_height: 20.0, weight: 500, family: Family::Ui };
-    /// Metadata, helper text. Never below 12px; Thai marks need the line height.
-    pub const CAPTION: Style = Style { size: 12.0, line_height: 18.0, weight: 400, family: Family::Ui };
-    /// Amount due, change due. One per view.
-    pub const MONEY_XL: Style = Style { size: 34.0, line_height: 40.0, weight: 600, family: Family::Num };
-    /// Change, cash received, KPI tiles.
+    /// Pane titles, bill name, inspector title. Touch 17.
+    pub const TITLE: Style = Style { size: 16.0, line_height: 24.0, weight: 600, family: Family::Ui };
+    /// Default text (compact). Touch 15/22.
+    pub const BODY: Style = Style { size: 13.0, line_height: 20.0, weight: 400, family: Family::Ui };
+    /// Emphasis, labels of key values.
+    pub const BODY_STRONG: Style = Style { size: 13.0, line_height: 20.0, weight: 600, family: Family::Ui };
+    /// Pane headers, field labels, toolbar (12.5). Touch 13–14.
+    pub const LABEL: Style = Style { size: 12.0, line_height: 18.0, weight: 600, family: Family::Ui };
+    /// Metadata, status bar. Never below 11px; Thai needs the line height.
+    pub const CAPTION: Style = Style { size: 11.5, line_height: 16.0, weight: 400, family: Family::Ui };
+    /// Amount due. Touch 34.
+    pub const MONEY_XL: Style = Style { size: 30.0, line_height: 36.0, weight: 600, family: Family::Num };
+    /// KPIs, change, counted cash.
     pub const MONEY_LG: Style = Style { size: 22.0, line_height: 28.0, weight: 600, family: Family::Num };
-    /// Line amounts, table cells, tile prices. Always right-aligned in columns.
-    pub const MONEY: Style = Style { size: 14.0, line_height: 22.0, weight: 500, family: Family::Num };
-    /// Unit prices, secondary amounts.
-    pub const MONEY_SM: Style = Style { size: 12.0, line_height: 18.0, weight: 500, family: Family::Num };
+    /// Line amounts, table cells, tile prices (600). Always right-aligned.
+    pub const MONEY: Style = Style { size: 13.0, line_height: 20.0, weight: 500, family: Family::Num };
+    /// Unit prices.
+    pub const MONEY_SM: Style = Style { size: 11.5, line_height: 16.0, weight: 500, family: Family::Num };
 }
 
-/// Motion (ms). Multiply by 0.0 when reduced motion is on.
+/// Seconds. Use 0 when reduced motion is on.
 pub mod motion {
-    /// Selection, focus, typing feedback.
+    /// Typing, selection.
     pub const INSTANT: f32 = 0.0;
-    /// Hover/press, small state changes.
+    /// Hover, press, count bump.
     pub const FAST: f32 = 0.12;
-    /// Popover, toast enter, row insert highlight.
+    /// Toast, pane switch, payment step.
     pub const BASE: f32 = 0.2;
-    /// Sheet/dialog enter. Exit = 0.7× enter.
-    pub const SLOW: f32 = 0.28;
+    /// “Just added” line flash fade.
+    pub const FLASH: f32 = 0.6;
 }

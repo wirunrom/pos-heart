@@ -232,7 +232,7 @@ pub fn panel(app: &mut App, ui: &mut egui::Ui) {
     ui.horizontal_wrapped(|ui| {
         ui.label(t.text(
             lang.text("จัดซื้อและรับของ", "Purchasing & receiving"),
-            type_scale::TITLE_LG,
+            type_scale::TITLE,
         ));
         if w::button(lang.text("โหลดใหม่", "Refresh"))
             .enabled(!app.busy)
