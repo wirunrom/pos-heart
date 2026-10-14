@@ -162,6 +162,7 @@ impl Language {
                     "แบ่งจ่ายต้องใช้อย่างน้อย 2 วิธี และยอดรวมต้องเท่ายอดชำระพอดี",
                     "A split needs at least two methods that add up to the exact amount due.",
                 ),
+                DomainError::InvalidPurchase => self.text("ตรวจชื่อผู้ขาย รายการ จำนวน และราคาต่อหน่วย สินค้าต้องเป็นจำนวนเต็ม", "Check supplier, items, quantities and unit costs. Product units must be whole numbers."),
                 DomainError::InvalidIngredient => self.text(
                     "วัตถุดิบต้องมีชื่อและหน่วย ปริมาณในสูตรต้องมากกว่า 0 และไม่ใส่ซ้ำ",
                     "Ingredients need a name and unit; recipe amounts must be above 0 and not repeated.",
@@ -203,6 +204,11 @@ impl Language {
                 "รูปต้องเป็น PNG ไม่เกิน 512 KB",
                 "The picture must be a PNG of at most 512 KB.",
             ),
+            Error::SupplierNotFound => self.text("ไม่พบผู้ขายหรือปิดใช้งานแล้ว กรุณาเลือกใหม่", "Supplier is unavailable. Select an active supplier."),
+            Error::PurchaseOrderNotFound => self.text("ไม่พบใบสั่งซื้อ กรุณาโหลดรายการใหม่", "Purchase order not found. Refresh the list."),
+            Error::PurchaseOrderChanged => self.text("ใบสั่งซื้อเปลี่ยนแล้ว โหลดข้อมูลล่าสุดและตรวจจำนวนอีกครั้ง", "The order changed. Refresh and review quantities again."),
+            Error::PurchaseOrderClosed => self.text("ใบสั่งซื้อนี้รับครบหรือยกเลิกยอดค้างแล้ว", "This order is fully received or cancelled."),
+            Error::PurchaseExceedsOrder => self.text("จำนวนรับเกินยอดค้างรับ กรุณาตรวจจำนวนอีกครั้ง", "Receiving exceeds the outstanding quantity. Check each line."),
             Error::IngredientNotFound => self.text(
                 "ไม่พบวัตถุดิบนี้ หรือถูกปิดใช้งานแล้ว",
                 "That ingredient no longer exists or is switched off.",

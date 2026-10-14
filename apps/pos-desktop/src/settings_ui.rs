@@ -330,6 +330,11 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
                         Section::Display => card(ui, &t, |ui| display_card(app, ui)),
                         Section::Data => card(ui, &t, |ui| data_card(app, ui)),
                     }
+                    #[cfg(debug_assertions)]
+                    if app.preview_scroll_bottom {
+                        ui.scroll_to_cursor(Some(Align::BOTTOM));
+                        app.preview_scroll_bottom = false;
+                    }
                 });
         });
     });

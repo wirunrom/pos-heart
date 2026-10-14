@@ -51,6 +51,7 @@ apps/pos-desktop/src/
   catalog_ui.rs    product views, table, bulk actions, inspector, option editor
   history_ui.rs    receipts table, inspector, full void/refund
   report_ui.rs     stat tiles, hourly chart, methods, top products, CSV
+  purchasing_ui.rs Products → Manage → Purchasing, suppliers, orders, receiving
   shift_ui.rs      open, cash in/out, steps-based close with denomination count, history
   settings_ui.rs   first-run setup, shop/device preferences, display, backup/export
   staff_ui.rs      lock screen, name chip, approval dialog, Staff & permissions card with role editor
@@ -69,7 +70,7 @@ apps/pos-desktop/src/
 apps/pos-desktop/examples/seed_screens.rs   sample data folder for layout captures
 crates/pos-domain/  money, product/options/cart/sale data, discounts, PromptPay payload and validation
 crates/pos-core/    Diesel catalog, checkout, held carts, voids, shifts and reports
-  migrations/      versioned SQLite schema (001–017)
+  migrations/      versioned SQLite schema (001–023)
 assets/fonts/      IBM Plex Sans / Sans Thai / Mono, Noto Sans Thai fallback, OFL licenses
 design/            POS Design System v0.1 (tokens, docs, reference screens)
 docs/architecture.md, docs/multi-device.md (proposal, not built)
@@ -103,7 +104,7 @@ Integer satang and checked arithmetic; no floating-point currency. Diesel handle
 
 ## Known limitations
 
-Single shop/register. Cash, manual transfer (optionally with a PromptPay QR) and manual card records; one method per bill, or a split payment across them. The app never checks that a transfer arrived; the cashier confirms it. Refunds go through the original method only (whole bill or selected items); no exchanges or store credit. Manual discounts and automatic promotions/coupons are supported; member pricing and points are outside scope. Credit notes are issued for refunds/voids of full tax invoices; no VAT return filing, e-Tax or other taxes, recipe stock, purchase orders or suppliers, online ordering, card terminal or other device integration (receipt printers aside) (the design system's tablet screens are marked Future and are not built; tables and the kitchen screen are built, see below). Barcodes are stored per product and looked up exactly on Enter; real scanner hardware has not been tested. Option groups: at most 10 per product, 20 choices each. Sell loads up to 500 products per category or search; Products pages 100, history 50 receipts, held list latest 100. No cloud sync or multi-device use (proposal for later: [docs/multi-device.md](docs/multi-device.md)). Database is not encrypted. Thai line breaking follows egui (spaces first), not dictionary segmentation. Before real use, verify refund procedures, backup/restore and field tests appropriate to the shop.
+Single shop/register. Cash, manual transfer (optionally with a PromptPay QR) and manual card records; one method per bill, or a split payment across them. The app never checks that a transfer arrived; the cashier confirms it. Refunds go through the original method only (whole bill or selected items); no exchanges or store credit. Manual discounts and automatic promotions/coupons are supported; member pricing and points are outside scope. Credit notes are issued for refunds/voids of full tax invoices; no VAT return filing, e-Tax or other taxes, purchase payments/payables, purchase VAT/freight/returns, online ordering, card terminal or other device integration (receipt printers aside) (the design system's tablet screens are marked Future and are not built; tables and the kitchen screen are built, see below). Barcodes are stored per product and looked up exactly on Enter; real scanner hardware has not been tested. Option groups: at most 10 per product, 20 choices each. Sell loads 500 products at a time, up to 10,000 per category or search; Products pages 100, history 50 receipts, held list latest 100. No cloud sync or multi-device use (proposal for later: [docs/multi-device.md](docs/multi-device.md)). Database is not encrypted. Thai line breaking follows egui (spaces first), not dictionary segmentation. Before real use, verify refund procedures, backup/restore and field tests appropriate to the shop.
 
 ## Guidance
 
@@ -152,7 +153,7 @@ Split (แบ่งจ่าย) is the fourth payment option: enter the transfe
 
 ## Catalog views and product options
 
-Schema 005 adds a scanner barcode (unique when present) separate from the shop's product code, and an **On sale** switch distinct from removing a product. Not-for-sale products stay listed, show a disabled tile in Sell and refuse checkout. Products show low stock at 5 units or fewer. Bulk actions change category or stop/resume selling for all selected products at once (all or nothing), with undo for stop/resume. Export writes every product, or the selected day's report, as UTF-8 CSV into the data folder without overwriting an existing file; cells that look like spreadsheet formulas are neutralised.
+Schema 005 adds a scanner barcode (unique when present) separate from the shop's product code, and an **On sale** switch distinct from removing a product. Not-for-sale products stay listed, show a disabled tile in Sell and refuse checkout. Products show low stock at 5 units or fewer. Bulk actions change category or stop/resume selling for all selected products at once (all or nothing), with undo for stop/resume. Export writes every product, or the selected period's report, as UTF-8 CSV into the data folder without overwriting an existing file; cells that look like spreadsheet formulas are neutralised.
 
 Schema 006 adds option groups per product (for example sweetness: required, pick one; extras: optional, pick several). A choice may add a price per unit. Checkout prices options from the catalog in the same transaction and snapshots option names and prices on the receipt; if a held bill's options no longer exist, payment is refused until they are chosen again (`F6`). Existing products start with no options; existing receipts are not rewritten. Back up before upgrading production data.
 
@@ -160,7 +161,7 @@ Schema 006 adds option groups per product (for example sweetness: required, pick
 
 Schema 007 adds `stock_movements`. Starting to track a product records its starting stock; afterwards the inspector shows the current count and Receive / Remove / Count actions with a recent history. Remove needs a reason (damaged, expired, used in shop, lost). A count is refused if stock changed after the count started, so a sale during counting is never overwritten. Saving a product edit keeps the stored stock.
 
-Reports accept a period of up to 366 Bangkok days. A single day compares with the same weekday last week; longer periods compare with the equally long period before. Categories use each product's current category. CSV export includes per-day and per-category rows.
+Reports accept a period of up to 366 Bangkok days. A single day compares with the same weekday last week; longer periods compare with the equally long period before. Categories use each product's current category. CSV export includes per-day, category, top-product and hourly rows, staff, promotions and ingredient usage, payment-method sales/refunds/net, cash received/change, VAT, service, rounding and standard-cost profit coverage. Ingredient quantities keep three exact decimal places; ingredient cost is an estimate at the current unit cost, not historical inventory valuation. Unavailable cost is blank and known zero is `0.00`. Formula-like text is neutralised and existing files are never overwritten.
 
 Schema 008 adds `sale_refunds`. Refund items picks units per receipt line (up to what is left), shows the refund amount, requires a reason and records it in the current shift through the original method; tracked units return to stock. Sales history marks receipts as part refunded or refunded. A bill with a partial refund cannot also be voided whole. Back up before upgrading production data.
 
@@ -216,7 +217,7 @@ Settings → Pricing (roles with Settings allowed) sets an optional service char
 - **Activity log** (workspace / Settings, `Alt 8`): search, type filters and newest-first pages of 50; product/price/cost changes, discounts, refunds, voids, stock, staff and roles. Actor/approver snapshots never include PINs/hashes. Events start with schema 14; no fabricated historical log. Uses Reports permission.
 - **Products → Unit cost; Reports → Estimated gross profit:** optional standard per-unit cost is snapshotted at checkout. Profit excludes VAT, includes service and reverses original revenue/cost on refund day; unknown-cost lines appear separately. This estimates standard-cost gross profit before operating expenses, not inventory averaging. Enter an inclusive standard cost for products with options; option-specific costs are not modeled. CSV exports include cost and profit coverage. Legacy costs stay unknown and receipts are never rewritten.
 
-Schemas 13-14 added costs and activity; the current schema is 17, including tables, credit notes and promotions below. Back up with the previous build before upgrading a real shop.
+Schemas 13–14 added costs and activity; the current schema is 23, including tables, credit notes, promotions, ingredients, pictures, categories, shared option sets and purchasing below. Back up with the previous build before upgrading a real shop.
 
 ## Tables and kitchen (2026-10-13)
 
@@ -244,7 +245,7 @@ This round remains development work with synthetic data and native macOS checks.
 
 ## Ingredients and recipes (2026-10-14)
 
-Products → Ingredients lists each ingredient with its stock in its own unit, a low-stock warning level and an optional cost per unit; Receive, Remove (with a reason), Count and History record every change. In the product editor, Recipe lists what one unit sold uses (up to three decimals) and shows the recipe cost when every ingredient has a cost (Use as cost copies it). Each sale deducts its recipes automatically; ingredient stock may go below zero and never blocks a sale. Voiding a whole bill gives the ingredients back; partial refunds do not, as the food was made. In Adjust by option, a choice can add or remove ingredients per unit (e.g. + fried egg: +1 egg; no egg: −1 egg); totals never go below zero. Reports have Promos (bills and amount per promotion; whole voids subtract) and Ingredients (used by recipes net of voids, removed by hand, cost at today's unit cost) tabs; the CSV export does not include them yet.
+Products → Ingredients lists each ingredient with its stock in its own unit, a low-stock warning level and an optional cost per unit; Receive, Remove (with a reason), Count and History record every change. In the product editor, Recipe lists what one unit sold uses (up to three decimals) and shows the recipe cost when every ingredient has a cost (Use as cost copies it). Each sale deducts its recipes automatically; ingredient stock may go below zero and never blocks a sale. Voiding a whole bill gives the ingredients back; partial refunds do not, as the food was made. In Adjust by option, a choice can add or remove ingredients per unit (e.g. + fried egg: +1 egg; no egg: −1 egg); totals never go below zero. Reports have Promos (bills and amount per promotion; whole voids subtract) and Ingredients (used by recipes net of voids, removed by hand, cost at today's unit cost) tabs; both sections are included in report CSV exports.
 
 ## Product pictures (2026-10-14)
 
@@ -261,3 +262,11 @@ Products → Manage → Option sets keeps option groups used by many products (s
 ### Large catalogs
 
 Sell loads 500 products at a time and loads more when the end of the grid comes into view (up to 10,000 per category or search); products are listed in the shop's category order, then by name. `seed_screens DIR --many 1500` creates a large sample catalog for checks.
+
+## จัดซื้อและรับของ (schema 23, 2026-10-14)
+
+สินค้า → จัดการ → จัดซื้อ มีแท็บใบสั่งซื้อและผู้ขาย เพิ่มผู้ขายพร้อมข้อมูลติดต่อ แล้วสร้างใบสั่งซื้อสินค้าแบบติดตามสต็อกหรือวัตถุดิบ ระบุจำนวนและราคาต่อหน่วย ระบบเก็บชื่อผู้ขาย ชื่อรายการ หน่วย และราคาขณะสั่งไว้ สินค้ารับเป็นจำนวนเต็ม วัตถุดิบรับได้ถึงสามตำแหน่งทศนิยม รับบางส่วนหลายครั้งได้ แต่ละครั้งต้องตรวจและยืนยันก่อนเพิ่มสต็อก พร้อมประวัติรับของและ Activity ใน transaction เดียวกัน
+
+ใบสั่งซื้อแสดงรอรับ/รับบางส่วน/รับครบ/ยกเลิกส่วนที่เหลือ ยกเลิกต้องมีเหตุผลและเก็บของที่รับแล้วกับประวัติเดิมไว้ ยอดรับสะสมมาจากใบรับจริง การปัดสตางค์แบบสะสมทำให้รับครบหลายครั้งรวมเท่ายอดสั่ง ไม่บวกราคาคลาดเคลื่อนทีละรอบ เมื่อรายการเปลี่ยนต้องโหลดใหม่และตรวจอีกครั้ง ร่างยังอยู่เมื่อล็อกจอ แต่ต้องยืนยันใหม่หลังเข้าใช้
+
+ผู้ขาย สร้างใบสั่งซื้อและยกเลิกใช้สิทธิ์ Catalog; รับของใช้ Stock และรองรับขออนุมัติ ไม่มีการจ่ายเงิน เจ้าหนี้ VAT จัดซื้อ ค่าขนส่ง คืนผู้ขาย หรือส่งคำสั่งซื้อให้ผู้ขาย แอปไม่เปลี่ยนต้นทุนมาตรฐานสินค้า/ต้นทุนต่อหน่วยวัตถุดิบอัตโนมัติ ใช้ `seed_screens DIR --purchases` สำหรับข้อมูลจำลอง (ใช้ร่วมกับ `--staff` ได้) ก่อนอัปเกรดร้านจริงให้สำรองด้วย build เดิม รุ่นเก่าเปิด schema 23 ไม่ได้ หลักฐานทดสอบดู docs/validation.md

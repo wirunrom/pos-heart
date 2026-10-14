@@ -228,6 +228,7 @@ impl crate::Pos {
         for table in self.dining_tables()? {
             table.validate()?;
         }
+        crate::purchasing::validate_recovery(&mut self.conn)?;
         self.staff()?;
         self.tax_settings()?.validate()?;
         self.pricing_settings()?.validate()?;

@@ -685,8 +685,17 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
             full.bottom(),
         ),
     );
-    keys(app, ui.ctx());
+    if !app.purchasing.open {
+        keys(app, ui.ctx());
+    }
     panel(ui, &t, nav, space::S2, |ui| side_nav(app, ui));
+    if app.purchasing.open {
+        let main = Rect::from_min_max(main.min, pos2(full.right(), full.bottom()));
+        panel(ui, &t, main, space::S4, |ui| {
+            crate::purchasing_ui::panel(app, ui)
+        });
+        return;
+    }
     if app.option_sets.open {
         let main = Rect::from_min_max(main.min, pos2(full.right(), full.bottom()));
         panel(ui, &t, main, space::S4, |ui| {
@@ -801,9 +810,11 @@ fn side_nav(app: &mut App, ui: &mut egui::Ui) {
                     && app.catalog.view == ProductView::All
                     && !app.ingredients.open
                     && !app.categories.open
-                    && !app.option_sets.open;
+                    && !app.option_sets.open
+                    && !app.purchasing.open;
                 if nav_item(ui, &t, &label, n, active).clicked() {
                     app.ingredients.open = false;
+                    app.purchasing.open = false;
                     app.categories.open = false;
                     app.option_sets.open = false;
                     app.catalog.category = value;
@@ -837,10 +848,14 @@ fn side_nav(app: &mut App, ui: &mut egui::Ui) {
                     w::Tone::Neutral,
                 ),
             ] {
-                let active =
-                    app.catalog.view == view && !app.ingredients.open && !app.categories.open;
+                let active = app.catalog.view == view
+                    && !app.ingredients.open
+                    && !app.categories.open
+                    && !app.option_sets.open
+                    && !app.purchasing.open;
                 if view_item(ui, &t, label, n, tone, active).clicked() {
                     app.ingredients.open = false;
+                    app.purchasing.open = false;
                     app.categories.open = false;
                     app.option_sets.open = false;
                     app.catalog.view = view;
@@ -874,6 +889,7 @@ fn side_nav(app: &mut App, ui: &mut egui::Ui) {
             {
                 app.categories.open = true;
                 app.ingredients.open = false;
+                app.purchasing.open = false;
                 app.option_sets.open = false;
                 app.catalog.editor = None;
             }
@@ -891,7 +907,26 @@ fn side_nav(app: &mut App, ui: &mut egui::Ui) {
                 app.option_sets.open = true;
                 app.categories.open = false;
                 app.ingredients.open = false;
+                app.purchasing.open = false;
                 app.catalog.editor = None;
+            }
+            if view_item(
+                ui,
+                &t,
+                lang.text("จัดซื้อ / ผู้ขาย", "Purchasing"),
+                0,
+                w::Tone::Neutral,
+                app.purchasing.open,
+            )
+            .clicked()
+                && !app.catalog.dirty()
+            {
+                app.purchasing.open = true;
+                app.ingredients.open = false;
+                app.categories.open = false;
+                app.option_sets.open = false;
+                app.catalog.editor = None;
+                app.send(Command::LoadPurchases(app.purchasing.offset));
             }
             let low = crate::ingredients_ui::low_count(app) as u64;
             if view_item(
@@ -906,6 +941,7 @@ fn side_nav(app: &mut App, ui: &mut egui::Ui) {
                 && !app.catalog.dirty()
             {
                 app.ingredients.open = true;
+                app.purchasing.open = false;
                 app.categories.open = false;
                 app.option_sets.open = false;
                 app.catalog.editor = None;

@@ -570,6 +570,7 @@ impl Palette {
 enum Action {
     Go(Page),
     Settings(crate::settings_ui::Section),
+    Purchasing,
     NewBill,
     Hold,
     OpenShift,
@@ -639,6 +640,15 @@ fn entries(app: &App) -> Vec<Entry> {
             });
         }
     };
+    command(
+        "จัดซื้อ / ผู้ขาย / รับของ",
+        "Purchasing / suppliers / receiving",
+        Icon::Products,
+        Action::Purchasing,
+        crate::staff_ui::access(app, pos_domain::Permission::Catalog) != pos_domain::Access::Deny
+            || crate::staff_ui::access(app, pos_domain::Permission::Stock)
+                != pos_domain::Access::Deny,
+    );
     command(
         "พักบิล",
         "Hold bill",
@@ -869,6 +879,28 @@ fn run(app: &mut App, action: Action) {
         Action::Settings(section) => {
             app.settings_section = section;
             app.navigate(Page::Settings);
+        }
+        Action::Purchasing => {
+            if app.catalog.dirty() {
+                app.error = Some(
+                    app.lang
+                        .text(
+                            "บันทึกหรือทิ้งร่างสินค้าก่อนเปิดจัดซื้อ",
+                            "Save or discard the product draft before opening Purchasing.",
+                        )
+                        .into(),
+                );
+                return;
+            }
+            app.navigate(Page::Products);
+            if app.page == Page::Products {
+                app.purchasing.open = true;
+                app.categories.open = false;
+                app.option_sets.open = false;
+                app.ingredients.open = false;
+                app.catalog.editor = None;
+                app.send(Command::LoadPurchases(app.purchasing.offset));
+            }
         }
         Action::NewBill => app.navigate(Page::Sell),
         Action::Hold => app.hold_cart(),

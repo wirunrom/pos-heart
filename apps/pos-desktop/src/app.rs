@@ -87,6 +87,7 @@ pub struct App {
     pub settings_section: crate::settings_ui::Section,
     pub promotions: crate::promo_ui::PromoState,
     pub ingredients: crate::ingredients_ui::IngredientsState,
+    pub purchasing: crate::purchasing_ui::PurchasingState,
     pub categories: crate::categories_ui::CategoriesState,
     pub option_sets: crate::option_sets_ui::OptionSetsState,
     pub images: crate::images::ImageCache,
@@ -98,6 +99,8 @@ pub struct App {
     pub pricing_draft: Option<pos_domain::PricingSettings>,
     /// The last command sent, replayed with a manager's approval if refused.
     last_command: Option<Command>,
+    /// Reload catalog, purchase list, then receiving history one foreground command at a time.
+    purchase_followup: Option<Uuid>,
     pub ctx: egui::Context,
     home_refreshed: Instant,
     pub page: Page,
@@ -139,6 +142,8 @@ pub struct App {
     pub frames: u32,
     /// Frame on which a preview preset was applied; captures wait for fades.
     pub preview_frame: u32,
+    #[cfg(debug_assertions)]
+    pub preview_scroll_bottom: bool,
 }
 const CURRENT_BILL: &str = "current-bill.txt";
 /// Widest layout for Home, Shift, Reports and Settings (points).
@@ -254,6 +259,7 @@ impl App {
             settings_section: crate::settings_ui::Section::default(),
             promotions: crate::promo_ui::PromoState::default(),
             ingredients: crate::ingredients_ui::IngredientsState::default(),
+            purchasing: crate::purchasing_ui::PurchasingState::default(),
             categories: crate::categories_ui::CategoriesState::default(),
             option_sets: crate::option_sets_ui::OptionSetsState::default(),
             images: crate::images::ImageCache::default(),
@@ -262,6 +268,7 @@ impl App {
             kitchen_open: false,
             pricing_draft: None,
             last_command: None,
+            purchase_followup: None,
             ctx: cc.egui_ctx.clone(),
             home_refreshed: Instant::now(),
             busy: true,
@@ -299,6 +306,8 @@ impl App {
             screenshot_requested: false,
             frames: 0,
             preview_frame: 0,
+            #[cfg(debug_assertions)]
+            preview_scroll_bottom: false,
         })
     }
     pub fn send(&mut self, command: Command) {
@@ -384,6 +393,7 @@ impl App {
         self.history.refund_editor = None;
         self.held_delete = None;
         self.catalog.cancel_confirmations();
+        self.purchasing.cancel_confirmations();
         self.tax.invoice = None;
         self.drawer.pending = None;
         self.drawer.reviewing = false;
@@ -694,6 +704,9 @@ impl App {
                         if let Some(id) = self.restore.take() {
                             self.restoring_bill = self.send_background(Command::Restore(id));
                         }
+                    }
+                    if self.purchase_followup.is_some() {
+                        self.send(Command::LoadPurchases(self.purchasing.offset));
                     }
                 }
                 Event::Quiet => {
@@ -1025,6 +1038,64 @@ impl App {
                     self.categories.delete = None;
                     self.refresh();
                 }
+                Event::Purchases {
+                    suppliers,
+                    orders,
+                    offset,
+                } => {
+                    self.purchasing.suppliers = suppliers;
+                    self.purchasing.orders = orders;
+                    self.purchasing.offset = offset;
+                    self.purchasing.loaded = true;
+                    if !crate::staff_ui::locked(self)
+                        && let Some(id) = self.purchase_followup.take()
+                    {
+                        self.send(Command::PurchaseDetail(id, 0));
+                    }
+                }
+                Event::PurchaseProducts(query, products) => {
+                    if self.purchasing.product_query == query {
+                        self.purchasing.products = products;
+                    }
+                }
+                Event::PurchaseDetail {
+                    order,
+                    receipts,
+                    offset,
+                } => self.purchasing.set_detail(order, receipts, offset),
+                Event::SupplierSaved(supplier) => {
+                    self.purchasing.on_supplier_saved(supplier);
+                    self.toast(self.lang.text("บันทึกผู้ขายแล้ว", "Supplier saved."));
+                    self.send(Command::LoadPurchases(self.purchasing.offset));
+                }
+                Event::PurchaseCreated(order) => {
+                    let id = order.id;
+                    self.purchasing.on_order_created(order);
+                    self.toast(self.lang.text("สร้างใบสั่งซื้อแล้ว", "Purchase order created."));
+                    self.purchasing.offset = 0;
+                    self.purchase_followup = Some(id);
+                    self.refresh();
+                }
+                Event::PurchaseReceived(order) => {
+                    let id = order.id;
+                    self.purchasing.on_order_updated(order);
+                    self.toast(
+                        self.lang
+                            .text("รับของและเพิ่มสต็อกแล้ว", "Goods received; stock updated."),
+                    );
+                    self.purchase_followup = Some(id);
+                    self.refresh();
+                }
+                Event::PurchaseCancelled(order) => {
+                    let id = order.id;
+                    self.purchasing.on_order_updated(order);
+                    self.toast(
+                        self.lang
+                            .text("ยกเลิกยอดค้างรับแล้ว", "Outstanding quantities cancelled."),
+                    );
+                    self.purchase_followup = Some(id);
+                    self.refresh();
+                }
                 Event::IngredientSaved => {
                     self.ingredients.editor = None;
                     self.ingredients.adjust = None;
@@ -1227,6 +1298,17 @@ impl App {
         }
     }
     pub fn navigate(&mut self, page: Page) {
+        if self.page == Page::Products && page != Page::Products && self.purchasing.dirty() {
+            self.error = Some(
+                self.lang
+                    .text(
+                        "บันทึกหรือทิ้งร่างจัดซื้อก่อนเปลี่ยนหน้า",
+                        "Save or discard the purchasing draft before changing workspace.",
+                    )
+                    .into(),
+            );
+            return;
+        }
         if self.page == Page::Products && page != Page::Products && self.catalog.dirty() {
             self.catalog.pending_nav = Some(page);
             return;
@@ -1355,6 +1437,7 @@ impl App {
     pub fn backup(&mut self) {
         if self.shop_draft != self.shop
             || self.catalog.dirty()
+            || self.purchasing.dirty()
             || self.print.draft != self.print.settings
             || self.pricing_draft.is_some()
             || self.tax.draft.is_some()
@@ -1520,6 +1603,7 @@ impl App {
         let unsaved = self.shop_draft != self.shop
             || self.print.draft != self.print.settings
             || self.catalog.dirty()
+            || self.purchasing.dirty()
             || self.auto_backup.dirty();
         if unsaved {
             ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
@@ -1713,6 +1797,7 @@ impl eframe::App for App {
             crate::categories_ui::dialogs(self, &ctx);
             crate::option_sets_ui::dialogs(self, &ctx);
         }
+        crate::purchasing_ui::dialogs(self, &ctx);
         crate::promo_ui::coupon_dialog(self, &ctx);
         sale_ui::options_sheet(self, &ctx);
         crate::discount_ui::dialog(self, &ctx);

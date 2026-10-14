@@ -23,6 +23,7 @@ mod preview;
 mod print;
 mod print_ui;
 mod promo_ui;
+mod purchasing_ui;
 mod report_ui;
 mod sale_ui;
 mod settings_ui;

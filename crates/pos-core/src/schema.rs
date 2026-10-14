@@ -233,3 +233,9 @@ diesel::table! {
         event_json -> Text,
     }
 }
+
+diesel::table! { suppliers (id) { id -> Text, name -> Text, active -> Bool, supplier_json -> Text, updated_at -> BigInt, } }
+diesel::table! { purchase_orders (id) { id -> Text, supplier_id -> Text, created_at -> BigInt, revision -> BigInt, order_json -> Text, request_json -> Text, } }
+diesel::table! { purchase_receipts (id) { id -> Text, order_id -> Text, created_at -> BigInt, receipt_json -> Text, } }
+
+diesel::table! { purchase_cancellations (id) { id -> Text, order_id -> Text, cancellation_json -> Text, } }

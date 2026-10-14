@@ -108,6 +108,13 @@ pub enum Command {
     SaveTable(pos_domain::DiningTable),
     SavePromotion(pos_domain::Promotion),
     SaveIngredient(pos_domain::Ingredient),
+    LoadPurchases(u32),
+    PurchaseDetail(Uuid, u32),
+    PurchaseProducts(String),
+    SaveSupplier(pos_domain::Supplier),
+    CreatePurchase(pos_domain::PurchaseOrderRequest),
+    ReceivePurchase(pos_domain::ReceivePurchaseRequest),
+    CancelPurchase(pos_domain::CancelPurchaseRequest),
     AddCategory(String),
     SaveOptionSet(pos_domain::OptionGroup),
     DeleteOptionSet(Uuid),
@@ -149,6 +156,21 @@ impl Command {
     }
 }
 pub enum Event {
+    Purchases {
+        suppliers: Vec<pos_domain::Supplier>,
+        orders: Vec<pos_domain::PurchaseOrder>,
+        offset: u32,
+    },
+    PurchaseDetail {
+        order: pos_domain::PurchaseOrder,
+        receipts: Vec<pos_domain::PurchaseReceipt>,
+        offset: u32,
+    },
+    PurchaseProducts(String, Vec<Product>),
+    SupplierSaved(pos_domain::Supplier),
+    PurchaseCreated(pos_domain::PurchaseOrder),
+    PurchaseReceived(pos_domain::PurchaseOrder),
+    PurchaseCancelled(pos_domain::PurchaseOrder),
     Ready(Box<Data>),
     ShiftOpened,
     CashMoved,
@@ -571,6 +593,41 @@ fn run(pos: &mut Pos, command: Command) -> pos_core::Result<Event> {
             pos.delete_category(&name, into.as_deref(), now())?;
             Event::CategoriesSaved
         }
+        Command::LoadPurchases(offset) => Event::Purchases {
+            suppliers: pos.suppliers("", true)?,
+            orders: pos.purchase_orders(offset)?,
+            offset,
+        },
+        Command::PurchaseDetail(id, offset) => Event::PurchaseDetail {
+            order: pos.purchase_order(id)?,
+            receipts: pos.purchase_receipts(id, offset)?,
+            offset,
+        },
+        Command::PurchaseProducts(search) => {
+            let products = pos
+                .catalog(&ProductQuery {
+                    search: search.clone(),
+                    limit: 50,
+                    ..Default::default()
+                })?
+                .into_iter()
+                .filter(|p| p.stock.is_some())
+                .collect();
+            Event::PurchaseProducts(search, products)
+        }
+        Command::SaveSupplier(supplier) => {
+            Event::SupplierSaved(pos.save_supplier(&supplier, now())?)
+        }
+        Command::CreatePurchase(request) => {
+            Event::PurchaseCreated(pos.create_purchase_order(&request, now())?)
+        }
+        Command::ReceivePurchase(request) => {
+            pos.receive_purchase_order(&request, now())?;
+            Event::PurchaseReceived(pos.purchase_order(request.order_id)?)
+        }
+        Command::CancelPurchase(request) => {
+            Event::PurchaseCancelled(pos.cancel_purchase_order(&request, now())?)
+        }
         Command::SaveIngredient(i) => {
             pos.save_ingredient(&i, now())?;
             Event::IngredientSaved
@@ -823,6 +880,9 @@ fn export_report(
         ],
         vec!["sale_count".into(), s.sale_count.to_string()],
         vec!["void_count".into(), s.void_count.to_string()],
+        vec!["partial_refund_count".into(), s.refund_count.to_string()],
+        vec!["cash_received".into(), s.cash_received.to_string()],
+        vec!["change_given".into(), s.change_given.to_string()],
         vec!["restocked_units".into(), s.restocked_units.to_string()],
     ];
     for method in [
@@ -831,6 +891,11 @@ fn export_report(
         pos_domain::PaymentMethod::Card,
     ] {
         let m = s.payments.method(method);
+        rows.push(vec![format!("{}_sales", method.key()), m.sales.to_string()]);
+        rows.push(vec![
+            format!("{}_refunds", method.key()),
+            m.refunds.to_string(),
+        ]);
         rows.push(vec![format!("{}_net", method.key()), m.net().to_string()]);
     }
     rows.push(Vec::new());
@@ -879,9 +944,85 @@ fn export_report(
             p.net_sales.to_string(),
         ]);
     }
+    rows.push(Vec::new());
+    rows.push(
+        ["staff_id", "staff_name", "sale_count", "sales", "refunds"]
+            .map(String::from)
+            .to_vec(),
+    );
+    for staff in &s.staff {
+        rows.push(vec![
+            staff.staff_id.to_string(),
+            staff.name.clone(),
+            staff.sale_count.to_string(),
+            staff.sales.to_string(),
+            staff.refunds.to_string(),
+        ]);
+    }
+    rows.push(Vec::new());
+    rows.push(
+        [
+            "promotion_id",
+            "promotion_name",
+            "net_bills",
+            "net_discount",
+        ]
+        .map(String::from)
+        .to_vec(),
+    );
+    for promo in &s.promotions {
+        rows.push(vec![
+            promo.id.to_string(),
+            promo.name.clone(),
+            promo.bills.to_string(),
+            promo.amount.to_string(),
+        ]);
+    }
+    rows.push(Vec::new());
+    rows.push(vec![
+        "ingredient_cost_basis".into(),
+        "Current unit cost estimate; not historical inventory valuation. Blank means unavailable; zero means known zero cost.".into(),
+    ]);
+    rows.push(
+        [
+            "ingredient_id",
+            "ingredient_name",
+            "unit",
+            "net_used",
+            "manually_removed",
+            "estimated_cost_at_current_unit_cost",
+        ]
+        .map(String::from)
+        .to_vec(),
+    );
+    for ingredient in &s.ingredients {
+        rows.push(vec![
+            ingredient.ingredient_id.to_string(),
+            ingredient.name.clone(),
+            ingredient.unit.clone(),
+            csv_quantity(ingredient.used),
+            csv_quantity(ingredient.removed),
+            ingredient.cost.map(|c| c.to_string()).unwrap_or_default(),
+        ]);
+    }
     write_csv(path, &rows)?;
     Ok(())
 }
+
+/// Exact, spreadsheet-friendly thousandths without grouping or float conversion.
+fn csv_quantity(milli: i64) -> String {
+    let amount = milli.unsigned_abs();
+    format!(
+        "{}{}.{:03}",
+        if milli < 0 { "-" } else { "" },
+        amount / 1000,
+        amount % 1000
+    )
+}
+
+#[cfg(test)]
+#[path = "report_csv_tests.rs"]
+mod report_csv_tests;
 
 #[cfg(test)]
 mod tests {

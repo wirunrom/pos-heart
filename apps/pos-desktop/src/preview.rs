@@ -40,13 +40,51 @@ pub fn apply(app: &mut App, ctx: &egui::Context) {
             break;
         }
     }
+    // Keep capture presets clean after the synthetic owner sign-in. The
+    // explicit undo-toast preset still demonstrates its transient feedback.
+    if name != "sell-toast" {
+        app.toasts.clear();
+    }
+    if matches!(
+        name.as_str(),
+        "purchasing"
+            | "suppliers"
+            | "purchase-create"
+            | "purchase-create-confirm"
+            | "purchase-receive"
+            | "purchase-receive-confirm"
+            | "purchase-cancel"
+            | "supplier-editor"
+            | "purchase-detail"
+    ) {
+        app.page = crate::app::Page::Products;
+        if !app.purchasing.loaded {
+            app.send(crate::worker::Command::LoadPurchases(0));
+            app.preview = Some(name);
+            return;
+        }
+        if name == "purchase-detail"
+            && app.purchasing.selected.is_none()
+            && let Some(id) = app.purchasing.orders.first().map(|o| o.id)
+        {
+            app.send(crate::worker::Command::PurchaseDetail(id, 0));
+            app.preview = Some(name);
+            return;
+        }
+        crate::purchasing_ui::preview(app, &name);
+        app.preview_frame = app.frames;
+        return;
+    }
     app.preview_frame = app.frames;
     let total = app.total().ok();
     match name.as_str() {
+        "page" => {}
+        "report-categories" => app.report_group = crate::report_ui::Group::Categories,
         "automatic-backups" => {
             app.page = crate::app::Page::Settings;
             app.settings_section = crate::settings_ui::Section::Data;
             app.auto_backup.draft.enabled = true;
+            app.recovery.focus = true;
         }
         "idle-settings" => {
             app.page = crate::app::Page::Settings;
@@ -175,7 +213,17 @@ pub fn apply(app: &mut App, ctx: &egui::Context) {
             app.page = crate::app::Page::Activity;
             app.send(crate::worker::Command::Activity(app.activity.query.clone()));
         }
+        "settings-vat" | "settings-roles" => {
+            app.page = crate::app::Page::Settings;
+            app.settings_section = if name == "settings-vat" {
+                crate::settings_ui::Section::Pricing
+            } else {
+                crate::settings_ui::Section::Staff
+            };
+            app.preview_scroll_bottom = true;
+        }
         "settings-printer" => {
+            app.preview_scroll_bottom = true;
             app.settings_section = crate::settings_ui::Section::Printing;
             app.print.draft.connection = crate::print::Connection::Network;
             app.print.draft.address = "192.168.1.80".into();

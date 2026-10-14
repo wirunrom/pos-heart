@@ -8,6 +8,7 @@ mod payment;
 mod pricing;
 mod promotion;
 mod promptpay;
+mod purchasing;
 mod reporting;
 mod sale;
 mod shift;
@@ -35,6 +36,7 @@ pub use promotion::{
     apply_promotions, same_code,
 };
 pub use promptpay::{PromptPayId, PromptPayKind};
+pub use purchasing::*;
 pub use reporting::{
     CategorySales, DailySummary, DaySales, IngredientUsage, ProductMovement, ProfitSummary,
     PromoSales, StaffSales,
@@ -57,6 +59,8 @@ pub use void::{
 
 #[derive(Debug, Clone, Copy, thiserror::Error, PartialEq, Eq)]
 pub enum DomainError {
+    #[error("ข้อมูลผู้ขาย ใบสั่งซื้อ หรือจำนวนรับเข้าไม่ถูกต้อง")]
+    InvalidPurchase,
     #[error("จำนวนเงินไม่ถูกต้อง กรุณาใส่เลขไม่ติดลบและทศนิยมไม่เกิน 2 ตำแหน่ง")]
     InvalidMoney,
     #[error("จำนวนเงินหรือจำนวนสินค้าเกินขอบเขตที่รองรับ")]

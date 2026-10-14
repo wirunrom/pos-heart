@@ -221,6 +221,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             });
         }
         if i == 17 {
+            // Explicit sample owner for the combined discount fixture; do not
+            // depend on a cashier's percentage limit or random catalog order.
+            if let Some(owner) = pos
+                .staff()?
+                .into_iter()
+                .find(|s| s.role == pos_domain::OWNER && s.active)
+            {
+                pos.sign_in(owner.id, "9999")?;
+            }
             // The latest receipt carries a line and a bill discount.
             cart.lines[0].discount = Some(pos_domain::Discount::Percent(1_000));
             cart.discount = Some(pos_domain::Discount::Amount(Money::from_satang(2_000)?));
@@ -706,6 +715,65 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             });
             pos.checkout_for_shift(&cart, "5000".parse()?, Some(shift.id), real_now - 200)?;
         }
+    }
+    // Explicit synthetic purchasing data, never enabled for a real shop launch.
+    if std::env::args().any(|a| a == "--purchases") {
+        use pos_domain::*;
+        if let Some(owner) = pos
+            .staff()?
+            .into_iter()
+            .find(|s| s.role == OWNER && s.active)
+        {
+            pos.sign_in(owner.id, "9999")?;
+        }
+        let now = time::OffsetDateTime::now_utc().unix_timestamp();
+        let supplier = pos.save_supplier(
+            &Supplier {
+                id: uuid::Uuid::new_v4(),
+                name: "ผู้ขายตัวอย่าง / Heart Supply".into(),
+                contact: "ผู้ติดต่อจำลอง / Sample contact".into(),
+                note: "ส่งของวันจันทร์ / Monday deliveries".into(),
+                active: true,
+            },
+            now - 180,
+        )?;
+        let mut items = Vec::new();
+        if let Some(product) = pos.products("", 0)?.into_iter().find(|p| p.stock.is_some()) {
+            items.push(PurchaseItemInput {
+                target: PurchaseTarget::Product(product.id),
+                quantity: 12_000,
+                unit_cost: "24.75".parse()?,
+            });
+        }
+        if let Some(ingredient) = pos.ingredients()?.into_iter().find(|i| i.active) {
+            items.push(PurchaseItemInput {
+                target: PurchaseTarget::Ingredient(ingredient.id),
+                quantity: 12_500,
+                unit_cost: "125.50".parse()?,
+            });
+        }
+        let order = pos.create_purchase_order(
+            &PurchaseOrderRequest {
+                id: uuid::Uuid::new_v4(),
+                supplier_id: supplier.id,
+                items,
+                note: "รับของบางส่วนได้ / Partial deliveries allowed".into(),
+            },
+            now - 120,
+        )?;
+        pos.receive_purchase_order(
+            &ReceivePurchaseRequest {
+                id: uuid::Uuid::new_v4(),
+                order_id: order.id,
+                revision: order.revision,
+                items: vec![PurchaseReceiveItem {
+                    line: 0,
+                    quantity: 3_000,
+                }],
+                note: "รอบแรก / First delivery".into(),
+            },
+            now - 60,
+        )?;
     }
     std::fs::write(
         dir.join("shop.json"),

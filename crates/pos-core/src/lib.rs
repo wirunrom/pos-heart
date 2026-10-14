@@ -9,6 +9,7 @@ mod import;
 mod ingredient;
 mod option_set;
 mod promotion;
+mod purchasing;
 mod recovery;
 mod refund;
 mod reporting;
@@ -32,6 +33,16 @@ pub use staff::DEFAULT_DISCOUNT_LIMIT_BP;
 pub type Result<T> = std::result::Result<T, Error>;
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+    #[error("Supplier not found or inactive")]
+    SupplierNotFound,
+    #[error("Purchase order not found")]
+    PurchaseOrderNotFound,
+    #[error("Purchase order changed; refresh and review it")]
+    PurchaseOrderChanged,
+    #[error("Purchase order is already closed")]
+    PurchaseOrderClosed,
+    #[error("Receiving exceeds the quantity ordered")]
+    PurchaseExceedsOrder,
     #[error(transparent)]
     Domain(#[from] DomainError),
     #[error("Database error: {0}")]

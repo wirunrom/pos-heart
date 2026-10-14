@@ -55,6 +55,7 @@ pub fn dialog(app: &mut App, ctx: &egui::Context) {
     let lang = app.lang;
     let unsaved = app.shop_draft != app.shop
         || app.catalog.dirty()
+        || app.purchasing.dirty()
         || app.print.draft != app.print.settings
         || app.pricing_draft.is_some()
         || app.tax.draft.is_some()
