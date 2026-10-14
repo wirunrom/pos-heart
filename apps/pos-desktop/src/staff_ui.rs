@@ -425,39 +425,6 @@ pub fn approval_dialog(app: &mut App, ctx: &egui::Context) {
     }
 }
 
-/// Top-bar chip with the signed-in name; opens "Lock" / "Switch user".
-pub fn topbar_chip(app: &mut App, ui: &mut egui::Ui) {
-    let Some(me) = app.data.signed_in.clone() else {
-        return;
-    };
-    let lang = app.lang;
-    let t = Theme::of(ui);
-    let role = role_label(app, &me.role);
-    let r = w::status_pill(ui, &me.name, None, false).on_hover_text(format!(
-        "{role} · {}",
-        lang.text("ล็อกเครื่อง (Ctrl L)", "Lock (Ctrl L)")
-    ));
-    egui::Popup::menu(&r)
-        .frame(
-            t.raised(2)
-                .inner_margin(egui::Margin::same(space::S1 as i8)),
-        )
-        .width(220.0)
-        .show(|ui| {
-            ui.label(t.muted(&role, type_scale::CAPTION));
-            if crate::shell::menu_row(
-                ui,
-                Icon::Lock,
-                lang.text("ล็อกเครื่อง / สลับผู้ใช้", "Lock / switch user"),
-                "Ctrl L",
-                false,
-            )
-            .clicked()
-            {
-                lock(app);
-            }
-        });
-}
 pub fn lock(app: &mut App) {
     app.lock_session();
 }

@@ -157,9 +157,6 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
                 app.sell.pane = Pane::Products;
                 app.sell.moving = false;
             }
-            if tables {
-                pane_tabs(app, ui);
-            }
             if app.sell.pane == Pane::Tables {
                 ui.allocate_ui_with_layout(
                     ui.available_size(),
@@ -189,43 +186,6 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
         });
     // A pay request the footer did not handle (no bill, Held tab) expires.
     app.sell.pay_requested = false;
-}
-
-/// Products / Tables switch above the right side of Sell.
-fn pane_tabs(app: &mut App, ui: &mut egui::Ui) {
-    let t = Theme::of(ui);
-    let lang = app.lang;
-    let busy = crate::tables_ui::busy_count(app);
-    let before = app.sell.pane;
-    let rect = ui
-        .horizontal(|ui| {
-            ui.add_space(space::S2);
-            w::tabs(
-                ui,
-                &mut app.sell.pane,
-                &[
-                    (Pane::Products, lang.text("สินค้า", "Products"), None),
-                    (Pane::Tables, lang.text("โต๊ะ", "Tables"), Some(busy)),
-                ],
-            );
-            ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
-                ui.label(t.muted("Alt 9", type_scale::CAPTION))
-                    .on_hover_text(lang.text("สลับสินค้า/โต๊ะ", "Switch products / tables"));
-            });
-        })
-        .response
-        .rect;
-    ui.painter().line_segment(
-        [
-            pos2(rect.left(), rect.bottom() + 0.5),
-            pos2(rect.right(), rect.bottom() + 0.5),
-        ],
-        Stroke::new(1.0, t.p.border_default),
-    );
-    ui.add_space(space::S2);
-    if before != app.sell.pane {
-        app.sell.moving = false;
-    }
 }
 
 // ───────────────────────────── Keyboard ─────────────────────────────
@@ -489,30 +449,6 @@ fn current_bill(app: &mut App, ui: &mut egui::Ui) {
                         {
                             app.promotions.coupon = Some(String::new());
                         }
-                        let units: u32 = app.cart.lines.iter().map(|l| l.quantity).sum();
-                        if units > 1
-                            && menu_row(
-                                ui,
-                                Icon::Options,
-                                lang.text("แยกบิล (จ่ายแยก)", "Split the bill"),
-                                "",
-                                false,
-                            )
-                            .clicked()
-                        {
-                            app.sell.bill_split = Some(BillSplit::new(&app.cart));
-                        }
-                        if menu_row(
-                            ui,
-                            Icon::Tag,
-                            lang.text("ส่วนลดทั้งบิล", "Bill discount"),
-                            "F8",
-                            false,
-                        )
-                        .clicked()
-                        {
-                            app.sell.discount_requested = Some(None);
-                        }
                         if menu_row(
                             ui,
                             Icon::Printer,
@@ -544,11 +480,6 @@ fn current_bill(app: &mut App, ui: &mut egui::Ui) {
                             app.clear_cart();
                         }
                     });
-                if w::icon_button(ui, Icon::Pause, lang.text("พักบิล (F4)", "Hold bill (F4)"))
-                    .clicked()
-                {
-                    app.hold_cart();
-                }
                 let has_current = app.sell.current.is_some_and(|c| c < app.cart.lines.len());
                 ui.add_enabled_ui(has_current, |ui| {
                     if w::icon_button(

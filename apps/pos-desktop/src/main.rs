@@ -9,6 +9,7 @@ mod backup;
 mod backup_ui;
 mod catalog_ui;
 mod categories_ui;
+mod chrome;
 mod discount_ui;
 mod history_ui;
 mod home_ui;

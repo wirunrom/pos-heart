@@ -26,13 +26,6 @@ pub fn page_label(lang: Language, page: Page) -> &'static str {
         .find(|(p, ..)| *p == page)
         .map_or("", |(_, _, th, en)| lang.text(th, en))
 }
-fn page_icon(page: Page) -> Icon {
-    PAGES
-        .iter()
-        .find(|(p, ..)| *p == page)
-        .map_or(Icon::Home, |(_, icon, ..)| *icon)
-}
-
 // ───────────────────────────── Toasts ─────────────────────────────
 
 pub enum Undo {
@@ -167,168 +160,6 @@ pub fn toasts(app: &mut App, ctx: &egui::Context) {
 
 // ───────────────────────────── Topbar ─────────────────────────────
 
-pub fn topbar(app: &mut App, ui: &mut egui::Ui) {
-    let t = Theme::of(ui);
-    let lang = app.lang;
-    let narrow = ui.available_width() < 1100.0;
-    ui.horizontal_centered(|ui| {
-        ui.spacing_mut().item_spacing.x = space::S3;
-        // Workspace switcher: current workspace + menu with Alt 1–7.
-        let label = if app.onboarding {
-            lang.text("เริ่มต้นร้าน", "Shop setup")
-        } else {
-            page_label(lang, app.page)
-        };
-        let switcher = egui::Frame::new()
-            .fill(t.p.bg_chrome_hover)
-            .corner_radius(t.radius(radius::MD))
-            .inner_margin(egui::Margin::symmetric(space::S3 as i8, 0))
-            .show(ui, |ui| {
-                ui.set_height(t.m.control_md + 4.0);
-                ui.horizontal_centered(|ui| {
-                    ui.spacing_mut().item_spacing.x = space::S2;
-                    icons::show(ui, page_icon(app.page), 18.0, t.p.fg_chrome);
-                    ui.label(
-                        RichText::new(label)
-                            .font(t.strong_font(type_scale::BODY))
-                            .color(t.p.fg_chrome),
-                    );
-                    if !app.onboarding {
-                        icons::show(ui, Icon::ChevronDown, 14.0, t.p.fg_chrome_muted);
-                    }
-                });
-            })
-            .response
-            .interact(if app.onboarding {
-                Sense::hover()
-            } else {
-                Sense::click()
-            });
-        switcher.widget_info(|| {
-            egui::WidgetInfo::labeled(
-                egui::WidgetType::ComboBox,
-                !app.onboarding,
-                format!("{}: {label}", lang.text("พื้นที่งาน", "Workspace")),
-            )
-        });
-        if !app.onboarding {
-            workspace_menu(app, &switcher, t);
-        }
-        let context = if app.demo {
-            format!(
-                "{} · {}",
-                app.shop.name,
-                lang.text("ข้อมูลตัวอย่าง", "Demo data")
-            )
-        } else {
-            app.shop.name.clone()
-        };
-        if !narrow || app.onboarding {
-            ui.add(egui::Label::new(t.chrome_muted(context, type_scale::LABEL)).truncate())
-                .on_hover_text(&app.shop.name);
-        }
-        ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
-            ui.spacing_mut().item_spacing.x = space::S2;
-            if w::chrome_icon_button(
-                ui,
-                Icon::Sliders,
-                lang.text("ภาษา สีหลัก และขนาด", "Language, colour & density"),
-            )
-            .clicked()
-            {
-                app.display_open = !app.display_open;
-            }
-            if !app.onboarding {
-                let shift_text = match &app.data.shift {
-                    Some(shift) if narrow => format!(
-                        "{} {}",
-                        lang.text("กะ", "Shift"),
-                        format::clock(shift.opened_at)
-                    ),
-                    Some(shift) => format!(
-                        "{} · {}",
-                        lang.text("กะเปิด", "Shift open"),
-                        format::clock(shift.opened_at)
-                    ),
-                    None => lang.text("ยังไม่เปิดกะ", "No open shift").into(),
-                };
-                let dot = if app.data.shift.is_some() {
-                    t.p.success_solid
-                } else {
-                    t.p.warning_solid
-                };
-                if w::status_pill(ui, &shift_text, Some(dot), false)
-                    .on_hover_text(lang.text("ดูกะและลิ้นชัก", "View shift & drawer"))
-                    .clicked()
-                {
-                    app.drawer.selected = None;
-                    app.navigate(Page::Shift);
-                }
-                crate::staff_ui::topbar_chip(app, ui);
-                if !narrow {
-                    w::status_pill(ui, lang.text("ออฟไลน์", "Offline"), None, true).on_hover_text(
-                        lang.text(
-                            "ทำงานในเครื่องนี้ ไม่ต้องใช้อินเทอร์เน็ต",
-                            "Works on this device without internet",
-                        ),
-                    );
-                }
-                if app.busy {
-                    w::spinner(
-                        ui,
-                        ui.cursor().left_center() + vec2(-12.0, 0.0),
-                        7.0,
-                        t.p.fg_chrome_muted,
-                    );
-                    ui.add_space(24.0);
-                }
-                command_field(app, ui, t);
-            }
-        });
-    });
-    display_popover(app, ui.ctx());
-}
-fn workspace_menu(app: &mut App, switcher: &egui::Response, t: Theme) {
-    let lang = app.lang;
-    let mut go = None;
-    egui::Popup::menu(switcher)
-        .frame(
-            t.raised(2)
-                .inner_margin(egui::Margin::same(space::S2 as i8)),
-        )
-        .width(280.0)
-        .gap(6.0)
-        .show(|ui| {
-            for (group, pages) in [
-                (lang.text("งานประจำวัน", "Daily work"), &PAGES[..4]),
-                (lang.text("จัดการร้าน", "Manage shop"), &PAGES[4..]),
-            ] {
-                ui.add_space(4.0);
-                ui.horizontal(|ui| {
-                    ui.add_space(8.0);
-                    w::eyebrow(ui, group);
-                });
-                // Tables is a pane of Sell (Alt 9 still opens it).
-                for (page, icon, th, en) in pages.iter().filter(|(p, ..)| *p != Page::Tables) {
-                    let n = PAGES.iter().position(|(p, ..)| p == page).unwrap_or(0) + 1;
-                    if menu_row(
-                        ui,
-                        *icon,
-                        lang.text(th, en),
-                        &format!("Alt {n}"),
-                        app.page == *page,
-                    )
-                    .clicked()
-                    {
-                        go = Some(*page);
-                    }
-                }
-            }
-        });
-    if let Some(page) = go {
-        app.navigate(page);
-    }
-}
 pub fn menu_row(
     ui: &mut egui::Ui,
     icon: Icon,
@@ -385,14 +216,14 @@ pub fn menu_row(
     }
     response
 }
-fn command_field(app: &mut App, ui: &mut egui::Ui, t: Theme) {
+pub(crate) fn command_field(app: &mut App, ui: &mut egui::Ui, t: Theme, width: f32) {
     let lang = app.lang;
-    let width = (ui.available_width() - space::S6).clamp(160.0, 440.0);
-    let height = t.m.control_md + 4.0;
-    // Centre the field in the remaining space, as in the reference topbar.
-    let free = ui.available_width() - width;
+    let height = t.m.control_sm.max(26.0);
+    // Too little room beside the tabs: a square search button.
+    let room = ui.available_width() - space::S3;
+    let compact = room < 160.0;
+    let width = if compact { height } else { width.min(room) };
     let (rect, response) = ui.allocate_exact_size(vec2(width, height), Sense::click());
-    let rect = rect.translate(vec2(-(free / 2.0 - space::S6).max(0.0), 0.0));
     response.widget_info(|| {
         egui::WidgetInfo::labeled(
             egui::WidgetType::Button,
@@ -415,18 +246,24 @@ fn command_field(app: &mut App, ui: &mut egui::Ui, t: Theme) {
     icons::paint_sized(
         ui.painter(),
         Icon::Search,
-        egui::pos2(rect.left() + 20.0, rect.center().y),
+        if compact {
+            rect.center()
+        } else {
+            egui::pos2(rect.left() + 20.0, rect.center().y)
+        },
         16.0,
         t.p.fg_chrome_muted,
     );
-    ui.painter().text(
-        egui::pos2(rect.left() + 38.0, rect.center().y),
-        egui::Align2::LEFT_CENTER,
-        lang.text("ค้นหาหรือสั่งงาน", "Search or run a command"),
-        t.font(type_scale::BODY),
-        t.p.fg_chrome_muted,
-    );
-    if t.m.show_shortcut_hints {
+    if !compact {
+        ui.painter().with_clip_rect(rect.shrink(2.0)).text(
+            egui::pos2(rect.left() + 38.0, rect.center().y),
+            egui::Align2::LEFT_CENTER,
+            lang.text("ค้นหาหรือสั่งงาน", "Search or run a command"),
+            t.font(type_scale::BODY),
+            t.p.fg_chrome_muted,
+        );
+    }
+    if t.m.show_shortcut_hints && !compact {
         let g = ui.painter().layout_no_wrap(
             "Ctrl K".into(),
             t.font(type_scale::MONEY_SM),
@@ -457,7 +294,7 @@ fn command_field(app: &mut App, ui: &mut egui::Ui, t: Theme) {
 
 // ───────────────────────────── Display preferences ─────────────────────────────
 
-fn display_popover(app: &mut App, ctx: &egui::Context) {
+pub(crate) fn display_popover(app: &mut App, ctx: &egui::Context) {
     if !app.display_open {
         return;
     }
@@ -466,7 +303,10 @@ fn display_popover(app: &mut App, ctx: &egui::Context) {
     let mut open = true;
     let response = egui::Area::new(egui::Id::new("display-prefs"))
         .order(egui::Order::Foreground)
-        .anchor(egui::Align2::RIGHT_TOP, vec2(-space::S3, t.m.titlebar_h))
+        .anchor(
+            egui::Align2::RIGHT_BOTTOM,
+            vec2(-space::S3, -(t.m.statusbar_h + space::S1)),
+        )
         .show(ctx, |ui| {
             t.raised(2)
                 .inner_margin(egui::Margin::same(space::S4 as i8))
@@ -549,10 +389,12 @@ fn display_popover(app: &mut App, ctx: &egui::Context) {
                 });
         })
         .response;
+    // The status bar's accent item toggles the popover itself.
+    let ui_bottom = ctx.content_rect().bottom() - t.m.statusbar_h;
     let clicked_outside = ctx.input(|i| i.pointer.any_pressed())
         && ctx
             .input(|i| i.pointer.interact_pos())
-            .is_some_and(|p| !response.rect.contains(p) && p.y > t.m.titlebar_h);
+            .is_some_and(|p| !response.rect.contains(p) && p.y < ui_bottom);
     if !open || clicked_outside || ctx.input(|i| i.key_pressed(Key::Escape)) {
         app.display_open = false;
     }
@@ -955,6 +797,11 @@ pub fn global_keys(app: &mut App, ctx: &egui::Context) {
     }
     if app.onboarding || app.palette.visible {
         return;
+    }
+    if matches!(app.page, Page::Sell | Page::Tables | Page::Home)
+        && ctx.input_mut(|i| i.consume_key(Modifiers::COMMAND, Key::N))
+    {
+        crate::chrome::new_bill(app);
     }
     let keys = [
         Key::Num1,

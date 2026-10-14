@@ -1680,15 +1680,31 @@ impl eframe::App for App {
             }
         }
         let t = Theme::current(&ctx);
-        egui::Panel::top("topbar")
-            .exact_size(t.m.titlebar_h + space::S2)
+        let soft = t.soft();
+        egui::Panel::top("titlebar")
+            .exact_size(t.m.titlebar_h)
             .show_separator_line(false)
             .frame(
                 egui::Frame::new()
                     .fill(t.p.bg_chrome)
+                    .inner_margin(egui::Margin::symmetric(if soft { 10 } else { 0 }, 0)),
+            )
+            .show(root, |ui| crate::chrome::title_bar(self, ui));
+        egui::Panel::top("toolbar")
+            .exact_size(t.m.toolbar_h)
+            .show_separator_line(!soft)
+            .frame(
+                egui::Frame::new()
+                    .fill(t.p.bg_chrome_raised)
                     .inner_margin(egui::Margin::symmetric(10, 0)),
             )
-            .show(root, |ui| shell::topbar(self, ui));
+            .show(root, |ui| crate::chrome::toolbar(self, ui));
+        egui::Panel::bottom("statusbar")
+            .exact_size(t.m.statusbar_h)
+            .show_separator_line(false)
+            .frame(egui::Frame::new().fill(t.p.bg_chrome))
+            .show(root, |ui| crate::chrome::status_bar(self, ui));
+        shell::display_popover(self, &ctx);
         egui::CentralPanel::default()
             .frame(
                 egui::Frame::new()
@@ -1697,7 +1713,7 @@ impl eframe::App for App {
                         egui::Margin {
                             left: space::PANE_GAP as i8,
                             right: space::PANE_GAP as i8,
-                            top: space::PANE_GAP as i8,
+                            top: 0,
                             bottom: space::PANE_GAP as i8,
                         }
                     } else {

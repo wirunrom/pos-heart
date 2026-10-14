@@ -1092,68 +1092,6 @@ pub fn paint_count(ui: &Ui, center: Pos2, n: u32, inverted: bool) -> Rect {
     ui.painter().galley(rect.center() - g.size() / 2.0, g, fg);
     rect
 }
-/// Dot + text pill for always-visible status (shift, offline).
-/// A status item on the graphite top bar (shift, staff, offline).
-pub fn status_pill(ui: &mut Ui, text: &str, dot: Option<Color32>, hollow: bool) -> Response {
-    let t = Theme::of(ui);
-    let g = galley(ui, text, t.font(type_scale::LABEL), t.p.fg_chrome);
-    let height = (t.m.control_sm + 4.0).max(32.0);
-    let (rect, response) = ui.allocate_exact_size(vec2(g.size().x + 40.0, height), Sense::click());
-    response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, text));
-    ui.painter().rect(
-        rect,
-        CornerRadius::same(t.radius(radius::FULL)),
-        if response.hovered() {
-            t.p.bg_chrome_hover
-        } else {
-            t.p.bg_chrome_raised
-        },
-        Stroke::new(1.0, t.p.border_chrome),
-        StrokeKind::Inside,
-    );
-    let dot_center = pos2(rect.left() + 17.0, rect.center().y);
-    let color = dot.unwrap_or(t.p.fg_chrome_muted);
-    if hollow {
-        ui.painter()
-            .circle_stroke(dot_center, 4.0, Stroke::new(1.5, color));
-    } else {
-        ui.painter().circle_filled(dot_center, 4.5, color);
-    }
-    ui.painter().galley(
-        pos2(rect.left() + 28.0, rect.center().y - g.size().y / 2.0),
-        g,
-        t.p.fg_chrome,
-    );
-    focus_ring(ui, rect, CornerRadius::same(radius::FULL), &response);
-    response
-}
-/// Icon-only button on the graphite top bar.
-pub fn chrome_icon_button(ui: &mut Ui, icon: Icon, label: &str) -> Response {
-    let t = Theme::of(ui);
-    let side = if t.touch() {
-        Metrics::TOUCH_TARGET_MIN
-    } else {
-        t.m.control_md
-    };
-    let (rect, response) = ui.allocate_exact_size(vec2(side, side), Sense::click());
-    response.widget_info(|| WidgetInfo::labeled(WidgetType::Button, true, label));
-    let r = t.control_radius();
-    ui.painter().rect(
-        rect,
-        r,
-        if response.hovered() {
-            t.p.bg_chrome_hover
-        } else {
-            Color32::TRANSPARENT
-        },
-        Stroke::new(1.0, t.p.border_chrome),
-        StrokeKind::Inside,
-    );
-    icons::paint_sized(ui.painter(), icon, rect.center(), t.m.icon, t.p.fg_chrome);
-    focus_ring(ui, rect, r, &response);
-    response.on_hover_text(label)
-}
-
 // ───────────────────────────── Layout helpers ─────────────────────────────
 
 pub fn title(ui: &mut Ui, text: &str) -> Response {
