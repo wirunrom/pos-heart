@@ -605,8 +605,8 @@ pub fn status_bar(app: &mut App, ui: &mut egui::Ui) {
                 ui.add_space(space::S3);
                 ui.label(
                     egui::RichText::new(lang.text("ข้อมูลตัวอย่าง", "Demo data"))
-                        .font(t.font(type_scale::CAPTION))
-                        .color(t.p.accent_bg),
+                        .font(t.strong_font(type_scale::CAPTION))
+                        .color(t.p.fg_chrome),
                 );
                 divider(ui, &t);
             }

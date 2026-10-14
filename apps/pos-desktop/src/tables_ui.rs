@@ -353,7 +353,7 @@ pub fn floor(app: &mut App, ui: &mut egui::Ui) {
                                         lang.text("ว่าง", "Free")
                                     },
                                     t.font(type_scale::BODY),
-                                    t.p.fg_subtle,
+                                    t.p.fg_muted,
                                 );
                             }
                         }
