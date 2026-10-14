@@ -225,76 +225,120 @@ fn difference_label(lang: Language, amount: SignedMoney) -> (&'static str, w::To
     }
 }
 
-pub fn show(app: &mut App, ui: &mut egui::Ui) {
+/// Shift toolbar: shift name, Overview / Count & close / History and the
+/// close steps on the right.
+pub fn toolbar(app: &mut App, ui: &mut egui::Ui) {
     let t = Theme::of(ui);
     let lang = app.lang;
     let now = time::OffsetDateTime::now_utc().unix_timestamp();
-    // Header: title + tabs, steps on the close tab.
     let shift = app.data.shift.clone();
-    ui.horizontal(|ui| {
-        match &shift {
-            Some(s) => {
-                ui.label(t.chrome(
-                    format!("{} {}", lang.text("กะ", "Shift"), number(app, s)),
-                    type_scale::TITLE,
-                ));
-                ui.label(t.chrome_muted(
-                    format!(
-                        "{} {} · {}",
-                        lang.text("เปิด", "opened"),
-                        format::clock(s.opened_at),
-                        format::duration(lang, now - s.opened_at)
-                    ),
-                    type_scale::BODY,
-                ));
-            }
-            None => {
-                ui.label(t.chrome(lang.text("กะและลิ้นชัก", "Shift & drawer"), type_scale::TITLE));
-            }
+    match &shift {
+        Some(s) => {
+            ui.label(t.chrome(
+                format!("{} {}", lang.text("กะ", "Shift"), number(app, s)),
+                type_scale::BODY_STRONG,
+            ));
+            ui.label(t.chrome_muted(
+                format!(
+                    "{} {} · {}",
+                    lang.text("เปิด", "opened"),
+                    format::clock(s.opened_at),
+                    format::duration(lang, now - s.opened_at)
+                ),
+                type_scale::CAPTION,
+            ));
         }
-        if app.drawer.tab == Tab::Close && shift.is_some() {
-            let step = if app.drawer.pending.is_some() {
-                2
-            } else if app.drawer.reviewing {
-                1
-            } else {
-                0
-            };
-            let labels = [
-                lang.text("นับเงิน", "Count"),
-                lang.text("ตรวจยอด", "Reconcile"),
-                lang.text("ยืนยัน", "Confirm"),
-            ];
-            let width = w::steps_width(ui, &labels);
-            ui.add_space((ui.available_width() - width).max(0.0));
-            w::steps(ui, &labels, step);
+        None => {
+            ui.label(t.chrome(
+                lang.text("ยังไม่เปิดกะ", "No open shift"),
+                type_scale::BODY_STRONG,
+            ));
         }
-    });
-    ui.add_space(space::S1);
+    }
+    crate::chrome::separator(ui, &t);
     let mut tab = app.drawer.tab;
-    let options: Vec<(Tab, &str, Option<usize>)> = if shift.is_some() {
+    let options: Vec<(Tab, String)> = if shift.is_some() {
         vec![
-            (Tab::Overview, lang.text("ภาพรวมกะ", "Overview"), None),
-            (Tab::Close, lang.text("นับเงินและปิดกะ", "Count & close"), None),
-            (Tab::History, lang.text("ประวัติกะ", "Shift history"), None),
+            (Tab::Overview, lang.text("ภาพรวมกะ", "Overview").to_owned()),
+            (
+                Tab::Close,
+                lang.text("นับเงินและปิดกะ", "Count & close").to_owned(),
+            ),
+            (
+                Tab::History,
+                lang.text("ประวัติกะ", "Shift history").to_owned(),
+            ),
         ]
     } else {
         vec![
-            (Tab::Overview, lang.text("เปิดกะ", "Open shift"), None),
-            (Tab::History, lang.text("ประวัติกะ", "Shift history"), None),
+            (Tab::Overview, lang.text("เปิดกะ", "Open shift").to_owned()),
+            (
+                Tab::History,
+                lang.text("ประวัติกะ", "Shift history").to_owned(),
+            ),
         ]
     };
     if shift.is_none() && tab == Tab::Close {
         tab = Tab::Overview;
     }
-    let options: Vec<(Tab, &str)> = options.iter().map(|(v, l, _)| (*v, *l)).collect();
-    if w::segmented(ui, &mut tab, &options) {
+    if crate::chrome::segmented(ui, &mut tab, &options) {
         app.drawer.selected = None;
         app.drawer.movement_offset = 0;
         app.refresh();
     }
     app.drawer.tab = tab;
-    ui.add_space(space::S2);
+    if tab == Tab::Close && shift.is_some() {
+        let step = if app.drawer.pending.is_some() {
+            2
+        } else if app.drawer.reviewing {
+            1
+        } else {
+            0
+        };
+        let labels = [
+            lang.text("นับเงิน", "Count"),
+            lang.text("ตรวจยอด", "Reconcile"),
+            lang.text("ยืนยันปิดกะ", "Confirm"),
+        ];
+        ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
+            for (i, label) in labels.iter().enumerate().rev() {
+                let (fg, strong) = if i == step {
+                    (t.p.fg_chrome, true)
+                } else {
+                    (t.p.fg_chrome_muted, false)
+                };
+                let mark = if i < step {
+                    "✓".to_owned()
+                } else {
+                    (i + 1).to_string()
+                };
+                ui.label(
+                    RichText::new(format!("{mark} {label}"))
+                        .font(if strong {
+                            t.strong_font(type_scale::LABEL)
+                        } else {
+                            t.font(type_scale::LABEL)
+                        })
+                        .color(fg),
+                );
+                if i > 0 {
+                    ui.label(RichText::new("—").color(t.p.border_chrome));
+                }
+            }
+        });
+    }
+}
+pub fn show(app: &mut App, ui: &mut egui::Ui) {
+    let t = Theme::of(ui);
+    let lang = app.lang;
+    let now = time::OffsetDateTime::now_utc().unix_timestamp();
+    // Title, tabs and close steps live in the toolbar (design v0.2).
+    let shift = app.data.shift.clone();
+    if shift.is_none() && app.drawer.tab == Tab::Close {
+        app.drawer.tab = Tab::Overview;
+    }
+    let tab = app.drawer.tab;
+    let _ = (&t, lang, now);
     match (tab, shift) {
         (Tab::History, _) => history(app, ui),
         (_, None) => open_view(app, ui),

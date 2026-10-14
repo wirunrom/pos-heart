@@ -240,7 +240,7 @@ fn section_item(
     response
         .widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::Button, true, active, label));
     let bg = if active {
-        t.p.bg_sunken
+        t.p.bg_selected
     } else if response.hovered() {
         t.p.bg_hover
     } else {
@@ -271,80 +271,107 @@ fn section_item(
 pub fn show(app: &mut App, ui: &mut egui::Ui) {
     let t = Theme::of(ui);
     let lang = app.lang;
-    w::canvas_title(ui, lang.text("ตั้งค่า", "Settings"));
-    ui.add_space(space::S2);
-    let full = ui.available_width();
-    let nav_w = if full < 1100.0 { 196.0 } else { 220.0 };
-    ui.horizontal_top(|ui| {
-        ui.spacing_mut().item_spacing.x = space::S3;
-        ui.allocate_ui_with_layout(vec2(nav_w, 0.0), egui::Layout::top_down(Align::Min), |ui| {
-            ui.set_width(nav_w);
-            t.surface()
-                .inner_margin(egui::Margin::same(space::S2 as i8))
-                .show(ui, |ui| {
-                    ui.set_width(ui.available_width());
-                    ui.spacing_mut().item_spacing.y = 2.0;
-                    for section in Section::ALL {
-                        let active = app.settings_section == section;
-                        let dirty = unsaved(app, section)
-                            .then(|| lang.text("มีการแก้ไขที่ยังไม่บันทึก", "Unsaved changes"));
-                        if section_item(ui, &t, section.label(lang), dirty, active).clicked() {
-                            app.settings_section = section;
-                        }
+    let full_rect = ui.available_rect_before_wrap();
+    ui.allocate_rect(full_rect, egui::Sense::hover());
+    let nav_w = if full_rect.width() < 1100.0 {
+        210.0
+    } else {
+        260.0
+    };
+    let nav = egui::Rect::from_min_size(full_rect.min, vec2(nav_w, full_rect.height()));
+    let main = egui::Rect::from_min_max(
+        egui::pos2(nav.right() + t.pane_gap(), full_rect.top()),
+        full_rect.max,
+    );
+    {
+        let (mut head, mut body) = w::pane_uis(ui, nav);
+        w::pane_title(&mut head, lang.text("ตั้งค่า", "Settings"));
+        egui::Frame::new()
+            .inner_margin(egui::Margin::same(6))
+            .show(&mut body, |ui| {
+                ui.set_width(ui.available_width());
+                ui.spacing_mut().item_spacing.y = 2.0;
+                for section in Section::ALL {
+                    let active = app.settings_section == section;
+                    let dirty = unsaved(app, section)
+                        .then(|| lang.text("มีการแก้ไขที่ยังไม่บันทึก", "Unsaved changes"));
+                    if section_item(ui, &t, section.label(lang), dirty, active).clicked() {
+                        app.settings_section = section;
                     }
-                });
-        });
-        ui.vertical(|ui| {
+                }
+            });
+    }
+    {
+        let (mut head, mut body) = w::pane_uis(ui, main);
+        w::pane_title(&mut head, app.settings_section.label(lang));
+        let ui = &mut body;
+        {
             egui::ScrollArea::vertical()
                 .id_salt(("settings", app.settings_section))
                 .auto_shrink([false, false])
                 .show(ui, |ui| {
+                    // A readable centred column, as in the reference.
                     let width = ui.available_width().min(760.0);
-                    ui.set_max_width(width);
-                    match app.settings_section {
-                        Section::Shop => card(ui, &t, |ui| shop_card(app, ui)),
-                        Section::Pricing => {
-                            card(ui, &t, |ui| crate::tax_ui::pricing_card(app, ui));
-                            card(ui, &t, |ui| crate::tax_ui::settings_card(app, ui));
-                        }
-                        Section::Promotions => {
-                            card(ui, &t, |ui| crate::promo_ui::settings_card(app, ui))
-                        }
-                        Section::Tables => {
-                            card(ui, &t, |ui| crate::tables_ui::settings_card(app, ui))
-                        }
-                        Section::Printing => {
-                            card(ui, &t, |ui| crate::templates_ui::settings_card(app, ui));
-                            card(ui, &t, |ui| {
-                                let manager =
-                                    crate::staff_ui::may(app, pos_domain::Permission::Settings);
-                                ui.add_enabled_ui(manager, |ui| {
-                                    crate::print_ui::settings_card(app, ui)
-                                });
-                            });
-                        }
-                        Section::Staff => {
-                            card(ui, &t, |ui| crate::auto_lock_ui::card(app, ui));
-                            card(ui, &t, |ui| crate::staff_ui::settings_card(app, ui));
-                        }
-                        Section::Display => card(ui, &t, |ui| display_card(app, ui)),
-                        Section::Data => card(ui, &t, |ui| data_card(app, ui)),
-                    }
-                    #[cfg(debug_assertions)]
-                    if app.preview_scroll_bottom {
-                        ui.scroll_to_cursor(Some(Align::BOTTOM));
-                        app.preview_scroll_bottom = false;
-                    }
+                    let side = ((ui.available_width() - width) / 2.0).max(space::S4);
+                    ui.add_space(space::S4);
+                    ui.horizontal(|ui| {
+                        ui.add_space(side);
+                        ui.vertical(|ui| {
+                            ui.set_max_width(width.min(ui.available_width() - space::S4));
+                            match app.settings_section {
+                                Section::Shop => card(ui, &t, |ui| shop_card(app, ui)),
+                                Section::Pricing => {
+                                    card(ui, &t, |ui| crate::tax_ui::pricing_card(app, ui));
+                                    card(ui, &t, |ui| crate::tax_ui::settings_card(app, ui));
+                                }
+                                Section::Promotions => {
+                                    card(ui, &t, |ui| crate::promo_ui::settings_card(app, ui))
+                                }
+                                Section::Tables => {
+                                    card(ui, &t, |ui| crate::tables_ui::settings_card(app, ui))
+                                }
+                                Section::Printing => {
+                                    card(ui, &t, |ui| crate::templates_ui::settings_card(app, ui));
+                                    card(ui, &t, |ui| {
+                                        let manager = crate::staff_ui::may(
+                                            app,
+                                            pos_domain::Permission::Settings,
+                                        );
+                                        ui.add_enabled_ui(manager, |ui| {
+                                            crate::print_ui::settings_card(app, ui)
+                                        });
+                                    });
+                                }
+                                Section::Staff => {
+                                    card(ui, &t, |ui| crate::auto_lock_ui::card(app, ui));
+                                    card(ui, &t, |ui| crate::staff_ui::settings_card(app, ui));
+                                }
+                                Section::Display => card(ui, &t, |ui| display_card(app, ui)),
+                                Section::Data => card(ui, &t, |ui| data_card(app, ui)),
+                            }
+                            #[cfg(debug_assertions)]
+                            if app.preview_scroll_bottom {
+                                ui.scroll_to_cursor(Some(Align::BOTTOM));
+                                app.preview_scroll_bottom = false;
+                            }
+                        });
+                    });
                 });
-        });
-    });
+        }
+    }
 }
+/// A settings group: paper card on the pane (bg-raised + subtle border).
 fn card(ui: &mut egui::Ui, t: &Theme, add: impl FnOnce(&mut egui::Ui)) {
-    t.surface().show(ui, |ui| {
-        ui.set_width(ui.available_width());
-        ui.spacing_mut().item_spacing.y = space::S2;
-        add(ui);
-    });
+    egui::Frame::new()
+        .fill(t.p.bg_raised)
+        .stroke(egui::Stroke::new(1.0, t.p.border_subtle))
+        .corner_radius(t.radius(crate::ui::tokens::radius::LG))
+        .inner_margin(egui::Margin::same(space::S4 as i8))
+        .show(ui, |ui| {
+            ui.set_width(ui.available_width());
+            ui.spacing_mut().item_spacing.y = space::S2;
+            add(ui);
+        });
     ui.add_space(space::S3);
 }
 fn shop_card(app: &mut App, ui: &mut egui::Ui) {

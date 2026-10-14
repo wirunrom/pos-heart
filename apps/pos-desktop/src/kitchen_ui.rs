@@ -83,8 +83,9 @@ fn board(app: &mut App, ui: &mut egui::Ui) {
         .cloned()
         .collect();
     ui.horizontal(|ui| {
-        w::page_title(ui, lang.text("ครัว", "Kitchen"));
-        ui.label(t.muted(
+        // The kitchen screen's header sits on the graphite canvas.
+        ui.label(t.chrome(lang.text("ครัว", "Kitchen"), type_scale::TITLE));
+        ui.label(t.chrome_muted(
             format!("{} {}", open.len(), lang.text("ใบที่รอ", "waiting")),
             type_scale::BODY,
         ));
@@ -94,7 +95,7 @@ fn board(app: &mut App, ui: &mut egui::Ui) {
             } else {
                 lang.text("ใบที่เสร็จล่าสุด", "Recently done")
             };
-            if w::button(label).ghost().show(ui).clicked() {
+            if w::button(label).show(ui).clicked() {
                 app.kitchen.show_done = !app.kitchen.show_done;
             }
         });

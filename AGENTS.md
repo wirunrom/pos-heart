@@ -7,7 +7,7 @@
 - Read docs/validation.md for verified behavior and outstanding platform checks.
 - Before changing data, checkout, or module layout, read docs/architecture.md.
 - Before changing product behavior, read PRODUCT.md. UI work also reads DESIGN.md.
-- UI follows the POS Design System v0.1 in `design/` (source of truth). Read `design/docs/07-egui-handoff.md` before UI work and the matching `design/docs/components/<Name>.md` before building or changing a widget. `design/reference/` is a visual reference only — never port its HTML/CSS/JS.
+- UI follows the POS Design System v0.2 in `design/` (source of truth). Read `design/docs/07-egui-handoff.md` before UI work and the matching `design/docs/components/<Name>.md` before building or changing a widget. `design/reference/` is a visual reference only — never port its HTML/CSS/JS.
 
 ## Rules
 - Dependency direction: desktop → core → domain. Domain never imports UI or storage.
@@ -22,7 +22,7 @@
 - Stock changes outside sales, refunds and transactional purchase receiving go through `adjust_stock` (receive, remove with reason, count with the stock shown when counting started) and are logged in `stock_movements`. Product edits from the desktop set `keep_tracked_stock` so saving never overwrites stock sold meanwhile.
 - Use Diesel typed queries for ordinary persistence; parameter-bound raw SQL where SQLite-specific operations or reporting justify it. Keep both on the same connection.
 - Reports use Bangkok event dates: payment for sales, cancellation for refunds; negative net is valid.
-- UI colours and sizes come only from `ui::Theme` (`ui/tokens.rs` Palette/Metrics, `space`, `radius`, `type_scale`); never hard-code `Color32` or pixel sizes in screens. Keep Light/Dark/System and Compact/Touch parity; persist appearance, density and language separately from business data.
+- UI colours and sizes come only from `ui::Theme` (`ui/tokens.rs` Palette/Metrics, `space`, `radius`, `type_scale`); never hard-code `Color32` or pixel sizes in screens. Single theme (no light/dark); keep Soft/Square shape, the five accent presets and Compact/Touch parity; persist accent, shape, density and language separately from business data. Sell payment is two steps (Pay F9 opens the payment panel; Esc returns), the toolbar holds whole-bill actions, line actions stay in the line editor.
 - Money displays with `ui::format` (grouped, 2 decimals, `−` for negatives) in the IBM Plex Mono number font, right-aligned and never truncated. One saffron primary button per view, reserved for the money-moving commit.
 - Preserve mouse/keyboard and touch access, left payment/right products, and blocking confirmations for sale/stock or unsaved data. Reversible actions (remove line, clear/hold bill, stop selling) act at once with an undo toast instead of a dialog.
 - The open bill autosaves to `held_carts` (marked by `current-bill.txt` beside the database) and is restored on launch; an emptied bill discards its saved copy. Background autosave never sets `busy` or shows banners.
@@ -90,7 +90,7 @@ Read docs/architecture.md "Tables and kitchen" before changing these flows.
 - Cancelling dishes the kitchen already has produces a cancellation ticket and an Activity `kitchen` event in the same transaction; clearing such a bill sends a cancellation, not an undo toast.
 - Kitchen screen actions (bump, recall, tick) are background worker commands that never set `busy` or block the counter. Paying frees the table; tickets stay until bumped.
 
-Verify one bill per table, moves and switch-off refusal, only-differences sends and cancellations after retries/stale copies/autosaves, activity on cancellation, bump/recall/tick, paying freeing the table, Light/Dark, Thai/English, Compact/Touch on the Sell floor tab (including move mode), kitchen screen and table bill.
+Verify one bill per table, moves and switch-off refusal, only-differences sends and cancellations after retries/stale copies/autosaves, activity on cancellation, bump/recall/tick, paying freeing the table, Soft/Square, Thai/English, Compact/Touch on the Sell floor tab (including move mode), kitchen screen and table bill.
 
 ## Print templates, preview and check bill
 
@@ -101,7 +101,7 @@ Read docs/architecture.md "Print templates, preview and check bill" before chang
 - `receipt-logo.png` (imported, resized, 1-bit dithered) is a business sidecar: it is in recovery backups beside `shop.json`; printer settings stay device-local.
 - Preview renders the same `Doc` the printer gets and works without a printer; it never prints on its own.
 
-Verify template defaults/partial and future-safe JSON, validation limits, logo import/reload and backup, VAT lines with every toggle off, kitchen notes/cancellations, check-bill totals against checkout (service, VAT on top, discounts, rounding), and the template card/preview in Light/Dark, Thai/English, Compact/Touch at 1000×700 and 1280×820.
+Verify template defaults/partial and future-safe JSON, validation limits, logo import/reload and backup, VAT lines with every toggle off, kitchen notes/cancellations, check-bill totals against checkout (service, VAT on top, discounts, rounding), and the template card/preview in Soft/Square, Thai/English, Compact/Touch at 1000×700 and 1280×820.
 
 ## Automatic backups and idle lock
 

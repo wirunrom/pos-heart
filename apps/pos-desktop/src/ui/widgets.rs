@@ -1191,11 +1191,6 @@ pub fn page_title(ui: &mut Ui, text: &str) -> Response {
     let t = Theme::of(ui);
     ui.add(egui::Label::new(t.text(text, type_scale::TITLE)).wrap())
 }
-/// A page heading drawn straight on the graphite canvas (outside a pane).
-pub fn canvas_title(ui: &mut Ui, text: &str) -> Response {
-    let t = Theme::of(ui);
-    ui.add(egui::Label::new(t.chrome(text, type_scale::TITLE)).wrap())
-}
 /// Small uppercase-like section label (`หมวดหมู่`, `มุมมอง`).
 pub fn eyebrow(ui: &mut Ui, text: &str) -> Response {
     let t = Theme::of(ui);
@@ -1283,70 +1278,6 @@ pub fn dashed(ui: &mut Ui) {
         x += 7.0;
     }
 }
-pub fn steps_width(ui: &Ui, labels: &[&str]) -> f32 {
-    let t = Theme::of(ui);
-    let text: f32 = labels
-        .iter()
-        .map(|l| text_width(ui, l, t.strong_font(type_scale::LABEL)))
-        .sum();
-    let n = labels.len() as f32;
-    text + n * 24.0 + (n - 1.0) * 20.0 + (n * 3.0 - 1.0) * space::S2 + 4.0
-}
-/// Step indicator for 3–5 ordered stages (`✓ นับเงิน — ② ตรวจยอด — ③ ยืนยัน`).
-pub fn steps(ui: &mut Ui, labels: &[&str], current: usize) {
-    let t = Theme::of(ui);
-    ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = space::S2;
-        for (i, label) in labels.iter().enumerate() {
-            let done = i < current;
-            let active = i == current;
-            let (rect, _) = ui.allocate_exact_size(vec2(24.0, 24.0), Sense::hover());
-            if done {
-                ui.painter()
-                    .circle_filled(rect.center(), 11.0, t.p.bg_inverse);
-                icons::paint_sized(
-                    ui.painter(),
-                    Icon::Check,
-                    rect.center(),
-                    14.0,
-                    t.p.fg_inverse,
-                );
-            } else {
-                ui.painter().circle_stroke(
-                    rect.center(),
-                    10.5,
-                    Stroke::new(
-                        if active { 2.0 } else { 1.2 },
-                        if active { t.p.fg_default } else { t.p.fg_muted },
-                    ),
-                );
-                let g = galley(
-                    ui,
-                    (i + 1).to_string(),
-                    t.strong_font(type_scale::CAPTION),
-                    t.p.fg_default,
-                );
-                ui.painter()
-                    .galley(rect.center() - g.size() / 2.0, g, t.p.fg_default);
-            }
-            let text = if active {
-                t.text(*label, type_scale::LABEL)
-                    .font(t.strong_font(type_scale::LABEL))
-            } else {
-                t.muted(*label, type_scale::LABEL)
-            };
-            ui.label(text);
-            if i + 1 < labels.len() {
-                let (r, _) = ui.allocate_exact_size(vec2(20.0, 24.0), Sense::hover());
-                ui.painter().line_segment(
-                    [r.left_center(), r.right_center()],
-                    Stroke::new(1.0, t.p.border_control),
-                );
-            }
-        }
-    });
-}
-
 // ───────────────────────────── Feedback ─────────────────────────────
 
 /// Persistent problem at the top of the area it concerns.

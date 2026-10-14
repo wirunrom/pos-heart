@@ -152,71 +152,6 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
         );
         return;
     }
-    let today = worker::today();
-    let yesterday = today.previous_day().unwrap_or(today);
-    let week = Period {
-        start: today.checked_sub(time::Duration::days(6)).unwrap_or(today),
-        end: today,
-    };
-    let month = Period {
-        start: today.replace_day(1).unwrap_or(today),
-        end: today,
-    };
-    let quick = match app.report {
-        p if p == Period::day(today) => Quick::Today,
-        p if p == Period::day(yesterday) => Quick::Yesterday,
-        p if p == week => Quick::Week,
-        p if p == month => Quick::Month,
-        _ => Quick::Other,
-    };
-    ui.horizontal(|ui| {
-        ui.label(t.chrome(
-            if app.report.single() {
-                lang.text("รายงานประจำวัน", "Daily report")
-            } else {
-                lang.text("รายงานช่วงเวลา", "Period report")
-            },
-            type_scale::TITLE,
-        ));
-        ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
-            ui.spacing_mut().item_spacing.x = space::S2;
-            if w::button(lang.text("ส่งออก CSV", "Export CSV"))
-                .icon(Icon::Download)
-                .enabled(!app.busy)
-                .tooltip(lang.text(
-                    "บันทึกรายงานช่วงนี้เป็นไฟล์ในโฟลเดอร์ข้อมูล",
-                    "Save this period's report in the data folder",
-                ))
-                .show(ui)
-                .clicked()
-            {
-                app.export_report();
-            }
-            date_picker(app, ui);
-            let mut q = quick;
-            if w::segmented(
-                ui,
-                &mut q,
-                &[
-                    (Quick::Today, lang.text("วันนี้", "Today")),
-                    (Quick::Yesterday, lang.text("เมื่อวาน", "Yesterday")),
-                    (Quick::Week, lang.text("7 วัน", "7 days")),
-                    (Quick::Month, lang.text("เดือนนี้", "This month")),
-                ],
-            ) {
-                set_period(
-                    app,
-                    match q {
-                        Quick::Today => Period::day(today),
-                        Quick::Yesterday => Period::day(yesterday),
-                        Quick::Week => week,
-                        _ => month,
-                    },
-                );
-            }
-        });
-    });
-    ui.add_space(space::S2);
     let s = app.data.summary.clone();
     let c = app.data.compare.clone();
     let loading =
@@ -283,13 +218,89 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
             });
         });
 }
+/// Reports toolbar (design v0.2): period, Export CSV, Activity log, and
+/// the quick periods on the right.
+pub fn toolbar(app: &mut App, ui: &mut egui::Ui) {
+    let lang = app.lang;
+    if !crate::staff_ui::may(app, pos_domain::Permission::Reports) {
+        return;
+    }
+    let today = worker::today();
+    let yesterday = today.previous_day().unwrap_or(today);
+    let week = Period {
+        start: today.checked_sub(time::Duration::days(6)).unwrap_or(today),
+        end: today,
+    };
+    let month = Period {
+        start: today.replace_day(1).unwrap_or(today),
+        end: today,
+    };
+    let quick = match app.report {
+        p if p == Period::day(today) => Quick::Today,
+        p if p == Period::day(yesterday) => Quick::Yesterday,
+        p if p == week => Quick::Week,
+        p if p == month => Quick::Month,
+        _ => Quick::Other,
+    };
+    date_picker(app, ui);
+    if crate::chrome::tool(
+        ui,
+        Icon::Download,
+        lang.text("ส่งออก CSV", "Export CSV"),
+        None,
+        !app.busy,
+    )
+    .on_hover_text(lang.text(
+        "บันทึกรายงานช่วงนี้เป็นไฟล์ในโฟลเดอร์ข้อมูล",
+        "Save this period's report in the data folder",
+    ))
+    .clicked()
+    {
+        app.export_report();
+    }
+    crate::chrome::separator(ui, &Theme::of(ui));
+    if crate::chrome::tool(
+        ui,
+        Icon::History,
+        lang.text("ประวัติกิจกรรม", "Activity log"),
+        Some("Alt 8"),
+        true,
+    )
+    .clicked()
+    {
+        app.navigate(crate::app::Page::Activity);
+    }
+    ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
+        let mut q = quick;
+        if crate::chrome::segmented(
+            ui,
+            &mut q,
+            &[
+                (Quick::Today, lang.text("วันนี้", "Today").to_owned()),
+                (
+                    Quick::Yesterday,
+                    lang.text("เมื่อวาน", "Yesterday").to_owned(),
+                ),
+                (Quick::Week, lang.text("7 วัน", "7 days").to_owned()),
+                (Quick::Month, lang.text("เดือนนี้", "This month").to_owned()),
+            ],
+        ) {
+            set_period(
+                app,
+                match q {
+                    Quick::Today => Period::day(today),
+                    Quick::Yesterday => Period::day(yesterday),
+                    Quick::Week => week,
+                    _ => month,
+                },
+            );
+        }
+    });
+}
 fn date_picker(app: &mut App, ui: &mut egui::Ui) {
     let t = Theme::of(ui);
     let lang = app.lang;
-    // Secondary (paper) so it reads on the graphite page header.
-    let response = w::button(app.report.label(lang))
-        .icon(Icon::Calendar)
-        .show(ui);
+    let response = crate::chrome::tool(ui, Icon::Calendar, &app.report.label(lang), None, true);
     egui::Popup::menu(&response)
         .frame(
             t.raised(2)

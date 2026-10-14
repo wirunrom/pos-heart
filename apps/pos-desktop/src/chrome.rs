@@ -214,19 +214,8 @@ pub fn toolbar(app: &mut App, ui: &mut egui::Ui) {
                 }
             }
             Page::Products => crate::catalog_ui::toolbar(app, ui),
-            Page::Reports => {
-                let clicked = tool(
-                    ui,
-                    Icon::History,
-                    lang.text("ประวัติกิจกรรม", "Activity log"),
-                    Some("Alt 8"),
-                    true,
-                )
-                .clicked();
-                if clicked {
-                    app.navigate(Page::Activity);
-                }
-            }
+            Page::Shift => crate::shift_ui::toolbar(app, ui),
+            Page::Reports => crate::report_ui::toolbar(app, ui),
             Page::Activity => {
                 let clicked = tool(
                     ui,

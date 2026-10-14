@@ -49,55 +49,74 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
             full.bottom(),
         ),
     );
-    let mut child = ui.new_child(
-        egui::UiBuilder::new()
-            .max_rect(main)
-            .layout(egui::Layout::top_down(Align::Min)),
+    let lang = app.lang;
+    let shown = app.data.sales.len() as u64;
+    let (mut head, mut body) = w::pane_uis(ui, main);
+    w::pane_title(
+        &mut head,
+        lang.text("ประวัติขาย · ล่าสุดก่อน", "Sales history · newest first"),
     );
-    t.surface().show(&mut child, |ui| {
-        let inner = main.size() - vec2(32.0, 32.0);
-        ui.set_min_size(inner);
-        ui.set_max_size(inner);
-        list(app, ui, !wide);
-    });
+    w::pane_count(
+        &mut head,
+        &format!(
+            "{} {}",
+            format::count(shown),
+            lang.noun(shown, "บิล", "bill", "bills")
+        ),
+    );
+    egui::Frame::new()
+        .inner_margin(egui::Margin::same(space::S3 as i8))
+        .show(&mut body, |ui| {
+            ui.set_min_size(ui.available_size());
+            list(app, ui, !wide);
+        });
     if wide {
         let rect = Rect::from_min_max(pos2(full.right() - detail_w, full.top()), full.max);
-        let mut child = ui.new_child(
-            egui::UiBuilder::new()
-                .max_rect(rect)
-                .layout(egui::Layout::top_down(Align::Min)),
-        );
-        t.surface().show(&mut child, |ui| {
-            let inner = rect.size() - vec2(32.0, 32.0);
-            ui.set_min_size(inner);
-            ui.set_max_size(inner);
-            match app.history.selected.clone() {
-                Some(record) => detail(app, ui, &record),
-                None => w::state_view(
-                    ui,
-                    Icon::History,
-                    app.lang.text("เลือกบิลเพื่อดูรายละเอียด", "Select a receipt"),
-                    app.lang.text(
-                        "ดูรายการ ยอด และยกเลิกบิลได้ที่นี่",
-                        "See lines and totals, or void it here.",
+        let selected = app.history.selected.clone();
+        let (mut head, mut body) = w::pane_uis(ui, rect);
+        match &selected {
+            Some(record) => {
+                w::pane_title(
+                    &mut head,
+                    &format!(
+                        "{} {}",
+                        lang.text("บิล", "Receipt"),
+                        format::receipt_number(record.sale.number)
                     ),
-                ),
+                );
+                let (label, tone) = status(lang, record);
+                head.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
+                    ui.add_space(space::S2);
+                    w::badge(ui, label, tone);
+                });
             }
-        });
+            None => w::pane_title(&mut head, lang.text("รายละเอียดบิล", "Receipt")),
+        }
+        egui::Frame::new()
+            .inner_margin(egui::Margin::same(space::S3 as i8))
+            .show(&mut body, |ui| {
+                ui.set_min_size(ui.available_size());
+                match selected {
+                    Some(record) => detail(app, ui, &record),
+                    None => w::state_view(
+                        ui,
+                        Icon::History,
+                        lang.text("เลือกบิลเพื่อดูรายละเอียด", "Select a receipt"),
+                        lang.text(
+                            "ดูรายการ ยอด และยกเลิกบิลได้ที่นี่",
+                            "See lines and totals, or void it here.",
+                        ),
+                    ),
+                }
+            });
     }
+    let _ = t;
 }
 
 fn list(app: &mut App, ui: &mut egui::Ui, dialog_detail: bool) {
     let t = Theme::of(ui);
     let lang = app.lang;
     ui.spacing_mut().item_spacing.y = space::S3;
-    ui.horizontal(|ui| {
-        ui.label(t.text(lang.text("ประวัติขาย", "Sales history"), type_scale::TITLE));
-        ui.label(t.muted(
-            lang.text("ล่าสุดก่อน · เวลาไทย", "Newest first · Bangkok time"),
-            type_scale::LABEL,
-        ));
-    });
     w::search_input(
         ui,
         &mut app.history.filter,

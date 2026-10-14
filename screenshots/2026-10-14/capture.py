@@ -90,7 +90,7 @@ def gallery(records):
         cards.append(f'<article data-theme="{r["theme"]}" data-search="{search}"><a href="{path}" target="_blank"><img src="{path}" loading="lazy" alt="{title}"></a><p>{title} <small>{r["theme"]} · {html.escape(r["slug"])}</small></p></article>')
     content='''<!doctype html><html lang="th"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>POS Heart — Screenshot catalog</title>
 <style>body{margin:0;background:#f5f4f0;color:#1f1e1b;font:15px/1.6 system-ui,sans-serif}header{padding:24px;position:sticky;top:0;background:#f5f4f0;border-bottom:1px solid #dedbd3;z-index:1}h1{margin:0;font-size:24px}p{margin:8px 0}button,input{font:inherit;padding:8px 12px;border:1px solid #827d72;border-radius:6px;background:white}button{cursor:pointer}button.active{background:#1f1e1b;color:white}input{margin-left:12px;width:min(300px,50vw)}main{padding:24px;display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:24px}article{min-width:0}img{display:block;width:100%;height:auto;border:1px solid #dedbd3}small{display:block;color:#625e55}article[hidden]{display:none}@media(max-width:450px){main{grid-template-columns:1fr;padding:12px}}</style>
-<header><h1>POS Heart · ทุกหน้าจอ</h1><p>ข้อมูลตัวอย่าง · ไทย · Compact · 1280×820 · คลิกภาพเพื่อเปิดขนาดเต็ม</p><button class="active" data-filter="light">Light</button> <button data-filter="dark">Dark</button> <button data-filter="all">ทั้งสองธีม</button><input type="search" placeholder="ค้นหาหน้าจอ…" aria-label="ค้นหาหน้าจอ"><p id="count"></p></header><main>'''+''.join(cards)+'''</main><script>let theme='light';const q=document.querySelector('input');function filter(){let count=0;document.querySelectorAll('article').forEach(a=>{a.hidden=!(theme==='all'||a.dataset.theme===theme)||!a.dataset.search.includes(q.value.toLowerCase());if(!a.hidden)count++});document.querySelector('#count').textContent=count+' ภาพ'}document.querySelectorAll('button').forEach(b=>b.onclick=()=>{theme=b.dataset.filter;document.querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));filter()});q.oninput=filter;filter()</script></html>'''
+<header><h1>POS Heart · ทุกหน้าจอ</h1><p>ข้อมูลตัวอย่าง · ไทย · Compact · 1280×820 · คลิกภาพเพื่อเปิดขนาดเต็ม</p><button class="active" data-filter="soft">โค้ง</button> <button data-filter="square">เหลี่ยม</button> <button data-filter="all">ทั้งสองแบบ</button><input type="search" placeholder="ค้นหาหน้าจอ…" aria-label="ค้นหาหน้าจอ"><p id="count"></p></header><main>'''+''.join(cards)+'''</main><script>let theme='soft';const q=document.querySelector('input');function filter(){let count=0;document.querySelectorAll('article').forEach(a=>{a.hidden=!(theme==='all'||a.dataset.theme===theme)||!a.dataset.search.includes(q.value.toLowerCase());if(!a.hidden)count++});document.querySelector('#count').textContent=count+' ภาพ'}document.querySelectorAll('button').forEach(b=>b.onclick=()=>{theme=b.dataset.filter;document.querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));filter()});q.oninput=filter;filter()</script></html>'''
     (OUT/'index.html').write_text(content,encoding='utf-8')
 
 
@@ -115,7 +115,7 @@ def main():
                 fixtures[name]=dest
         work=scratch/'shot'
         total=len(CASES)*2
-        for theme in ['light','dark']:
+        for theme in ['soft','square']:
             for case in CASES:
                 group=case['group']; folder=OUT/theme/group; folder.mkdir(parents=True,exist_ok=True)
                 path=folder/(case['slug']+'.png')
@@ -127,7 +127,7 @@ def main():
                         work.mkdir()
                         if case['fixture']=='empty':
                             (work/'shop.json').write_text(json.dumps(dict(version=1,name='ร้านหัวใจ (ตัวอย่าง)',kind='mixed',start_in_sell=False,setup_complete=True)))
-                    for name,value in [('theme.txt',theme),('language.txt','th'),('density.txt','compact')]:
+                    for name,value in [('shape.txt',theme),('language.txt','th'),('density.txt','compact')]:
                         (work/name).write_text(value)
                     command=[str(ROOT/'target/debug/pos-heart'),'--data-dir',str(work),'--page',case['page'],'--window-size','1280x820','--screenshot',str(path)]
                     if case['preset']:

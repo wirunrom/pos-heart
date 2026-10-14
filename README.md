@@ -1,6 +1,6 @@
 # POS Heart
 
-แอป POS เดสก์ท็อปสำหรับร้านค้าทั่วไปและร้านอาหารแบบเคาน์เตอร์ ใช้ Rust + egui/eframe, ฐานข้อมูล SQLite ในเครื่องผ่าน Diesel ORM และ UI ไทย / English ตาม POS Design System v0.1 (`design/`)
+แอป POS เดสก์ท็อปสำหรับร้านค้าทั่วไปและร้านอาหารแบบเคาน์เตอร์ ใช้ Rust + egui/eframe, ฐานข้อมูล SQLite ในเครื่องผ่าน Diesel ORM และ UI ไทย / English ตาม POS Design System v0.2 (`design/`)
 
 **สถานะ: development foundation / ยังไม่พร้อมแทนระบบขายหน้างานจริง**
 
@@ -21,7 +21,7 @@ The initial build downloads dependencies. The built app works without internet.
 ## Current flow
 
 1. First launch: set a shop name and add products, or choose Set up later. Existing databases and Demo open Home without this step.
-2. The top bar holds the workspace switcher (Home · Sell · Sales history · Shift & drawer · Products · Reports · Settings · Activity log · Tables, `Alt 1–9`), the `Ctrl K` command palette, shift/offline status and display preferences (language, Light/Dark/System, Compact/Touch density).
+2. The window has workspace tabs (Home · Sell · Sales history · Shift & drawer · Products · Reports · Settings, `Alt 1–7`; Activity log `Alt 8` opens from Reports, Tables `Alt 9` is a Sell pane) with the `Ctrl K` command field, a toolbar with the current page's actions, and a status bar (staff, offline, shift, drawer cash, printer, accent colour, rounded/square, language, density).
 3. Home shows today’s sales tiles, expected drawer cash, pending work (held bills, an unfinished drawer count, backup older than 7 days) and shortcuts. Settings can make a cashier device open Sell immediately.
 4. Products: categories and saved views (low stock, out of stock, not for sale), search, bulk category / stop-selling, CSV export and an inspector (sheet below 1200 points) for price, category, stock, SKU, barcode, on-sale and option groups such as sweetness or toppings with extra prices.
 5. Sell: cart/payment on the **left**; categories and product tiles on the **right**. Tap a tile or scan/type a code and press Enter. Products with options open an options sheet. Quantities, notes and options stay editable per line; removing a line can be undone. Discounts in baht or percent apply to one line (`F7`) or the whole bill (`F8`), with an optional reason; the cart footer shows items total, discount, any service charge, VAT on top and cash rounding, and amount due.
@@ -72,7 +72,7 @@ crates/pos-domain/  money, product/options/cart/sale data, discounts, PromptPay 
 crates/pos-core/    Diesel catalog, checkout, held carts, voids, shifts and reports
   migrations/      versioned SQLite schema (001–023)
 assets/fonts/      IBM Plex Sans / Sans Thai / Mono, Noto Sans Thai fallback, OFL licenses
-design/            POS Design System v0.1 (tokens, docs, reference screens)
+design/            POS Design System v0.2 (tokens, docs, reference screens, pos-desktop-concept.html)
 docs/architecture.md, docs/multi-device.md (proposal, not built)
 ```
 
@@ -118,7 +118,7 @@ Daily summary uses YYYY-MM-DD in Bangkok UTC+7. Sales belong to payment day, ref
 
 ## Appearance and input
 
-Choose language, Light/Dark/System and Compact/Touch density from the sliders button in the top bar or in Settings; they apply immediately and are saved as `language.txt`, `theme.txt` and `density.txt` next to the local database, independently of sales. Missing or unrecognized preferences use Thai, System and Compact. Colours, sizes and type come from the design-system tokens (warm stone neutrals, one saffron accent for money-moving actions, IBM Plex Sans Thai/Sans for text and IBM Plex Mono for every amount).
+Choose language, accent colour (Saffron, Jade, Ocean, Plum, Ink), corners (rounded or square) and Compact/Touch density from the status bar or Settings → Language & display; they apply immediately and are saved as `language.txt`, `accent.txt`, `shape.txt` and `density.txt` next to the local database, independently of sales. Missing or unrecognized preferences use Thai, Saffron, rounded and Compact. There is one theme (graphite chrome, paper panes); colours, sizes and type come from the design-system tokens (IBM Plex Sans Thai/Sans for text and IBM Plex Mono for every amount).
 
 The counter layout keeps the cart and payment on the left and product tiles on the right; totals and the pay button stay pinned while lines scroll. Sell keys: `F2` or `/` search (kept focused for scanners), `Enter` add the matching code or first result, `↑ ↓` select a line, `+ −` quantity, `F3` type quantity, `F6` note/options, `F7` line discount, `F8` bill discount, `Del` remove (undo with `Ctrl Z`), `F4` hold, `F10` send to kitchen (with tables), `F9` cash field then take payment. Everywhere: `Ctrl K` command palette, `Ctrl L` lock / switch user (with staff), `Alt 1–9` workspaces, `Ctrl S` save a product, `Esc` closes overlays. Touch density raises controls to 48–64 points and hides shortcut hints (the keys still work). Irreversible or money-moving decisions use blocking dialogs; reversible ones show an undo toast.
 
