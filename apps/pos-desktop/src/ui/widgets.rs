@@ -73,7 +73,6 @@ pub struct Button {
     enabled: bool,
     loading: bool,
     fill: bool,
-    min_width: f32,
     tooltip: Option<String>,
 }
 pub fn button(label: impl Into<String>) -> Button {
@@ -87,7 +86,6 @@ pub fn button(label: impl Into<String>) -> Button {
         enabled: true,
         loading: false,
         fill: false,
-        min_width: 0.0,
         tooltip: None,
     }
 }
@@ -131,10 +129,6 @@ impl Button {
     /// Stretch to the available width (commit buttons at the bottom of a panel).
     pub fn fill(mut self) -> Self {
         self.fill = true;
-        self
-    }
-    pub fn min_width(mut self, width: f32) -> Self {
-        self.min_width = width;
         self
     }
     /// Full amount appended in the money font: `รับเงินสด ฿1,323.50`.
@@ -228,7 +222,7 @@ impl Button {
         if let Some(h) = &hint {
             content += gap + 4.0 + h.size().x + 8.0;
         }
-        let mut width = (content + pad * 2.0).max(self.min_width).max(height);
+        let mut width = (content + pad * 2.0).max(height);
         if self.fill {
             width = width.max(ui.available_width());
         }

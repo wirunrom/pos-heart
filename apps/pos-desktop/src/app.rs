@@ -1764,6 +1764,7 @@ impl eframe::App for App {
                         Page::Sell => sale_ui::show(self, ui),
                         Page::Products => crate::catalog_ui::show(self, ui),
                         Page::History => crate::history_ui::show(self, ui),
+                        Page::Home => crate::home_ui::show(self, ui),
                         // Statement pages read label → amount across a row; on wide
                         // screens they stay centred at a readable width.
                         page => {
@@ -1787,7 +1788,6 @@ impl eframe::App for App {
                                     .layout(egui::Layout::top_down(egui::Align::Min)),
                             );
                             match page {
-                                Page::Home => crate::home_ui::show(self, &mut page_ui),
                                 Page::Settings => crate::settings_ui::show(self, &mut page_ui),
                                 Page::Reports => crate::report_ui::show(self, &mut page_ui),
                                 Page::Activity => {
