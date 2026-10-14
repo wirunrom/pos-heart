@@ -25,6 +25,7 @@ pub enum Icon {
     More,
     Check,
     Download,
+    Upload,
     Tag,
     Lock,
     Unlock,
@@ -219,6 +220,11 @@ pub fn paint(painter: &egui::Painter, icon: Icon, rect: Rect, color: Color32) {
         Icon::Download => {
             pen.line(&[(12., 3.), (12., 15.)]);
             pen.line(&[(7., 10.), (12., 15.), (17., 10.)]);
+            pen.line(&[(4., 17.), (4., 20.), (20., 20.), (20., 17.)]);
+        }
+        Icon::Upload => {
+            pen.line(&[(12., 15.), (12., 3.)]);
+            pen.line(&[(7., 8.), (12., 3.), (17., 8.)]);
             pen.line(&[(4., 17.), (4., 20.), (20., 20.), (20., 17.)]);
         }
         Icon::Tag => {

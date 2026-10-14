@@ -213,6 +213,7 @@ pub fn toolbar(app: &mut App, ui: &mut egui::Ui) {
                     app.backup();
                 }
             }
+            Page::Products => crate::catalog_ui::toolbar(app, ui),
             Page::Reports => {
                 let clicked = tool(
                     ui,

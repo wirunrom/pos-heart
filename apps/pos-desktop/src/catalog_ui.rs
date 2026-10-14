@@ -3,7 +3,6 @@
 //! (a Sheet below 1200 points) with explicit Save / Discard.
 use crate::{
     app::{App, Page},
-    sale_ui::nav_item,
     shell::Undo,
     ui::{Icon, Theme, format, space, type_scale, w},
     worker::Command,
@@ -328,6 +327,8 @@ pub struct CatalogState {
     focus_search: bool,
     last_bulk: Option<(Vec<Uuid>, bool)>,
     save_requested: bool,
+    /// Ctrl N: open a new product.
+    new_requested: bool,
     close_after_prompt: bool,
     pub stock_dialog: Option<StockDialog>,
 }
@@ -688,7 +689,12 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
     if !app.purchasing.open {
         keys(app, ui.ctx());
     }
-    panel(ui, &t, nav, space::S2, |ui| side_nav(app, ui));
+    {
+        let (mut head, body) = w::pane_uis(ui, nav);
+        w::pane_title(&mut head, app.lang.text("หมวดหมู่", "Categories"));
+        let mut body = body;
+        side_nav(app, &mut body);
+    }
     if app.purchasing.open {
         let main = Rect::from_min_max(main.min, pos2(full.right(), full.bottom()));
         panel(ui, &t, main, space::S4, |ui| {
@@ -718,7 +724,18 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
         });
         return;
     }
-    panel(ui, &t, main, space::S4, |ui| table_panel(app, ui));
+    {
+        let total = table_total(app);
+        let (mut head, mut body) = w::pane_uis(ui, main);
+        w::pane_title(&mut head, &title_text(app));
+        w::pane_count(&mut head, &format::count(total));
+        egui::Frame::new()
+            .inner_margin(egui::Margin::same(space::S3 as i8))
+            .show(&mut body, |ui| {
+                ui.set_min_size(ui.available_size());
+                table_panel(app, ui);
+            });
+    }
     if inspector_w > 0.0 {
         let rect = Rect::from_min_max(pos2(full.right() - inspector_w, full.top()), full.max);
         panel(ui, &t, rect, space::S4, |ui| inspector(app, ui));
@@ -741,6 +758,121 @@ fn panel(ui: &mut egui::Ui, t: &Theme, rect: Rect, pad: f32, add: impl FnOnce(&m
             add(ui);
         });
 }
+/// Products toolbar (design v0.2): add / import / export, and the bulk
+/// actions while rows are selected.
+pub fn toolbar(app: &mut App, ui: &mut egui::Ui) {
+    use crate::chrome::{separator, tool};
+    let t = Theme::of(ui);
+    let lang = app.lang;
+    let table = !(app.purchasing.open
+        || app.option_sets.open
+        || app.categories.open
+        || app.ingredients.open);
+    if !table {
+        return;
+    }
+    if tool(
+        ui,
+        Icon::Plus,
+        lang.text("เพิ่มสินค้า", "Add product"),
+        Some("Ctrl N"),
+        !app.busy,
+    )
+    .clicked()
+    {
+        open_editor(app, None);
+    }
+    if tool(
+        ui,
+        Icon::Upload,
+        lang.text("นำเข้า CSV", "Import CSV"),
+        None,
+        !app.busy && !app.catalog.dirty(),
+    )
+    .clicked()
+    {
+        app.catalog.import = Some(Default::default());
+    }
+    if tool(
+        ui,
+        Icon::Download,
+        lang.text("ส่งออก", "Export"),
+        None,
+        !app.busy && app.data.counts.total > 0,
+    )
+    .on_hover_text(lang.text(
+        "บันทึกสินค้าทั้งหมดเป็นไฟล์ CSV ในโฟลเดอร์ข้อมูล",
+        "Save every product as CSV in the data folder",
+    ))
+    .clicked()
+    {
+        app.export_products();
+    }
+    let ids: Vec<Uuid> = app.catalog.selected.iter().copied().collect();
+    let any = !ids.is_empty() && !app.busy;
+    separator(ui, &t);
+    if tool(ui, Icon::Tag, lang.text("เปลี่ยนหมวด", "Category"), None, any).clicked()
+    {
+        app.catalog.bulk_category = Some(String::new());
+    }
+    let all_off = any
+        && app
+            .data
+            .products
+            .iter()
+            .filter(|p| app.catalog.selected.contains(&p.id))
+            .all(|p| !p.on_sale);
+    let (icon, label) = if all_off {
+        (Icon::Unlock, lang.text("เปิดขาย", "Resume selling"))
+    } else {
+        (Icon::Lock, lang.text("ปิดขาย", "Stop selling"))
+    };
+    if tool(ui, icon, label, None, any).clicked() {
+        app.catalog.last_bulk = Some((ids.clone(), all_off));
+        app.send(Command::SetOnSale(ids.clone(), all_off));
+    }
+    if tool(
+        ui,
+        Icon::Options,
+        lang.text("ชุดตัวเลือก", "Option set"),
+        None,
+        any,
+    )
+    .clicked()
+    {
+        app.error = None;
+        app.option_sets.bulk = Some((None, true));
+    }
+    ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
+        if ids.is_empty() {
+            ui.label(t.chrome_muted(
+                lang.text("เลือกแถวเพื่อทำทีละหลายรายการ", "Select rows for bulk actions"),
+                type_scale::CAPTION,
+            ));
+        } else {
+            if tool(
+                ui,
+                Icon::Close,
+                lang.text("ล้าง", "Clear"),
+                Some("Esc"),
+                true,
+            )
+            .clicked()
+            {
+                app.catalog.selected.clear();
+            }
+            ui.label(t.chrome(
+                format!(
+                    "{} {} {}",
+                    lang.text("เลือก", "Selected"),
+                    ids.len(),
+                    lang.text("รายการ", "")
+                ),
+                type_scale::LABEL,
+            ));
+        }
+    });
+}
 fn keys(app: &mut App, ctx: &egui::Context) {
     if app.palette.visible || app.catalog.archive_confirm || app.catalog.pending_nav.is_some() {
         return;
@@ -752,6 +884,9 @@ fn keys(app: &mut App, ctx: &egui::Context) {
         }
         if !typing && i.consume_key(Modifiers::NONE, Key::Slash) {
             app.catalog.focus_search = true;
+        }
+        if i.consume_key(Modifiers::COMMAND, Key::N) && !app.busy {
+            app.catalog.new_requested = true;
         }
         if !typing && i.consume_key(Modifiers::COMMAND, Key::A) {
             app.catalog.selected = app.data.products.iter().map(|p| p.id).collect();
@@ -766,6 +901,9 @@ fn keys(app: &mut App, ctx: &egui::Context) {
     });
     if std::mem::take(&mut app.catalog.save_requested) {
         save(app);
+    }
+    if std::mem::take(&mut app.catalog.new_requested) {
+        open_editor(app, None);
     }
 }
 fn refresh_from_start(app: &mut App) {
@@ -782,19 +920,15 @@ fn side_nav(app: &mut App, ui: &mut egui::Ui) {
         .id_salt("catalog-nav")
         .auto_shrink([false, false])
         .show(ui, |ui| {
-            ui.spacing_mut().item_spacing.y = 2.0;
-            ui.add_space(space::S2);
-            ui.horizontal(|ui| {
-                ui.add_space(space::S3);
-                w::eyebrow(ui, lang.text("หมวดหมู่", "Categories"));
-            });
+            ui.spacing_mut().item_spacing.y = if t.soft() { 2.0 } else { 0.0 };
             ui.add_space(space::S1);
             let mut entries = vec![(
                 None,
                 lang.text("ทั้งหมด", "All products").to_owned(),
                 counts.total,
+                None,
             )];
-            entries.extend(counts.categories.iter().map(|(c, n)| {
+            entries.extend(counts.categories.iter().enumerate().map(|(i, (c, n))| {
                 (
                     Some(c.clone()),
                     if c.is_empty() {
@@ -803,16 +937,17 @@ fn side_nav(app: &mut App, ui: &mut egui::Ui) {
                         c.clone()
                     },
                     *n,
+                    (!c.is_empty()).then(|| t.cat_color(i)),
                 )
             }));
-            for (value, label, n) in entries {
+            for (value, label, n, dot) in entries {
                 let active = app.catalog.category == value
                     && app.catalog.view == ProductView::All
                     && !app.ingredients.open
                     && !app.categories.open
                     && !app.option_sets.open
                     && !app.purchasing.open;
-                if nav_item(ui, &t, &label, n, active).clicked() {
+                if crate::sale_ui::nav_row(ui, &t, &label, n, active, dot).clicked() {
                     app.ingredients.open = false;
                     app.purchasing.open = false;
                     app.categories.open = false;
@@ -957,11 +1092,19 @@ fn view_item(
     active: bool,
 ) -> egui::Response {
     let width = ui.available_width();
-    let (rect, response) = ui.allocate_exact_size(vec2(width, t.m.control_md), Sense::click());
+    let (full, response) = ui.allocate_exact_size(vec2(width, t.m.control_md), Sense::click());
+    let rect = full.shrink2(vec2(if t.soft() { 6.0 } else { 0.0 }, 0.0));
     response
         .widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::Button, true, active, label));
+    if active && !t.soft() {
+        ui.painter().rect_filled(
+            Rect::from_min_size(rect.min, vec2(2.0, rect.height())),
+            0,
+            t.p.border_selected,
+        );
+    }
     let bg = if active {
-        t.p.bg_sunken
+        t.p.bg_selected
     } else if response.hovered() {
         t.p.bg_hover
     } else {
@@ -1015,10 +1158,8 @@ fn title_text(app: &App) -> String {
         },
     }
 }
-fn table_panel(app: &mut App, ui: &mut egui::Ui) {
-    let t = Theme::of(ui);
-    let lang = app.lang;
-    let total = match (&app.catalog.view, &app.catalog.category) {
+fn table_total(app: &App) -> u64 {
+    match (&app.catalog.view, &app.catalog.category) {
         (ProductView::LowStock, _) => app.data.counts.low_stock,
         (ProductView::OutOfStock, _) => app.data.counts.out_of_stock,
         (ProductView::NotForSale, _) => app.data.counts.not_for_sale,
@@ -1030,48 +1171,11 @@ fn table_panel(app: &mut App, ui: &mut egui::Ui) {
             .find(|(n, _)| n == c)
             .map_or(0, |(_, n)| *n),
         (ProductView::All, None) => app.data.counts.total,
-    };
-    ui.spacing_mut().item_spacing.y = space::S3;
-    ui.horizontal(|ui| {
-        ui.label(t.text(title_text(app), type_scale::TITLE));
-        ui.label(t.muted(format::count(total), type_scale::BODY));
-        ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
-            ui.spacing_mut().item_spacing.x = space::S2;
-            let add = w::button(lang.text("เพิ่มสินค้า", "Add product")).icon(Icon::Plus);
-            let add = if app.catalog.editor.is_some() {
-                add
-            } else {
-                add.primary()
-            };
-            if add.enabled(!app.busy).show(ui).clicked() {
-                open_editor(app, None);
-            }
-            if w::button(lang.text("นำเข้า CSV", "Import CSV"))
-                .enabled(!app.busy && !app.catalog.dirty())
-                .show(ui)
-                .clicked()
-            {
-                app.catalog.import = Some(Default::default());
-            }
-            if w::button(lang.text("ส่งออก", "Export"))
-                .icon(Icon::Download)
-                .enabled(!app.busy && app.data.counts.total > 0)
-                .tooltip(lang.text(
-                    "บันทึกสินค้าทั้งหมดเป็นไฟล์ CSV ในโฟลเดอร์ข้อมูล",
-                    "Save every product as CSV in the data folder",
-                ))
-                .show(ui)
-                .clicked()
-            {
-                app.export_products();
-            }
-        });
-    });
-    if app.catalog.selected.is_empty() {
-        filter_bar(app, ui);
-    } else {
-        bulk_bar(app, ui);
     }
+}
+fn table_panel(app: &mut App, ui: &mut egui::Ui) {
+    ui.spacing_mut().item_spacing.y = space::S3;
+    filter_bar(app, ui);
     table(app, ui);
 }
 fn filter_bar(app: &mut App, ui: &mut egui::Ui) {
@@ -1175,86 +1279,6 @@ fn truncate(text: &str, max: usize) -> String {
         format!("{}…", text.chars().take(max - 1).collect::<String>())
     }
 }
-fn bulk_bar(app: &mut App, ui: &mut egui::Ui) {
-    let t = Theme::of(ui);
-    let lang = app.lang;
-    let ids: Vec<Uuid> = app.catalog.selected.iter().copied().collect();
-    let all_off = app
-        .data
-        .products
-        .iter()
-        .filter(|p| app.catalog.selected.contains(&p.id))
-        .all(|p| !p.on_sale);
-    let height = t.m.control_lg;
-    let (rect, _) = ui.allocate_exact_size(vec2(ui.available_width(), height), Sense::hover());
-    ui.painter()
-        .rect_filled(rect, CornerRadius::same(t.radius(8)), t.p.bg_inverse);
-    let mut child = ui.new_child(
-        egui::UiBuilder::new()
-            .max_rect(rect.shrink2(vec2(space::S3, 0.0)))
-            .layout(egui::Layout::left_to_right(Align::Center)),
-    );
-    let ui = &mut child;
-    ui.spacing_mut().item_spacing.x = space::S2;
-    let fg = t.p.fg_inverse;
-    ui.label(
-        RichText::new(format!("{} {}", lang.text("เลือก", "Selected"), ids.len()))
-            .font(t.strong_font(type_scale::BODY))
-            .color(fg),
-    );
-    ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
-        let inverse_button = |ui: &mut egui::Ui, icon: Icon, label: &str| -> egui::Response {
-            let g =
-                ui.painter()
-                    .layout_no_wrap(label.to_owned(), t.strong_font(type_scale::BODY), fg);
-            let (r, resp) =
-                ui.allocate_exact_size(vec2(g.size().x + 42.0, height - 10.0), Sense::click());
-            resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, label));
-            if resp.hovered() {
-                ui.painter()
-                    .rect_filled(r, t.radius(6), fg.gamma_multiply(0.15));
-            }
-            crate::ui::icons::paint_sized(
-                ui.painter(),
-                icon,
-                pos2(r.left() + 16.0, r.center().y),
-                16.0,
-                fg,
-            );
-            ui.painter().galley(
-                pos2(r.left() + 30.0, r.center().y - g.size().y / 2.0),
-                g,
-                fg,
-            );
-            w::focus_ring(ui, r, CornerRadius::same(t.radius(6)), &resp);
-            resp
-        };
-        if inverse_button(ui, Icon::Close, lang.text("ล้าง", "Clear")).clicked() {
-            app.catalog.selected.clear();
-        }
-        ui.add_enabled_ui(!app.busy, |ui| {
-            let (icon, label) = if all_off {
-                (Icon::Unlock, lang.text("เปิดขาย", "Resume selling"))
-            } else {
-                (Icon::Lock, lang.text("ปิดขาย", "Stop selling"))
-            };
-            if inverse_button(ui, icon, label).clicked() {
-                app.catalog.last_bulk = Some((ids.clone(), all_off));
-                app.send(Command::SetOnSale(ids.clone(), all_off));
-            }
-            if inverse_button(ui, Icon::Tag, lang.text("เปลี่ยนหมวด", "Category")).clicked()
-            {
-                app.catalog.bulk_category = Some(String::new());
-            }
-            if inverse_button(ui, Icon::Options, lang.text("ชุดตัวเลือก", "Option set")).clicked()
-            {
-                app.error = None;
-                app.option_sets.bulk = Some((None, true));
-            }
-        });
-    });
-}
-
 struct Columns {
     check: f32,
     name: f32,

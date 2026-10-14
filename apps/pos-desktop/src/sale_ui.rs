@@ -2085,10 +2085,6 @@ fn category_chips(app: &mut App, ui: &mut egui::Ui) {
             });
         });
 }
-/// Side navigation row with a count (categories, saved views).
-pub fn nav_item(ui: &mut egui::Ui, t: &Theme, label: &str, n: u64, active: bool) -> egui::Response {
-    nav_row(ui, t, label, n, active, None)
-}
 /// Navigation row: soft = inset rounded row, square = full-width row with
 /// a 2 px selected bar; optional category dot.
 pub fn nav_row(
