@@ -3,7 +3,7 @@
 //! with the table; tapping a table loads it into the bill panel.
 use crate::{
     app::App,
-    ui::{Icon, Theme, format, space, type_scale, w},
+    ui::{Icon, Theme, format, space, tokens::radius, type_scale, w},
     worker::Command,
 };
 use eframe::egui::{self, Align, Align2, Sense, Stroke, StrokeKind, pos2, vec2};
@@ -203,7 +203,7 @@ pub fn floor(app: &mut App, ui: &mut egui::Ui) {
                 let min_w = if t.touch() { 176.0 } else { 152.0 };
                 let cols = (((width + gap) / (min_w + gap)).floor() as usize).max(1);
                 let card_w = ((width - gap * (cols - 1) as f32) / cols as f32).floor();
-                let card_h = if t.touch() { 124.0 } else { 104.0 };
+                let card_h = if t.touch() { 128.0 } else { 108.0 };
                 ui.horizontal_wrapped(|ui| {
                     ui.spacing_mut().item_spacing = vec2(gap, gap);
                     for table in tables.iter().filter(|x| &x.zone == zone) {
@@ -215,55 +215,74 @@ pub fn floor(app: &mut App, ui: &mut egui::Ui) {
                         // Move mode: only free tables are targets.
                         let enabled = !app.busy && (!moving || (!busy && !current));
                         let waiting = bill.map_or(0, |c| unsent(app, c));
-                        let (bg, border, stroke) = if current {
-                            (t.p.accent_soft, t.p.accent_bg, 3.0)
-                        } else if busy {
-                            (t.p.accent_soft, t.p.border_selected, 2.0)
-                        } else {
-                            (t.p.bg_surface, t.p.border_default, 1.0)
-                        };
-                        let bg = if resp.hovered() && enabled { t.p.bg_hover } else { bg };
-                        ui.painter().rect(
-                            rect,
-                            t.control_radius(),
-                            bg,
-                            Stroke::new(stroke, border),
-                            StrokeKind::Inside,
-                        );
+                        // design v0.2: free = dashed outline; seated = paper
+                        // card with a status stripe and a status badge.
+                        let r = t.radius(radius::LG);
                         let faded = moving && !enabled;
                         let fg = if faded { t.p.fg_subtle } else { t.p.fg_default };
-                        let pad = space::S3;
+                        let pad = if t.touch() { space::S3 } else { 10.0 };
+                        let kitchen_open = bill.is_some_and(|c| {
+                            app.data
+                                .kitchen
+                                .iter()
+                                .any(|k| k.cart_id == c.id && k.bumped_at.is_none())
+                        });
+                        if busy || current {
+                            let bg = if resp.hovered() && enabled {
+                                t.p.bg_hover
+                            } else {
+                                t.p.bg_raised
+                            };
+                            let edge = if current {
+                                Stroke::new(2.0, t.p.border_selected)
+                            } else {
+                                Stroke::new(1.0, t.p.border_subtle)
+                            };
+                            ui.painter().rect_filled(rect, r, bg);
+                            ui.painter().rect_stroke(rect, r, edge, StrokeKind::Inside);
+                            let stripe = if waiting > 0 {
+                                t.p.warning_solid
+                            } else {
+                                t.p.info_solid
+                            };
+                            let inner = rect.shrink(edge.width);
+                            let ir = r.saturating_sub(edge.width as u8);
+                            ui.painter().rect_filled(
+                                egui::Rect::from_min_size(inner.min, vec2(3.0, inner.height())),
+                                egui::CornerRadius { nw: ir, sw: ir, ne: 0, se: 0 },
+                                stripe,
+                            );
+                        } else {
+                            if resp.hovered() && enabled {
+                                ui.painter().rect_filled(rect, r, t.p.bg_hover);
+                            }
+                            dashed_rect(ui, rect.shrink(0.5), t.p.border_control);
+                        }
                         ui.painter().text(
-                            rect.min + vec2(pad, pad),
+                            rect.min + vec2(pad + 2.0, pad),
                             Align2::LEFT_TOP,
                             &table.name,
                             t.strong_font(type_scale::TITLE),
                             fg,
                         );
+                        let guests = bill.map_or(0, |c| c.guests);
                         let seats = if table.seats > 0 {
-                            format!("{} {}", table.seats, lang.text("ที่", "seats"))
+                            format!("{guests}/{} {}", table.seats, lang.text("ที่", "seats"))
                         } else {
                             String::new()
                         };
                         ui.painter().text(
-                            pos2(rect.right() - pad, rect.top() + pad + 4.0),
+                            pos2(rect.right() - pad, rect.top() + pad + 2.0),
                             Align2::RIGHT_TOP,
                             seats,
-                            t.font(type_scale::CAPTION),
+                            t.font(type_scale::LABEL),
                             t.p.fg_muted,
                         );
                         match bill {
                             Some(cart) => {
                                 let total = app
                                     .price_cart(cart)
-                                    .map_or("—".into(), |p| format::baht(p.total));
-                                ui.painter().text(
-                                    pos2(rect.left() + pad, rect.bottom() - pad),
-                                    Align2::LEFT_BOTTOM,
-                                    total,
-                                    t.strong_font(type_scale::MONEY),
-                                    fg,
-                                );
+                                    .map_or("—".into(), |p| format::money(p.total));
                                 let since = app
                                     .data
                                     .kitchen
@@ -271,37 +290,62 @@ pub fn floor(app: &mut App, ui: &mut egui::Ui) {
                                     .filter(|k| k.cart_id == cart.id)
                                     .map(|k| k.created_at)
                                     .min();
-                                let mut info = Vec::new();
-                                if current {
-                                    info.push(lang.text("เปิดอยู่", "Open").to_owned());
-                                }
-                                if cart.guests > 0 {
-                                    info.push(format!("{} {}", cart.guests, lang.text("คน", "guests")));
-                                }
-                                if let Some(at) = since {
-                                    info.push(format!("{} {}", (now - at).max(0) / 60, lang.text("นาที", "min")));
-                                }
+                                let badge_h = if t.touch() { 22.0 } else { 18.0 };
+                                let line_y = rect.bottom() - pad - badge_h - space::S1;
+                                let minutes = since.map_or(String::new(), |at| {
+                                    format!("{} {}", (now - at).max(0) / 60, lang.text("นาที", "min"))
+                                });
                                 ui.painter().text(
-                                    pos2(rect.left() + pad, rect.top() + pad + 28.0),
-                                    Align2::LEFT_TOP,
-                                    info.join(" · "),
-                                    t.font(type_scale::LABEL),
+                                    pos2(rect.left() + pad + 2.0, line_y),
+                                    Align2::LEFT_BOTTOM,
+                                    if current {
+                                        format!("{} {minutes}", lang.text("เปิดอยู่ ·", "Open ·"))
+                                    } else {
+                                        minutes
+                                    },
+                                    t.font(type_scale::CAPTION),
                                     t.p.fg_muted,
                                 );
-                                if waiting > 0 {
-                                    let label = format!("{} {waiting}", lang.text("ยังไม่ส่ง", "unsent"));
-                                    ui.painter().text(
-                                        pos2(rect.right() - pad, rect.bottom() - pad),
-                                        Align2::RIGHT_BOTTOM,
-                                        label,
-                                        t.strong_font(type_scale::CAPTION),
+                                ui.painter().text(
+                                    pos2(rect.right() - pad, line_y),
+                                    Align2::RIGHT_BOTTOM,
+                                    total,
+                                    t.strong_font(type_scale::MONEY),
+                                    fg,
+                                );
+                                let badge = if waiting > 0 {
+                                    Some((
+                                        format!("{} {waiting}", lang.text("ยังไม่ส่งครัว", "Not sent")),
+                                        t.p.warning_bg,
                                         t.p.warning_fg,
+                                    ))
+                                } else if kitchen_open {
+                                    Some((
+                                        lang.text("กำลังทำ", "In kitchen").to_owned(),
+                                        t.p.info_bg,
+                                        t.p.info_fg,
+                                    ))
+                                } else {
+                                    None
+                                };
+                                if let Some((text, bg, color)) = badge {
+                                    let b = egui::Rect::from_min_max(
+                                        pos2(rect.left() + pad + 2.0, rect.bottom() - pad - badge_h),
+                                        pos2(rect.right() - pad, rect.bottom() - pad),
+                                    );
+                                    ui.painter().rect_filled(b, t.radius(radius::SM), bg);
+                                    ui.painter().text(
+                                        pos2(b.left() + space::S2, b.center().y),
+                                        Align2::LEFT_CENTER,
+                                        text,
+                                        t.strong_font(type_scale::CAPTION),
+                                        color,
                                     );
                                 }
                             }
                             None => {
                                 ui.painter().text(
-                                    pos2(rect.left() + pad, rect.bottom() - pad),
+                                    pos2(rect.left() + pad + 2.0, rect.bottom() - pad),
                                     Align2::LEFT_BOTTOM,
                                     if current {
                                         lang.text("เปิดอยู่ · ยังไม่สั่ง", "Open · no items")
@@ -309,7 +353,7 @@ pub fn floor(app: &mut App, ui: &mut egui::Ui) {
                                         lang.text("ว่าง", "Free")
                                     },
                                     t.font(type_scale::BODY),
-                                    if faded { t.p.fg_subtle } else { t.p.success_fg },
+                                    t.p.fg_subtle,
                                 );
                             }
                         }
@@ -347,6 +391,23 @@ pub fn floor(app: &mut App, ui: &mut egui::Ui) {
             open_table(app, &table, bill.as_ref());
         }
     }
+}
+
+/// Dashed outline of a free table.
+fn dashed_rect(ui: &egui::Ui, rect: egui::Rect, color: egui::Color32) {
+    let pts = [
+        rect.left_top(),
+        rect.right_top(),
+        rect.right_bottom(),
+        rect.left_bottom(),
+        rect.left_top(),
+    ];
+    ui.painter().extend(egui::Shape::dashed_line(
+        &pts,
+        Stroke::new(1.0, color),
+        5.0,
+        4.0,
+    ));
 }
 
 /// Settings → Tables & zones.

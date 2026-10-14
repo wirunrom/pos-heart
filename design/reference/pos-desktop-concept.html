@@ -1,3 +1,8 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>POS Desktop Concept</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
 <style>
@@ -386,6 +391,9 @@ table.t{color:var(--ink);font-family:var(--ui);width:100%;border-collapse:separa
 .cmdk .res span.k{color:var(--subtle);font-size:12px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
+</head>
+<body>
+
 <div id="stage"><div id="win"></div></div>
 <script>
 (function(){
@@ -613,3 +621,6 @@ document.addEventListener('keydown',function(e){var t=e.target,inQ=t.id==='q',in
 draw();setTimeout(function(){var q=W.querySelector('#q');q&&q.focus({preventScroll:true})},50);
 })();
 </script>
+
+</body>
+</html>

@@ -101,18 +101,24 @@ pub fn apply(app: &mut App, ctx: &egui::Context) {
         }
         "palette-empty" => app.palette.open(),
         "display" => app.display_open = true,
+        "sell-pay" => app.sell.paying = Some(app.cart.id),
         "sell-cash" => {
+            app.sell.paying = Some(app.cart.id);
             if let Some(total) = total {
                 app.cash = format::money(sale_ui::quick_cash(total)[0]);
             }
             app.sell.current = Some(1);
         }
-        "sell-short" => app.cash = "100.00".into(),
+        "sell-short" => {
+            app.sell.paying = Some(app.cart.id);
+            app.cash = "100.00".into();
+        }
         "sell-note" => {
             app.sell.current = Some(0);
             app.sell.note_edit = Some(0);
         }
         "sell-review" => {
+            app.sell.paying = Some(app.cart.id);
             app.payment_method = PaymentMethod::Transfer;
             if let (Some(total), Some(shift)) = (total, app.data.shift.as_ref()) {
                 app.payment_review = Some(sale_ui::PaymentReview::new(
@@ -126,6 +132,7 @@ pub fn apply(app: &mut App, ctx: &egui::Context) {
             }
         }
         "sell-split" | "sell-split-review" => {
+            app.sell.paying = Some(app.cart.id);
             app.sell.split_pay = Some(sale_ui::SplitDraft {
                 transfer: "100.00".into(),
                 card: String::new(),
@@ -166,6 +173,7 @@ pub fn apply(app: &mut App, ctx: &egui::Context) {
         }
         "bill-split" => app.sell.bill_split = Some(sale_ui::BillSplit::preview(&app.cart)),
         "sell-large" => {
+            app.sell.paying = Some(app.cart.id);
             app.cash = "99999.00".into();
             app.sell.confirm_large_cash = true;
         }

@@ -125,65 +125,69 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
     let t = Theme::of(ui);
     keys(app, ui.ctx());
     let full = ui.available_rect_before_wrap();
+    ui.allocate_rect(full, Sense::hover());
+    let gap = t.pane_gap();
     let cart_w = t.cart_width(full.width() + 20.0);
     let cart_rect = Rect::from_min_size(full.min, vec2(cart_w, full.height()));
-    let right_rect =
-        Rect::from_min_max(pos2(cart_rect.right() + t.pane_gap(), full.top()), full.max);
-    ui.allocate_rect(full, Sense::hover());
-    let mut cart_ui = ui.new_child(
-        egui::UiBuilder::new()
-            .max_rect(cart_rect)
-            .layout(egui::Layout::top_down(Align::Min)),
-    );
-    t.surface()
-        .inner_margin(egui::Margin::same(space::S3 as i8))
-        .show(&mut cart_ui, |ui| {
-            ui.set_min_size(cart_rect.size() - vec2(24.0, 24.0));
-            ui.set_max_size(cart_rect.size() - vec2(24.0, 24.0));
-            cart_panel(app, ui);
-        });
-    let mut right_ui = ui.new_child(
-        egui::UiBuilder::new()
-            .max_rect(right_rect)
-            .layout(egui::Layout::top_down(Align::Min)),
-    );
-    t.surface()
-        .inner_margin(egui::Margin::same(space::S2 as i8))
-        .show(&mut right_ui, |ui| {
-            ui.set_min_size(right_rect.size() - vec2(16.0, 16.0));
-            ui.set_max_size(right_rect.size() - vec2(16.0, 16.0));
-            let tables = !crate::tables_ui::active(app).is_empty();
-            if !tables {
-                app.sell.pane = Pane::Products;
-                app.sell.moving = false;
-            }
-            if app.sell.pane == Pane::Tables {
-                ui.allocate_ui_with_layout(
-                    ui.available_size(),
-                    egui::Layout::top_down(Align::Min),
-                    |ui| crate::tables_ui::floor(app, ui),
-                );
-                return;
-            }
-            ui.horizontal_top(|ui| {
-                let nav_w = if right_rect.width() < 700.0 {
-                    140.0
-                } else {
-                    172.0
-                };
-                ui.allocate_ui_with_layout(
-                    vec2(nav_w, ui.available_height()),
-                    egui::Layout::top_down(Align::Min),
-                    |ui| categories(app, ui),
-                );
-                ui.add_space(space::S2);
-                ui.allocate_ui_with_layout(
-                    ui.available_size(),
-                    egui::Layout::top_down(Align::Min),
-                    |ui| products(app, ui),
-                );
-            });
-        });
+    let right = Rect::from_min_max(pos2(cart_rect.right() + gap, full.top()), full.max);
+    cart_pane(app, ui, cart_rect);
+    // Before the first data load the table list is still empty.
+    if app.ready && crate::tables_ui::active(app).is_empty() {
+        app.sell.pane = Pane::Products;
+        app.sell.moving = false;
+    }
+    let lang = app.lang;
+    if app.sell.pane == Pane::Tables {
+        w::pane_at(
+            ui,
+            right,
+            |ui| w::pane_title(ui, lang.text("โต๊ะ", "Tables")),
+            |ui| {
+                egui::Frame::new()
+                    .inner_margin(egui::Margin::same(space::S2 as i8))
+                    .show(ui, |ui| {
+                        ui.set_min_size(ui.available_size());
+                        crate::tables_ui::floor(app, ui);
+                    });
+            },
+        );
+    } else {
+        // Touch puts categories in a chip row above the grid (design v0.2).
+        let products_rect = if t.m.categories_as_chips {
+            right
+        } else {
+            let nav_w = if right.width() < 720.0 {
+                140.0
+            } else {
+                t.m.category_width
+            };
+            let nav = Rect::from_min_size(right.min, vec2(nav_w, right.height()));
+            w::pane_at(
+                ui,
+                nav,
+                |ui| w::pane_title(ui, lang.text("หมวดหมู่", "Categories")),
+                |ui| categories(app, ui),
+            );
+            Rect::from_min_max(pos2(nav.right() + gap, right.top()), right.max)
+        };
+        let count = format::count(app.data.products.len() as u64);
+        w::pane_at(
+            ui,
+            products_rect,
+            |ui| {
+                w::pane_title(ui, lang.text("สินค้า", "Products"));
+                w::pane_count(ui, &count);
+            },
+            |ui| {
+                egui::Frame::new()
+                    .inner_margin(egui::Margin::same(space::S2 as i8))
+                    .show(ui, |ui| {
+                        ui.set_min_size(ui.available_size());
+                        products(app, ui);
+                    });
+            },
+        );
+    }
     // A pay request the footer did not handle (no bill, Held tab) expires.
     app.sell.pay_requested = false;
 }
@@ -301,8 +305,7 @@ fn keys(app: &mut App, ctx: &egui::Context) {
 
 // ───────────────────────────── Cart ─────────────────────────────
 
-fn cart_panel(app: &mut App, ui: &mut egui::Ui) {
-    let t = Theme::of(ui);
+fn cart_pane(app: &mut App, ui: &mut egui::Ui, rect: Rect) {
     let lang = app.lang;
     // Table bills live on the floor, not in Held.
     let held: Vec<Cart> = app
@@ -310,218 +313,258 @@ fn cart_panel(app: &mut App, ui: &mut egui::Ui) {
         .into_iter()
         .filter(|c| c.table.is_none())
         .collect();
-    ui.spacing_mut().item_spacing.y = space::S2;
-    let tabs_rect = ui
-        .scope(|ui| {
-            w::tabs(
-                ui,
-                &mut app.sell.tab,
-                &[
-                    (CartTab::Current, lang.text("บิลปัจจุบัน", "Current bill"), None),
-                    (CartTab::Held, lang.text("พักไว้", "Held"), Some(held.len())),
-                ],
-            );
-        })
-        .response
-        .rect;
-    ui.painter().line_segment(
-        [
-            pos2(tabs_rect.left() - 4.0, tabs_rect.bottom() + 0.5),
-            pos2(
-                tabs_rect.left() + ui.available_width() + 4.0,
-                tabs_rect.bottom() + 0.5,
-            ),
-        ],
-        Stroke::new(1.0, t.p.border_default),
+    let lines = app.cart.lines.len() as u64;
+    let units: u64 = app.cart.lines.iter().map(|l| u64::from(l.quantity)).sum();
+    let summary = format!(
+        "{} {} · {} {}",
+        format::count(lines),
+        lang.noun(lines, "รายการ", "line", "lines"),
+        format::count(units),
+        lang.noun(units, "ชิ้น", "item", "items")
     );
+    let held_n = held.len();
+    let (mut head, mut body) = w::pane_uis(ui, rect);
+    w::pane_tabs(
+        &mut head,
+        &mut app.sell.tab,
+        &[
+            (CartTab::Current, lang.text("บิลปัจจุบัน", "Current bill"), None),
+            (CartTab::Held, lang.text("พักไว้", "Held"), Some(held_n)),
+        ],
+    );
+    if app.sell.tab == CartTab::Current && lines > 0 {
+        w::pane_count(&mut head, &summary);
+    }
     match app.sell.tab {
-        CartTab::Current => current_bill(app, ui),
-        CartTab::Held => held_list(app, ui, held),
+        CartTab::Current => current_bill(app, &mut body),
+        CartTab::Held => {
+            egui::Frame::new()
+                .inner_margin(egui::Margin::same(space::S2 as i8))
+                .show(&mut body, |ui| {
+                    ui.set_min_size(ui.available_size());
+                    held_list(app, ui, held);
+                });
+        }
     }
 }
 
 fn current_bill(app: &mut App, ui: &mut egui::Ui) {
     let t = Theme::of(ui);
     let lang = app.lang;
+    let pad_x = if t.touch() { 12 } else { 10 };
     // Header: bill name + actions.
-    ui.horizontal(|ui| {
-        let actions_w = t.m.control_md * 3.0 + space::S2 * 2.0;
-        ui.allocate_ui_with_layout(
-            vec2(ui.available_width() - actions_w - space::S2, t.m.control_lg),
-            egui::Layout::top_down(Align::Min),
-            |ui| {
-                ui.spacing_mut().item_spacing.y = 0.0;
-                if app.cart.table.is_some() {
-                    guests_caption(app, ui);
-                } else {
-                    ui.label(t.muted(lang.text("ชื่อบิล", "Bill name"), type_scale::CAPTION));
-                }
-                if app.sell.editing_label {
-                    let r = ui.add(
-                        egui::TextEdit::singleline(&mut app.cart.label)
-                            .id(Id::new("bill-label"))
-                            .font(t.strong_font(type_scale::TITLE))
-                            .hint_text(
-                                lang.text("โต๊ะ / ลูกค้า / กลับบ้าน", "Table / customer / takeaway"),
-                            )
-                            .desired_width(f32::INFINITY)
-                            .char_limit(160),
-                    );
-                    if !r.has_focus() && !r.gained_focus() && r.lost_focus() {
-                        app.sell.editing_label = false;
-                    }
-                    if !r.has_focus() && ui.memory(|m| m.focused().is_none()) {
-                        r.request_focus();
-                    }
-                    if ui.input(|i| i.key_pressed(Key::Enter) || i.key_pressed(Key::Escape)) {
-                        app.sell.editing_label = false;
-                    }
-                } else {
-                    let title = if app.cart.label.is_empty() {
-                        t.muted(
-                            lang.text("ไม่มีชื่อ · แตะเพื่อตั้ง", "Untitled · tap to name"),
-                            type_scale::TITLE,
-                        )
-                    } else {
-                        t.text(&app.cart.label, type_scale::TITLE)
-                    };
-                    let r = ui
-                        .add(egui::Label::new(title).truncate().sense(Sense::click()))
-                        .on_hover_text(lang.text("ตั้งชื่อบิล", "Name this bill"));
-                    if r.clicked() && !app.busy {
-                        app.sell.editing_label = true;
-                    }
-                }
-            },
-        );
-        ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
-            ui.spacing_mut().item_spacing.x = space::S2;
-            let has_lines = !app.cart.lines.is_empty() && !app.busy;
-            ui.add_enabled_ui(has_lines, |ui| {
-                let more =
-                    w::icon_button_sized(ui, Icon::More, lang.text("เพิ่มเติม", "More"), None, false);
-                egui::Popup::menu(&more)
-                    .frame(
-                        t.raised(2)
-                            .inner_margin(egui::Margin::same(space::S1 as i8)),
-                    )
-                    .width(220.0)
-                    .show(|ui| {
-                        if menu_row(
-                            ui,
-                            Icon::Pencil,
-                            lang.text("ตั้งชื่อบิล", "Name bill"),
-                            "",
-                            false,
-                        )
-                        .clicked()
-                        {
-                            app.sell.editing_label = true;
+    egui::Frame::new()
+        .inner_margin(egui::Margin::symmetric(
+            pad_x,
+            if t.touch() { 10 } else { 8 },
+        ))
+        .show(ui, |ui| {
+            ui.horizontal(|ui| {
+                let actions_w = t.m.control_md * 3.0 + space::S2 * 2.0;
+                ui.allocate_ui_with_layout(
+                    vec2(ui.available_width() - actions_w - space::S2, t.m.control_lg),
+                    egui::Layout::top_down(Align::Min),
+                    |ui| {
+                        ui.spacing_mut().item_spacing.y = 0.0;
+                        if app.cart.table.is_some() {
+                            guests_caption(app, ui);
+                        } else {
+                            ui.label(t.muted(lang.text("ชื่อบิล", "Bill name"), type_scale::CAPTION));
                         }
-                        if !crate::tables_ui::active(app).is_empty() {
-                            let label = if app.cart.table.is_some() {
-                                lang.text("ย้ายโต๊ะ", "Move to another table")
-                            } else {
-                                lang.text("ให้บิลนี้นั่งโต๊ะ", "Seat this bill at a table")
-                            };
-                            if menu_row(ui, Icon::Sell, label, "", false).clicked() {
-                                app.sell.moving = true;
-                                app.sell.pane = Pane::Tables;
+                        if app.sell.editing_label {
+                            let r =
+                                ui.add(
+                                    egui::TextEdit::singleline(&mut app.cart.label)
+                                        .id(Id::new("bill-label"))
+                                        .font(t.strong_font(type_scale::TITLE))
+                                        .hint_text(lang.text(
+                                            "โต๊ะ / ลูกค้า / กลับบ้าน",
+                                            "Table / customer / takeaway",
+                                        ))
+                                        .desired_width(f32::INFINITY)
+                                        .char_limit(160),
+                                );
+                            if !r.has_focus() && !r.gained_focus() && r.lost_focus() {
+                                app.sell.editing_label = false;
                             }
-                        }
-                        if app.data.promotions.iter().any(|p| p.is_coupon())
-                            && menu_row(
-                                ui,
-                                Icon::Tag,
-                                &if app.cart.coupons.is_empty() {
-                                    lang.text("ใส่คูปอง", "Enter coupon").to_owned()
-                                } else {
-                                    format!(
-                                        "{} · {}",
-                                        lang.text("คูปอง", "Coupons"),
-                                        app.cart.coupons.join(", ")
-                                    )
-                                },
-                                "",
-                                false,
-                            )
-                            .clicked()
-                        {
-                            app.promotions.coupon = Some(String::new());
-                        }
-                        if menu_row(
-                            ui,
-                            Icon::Printer,
-                            lang.text("ดูใบแจ้งยอด (เช็กบิล)", "Check bill"),
-                            "",
-                            false,
-                        )
-                        .clicked()
-                        {
-                            app.preview_check_bill();
-                        }
-                        if app.data.pricing.service_bp > 0 {
-                            let label = if app.cart.service_charge {
-                                lang.text(
-                                    "ไม่คิด service charge (กลับบ้าน)",
-                                    "No service charge (takeaway)",
+                            if !r.has_focus() && ui.memory(|m| m.focused().is_none()) {
+                                r.request_focus();
+                            }
+                            if ui.input(|i| i.key_pressed(Key::Enter) || i.key_pressed(Key::Escape))
+                            {
+                                app.sell.editing_label = false;
+                            }
+                        } else {
+                            let title = if app.cart.label.is_empty() {
+                                t.muted(
+                                    lang.text("ไม่มีชื่อ · แตะเพื่อตั้ง", "Untitled · tap to name"),
+                                    type_scale::TITLE,
                                 )
                             } else {
-                                lang.text("คิด service charge", "Add service charge")
+                                t.text(&app.cart.label, type_scale::TITLE)
                             };
-                            if menu_row(ui, Icon::Tag, label, "", false).clicked() {
-                                app.cart.service_charge = !app.cart.service_charge;
-                                app.payment_review = None;
+                            let r = ui
+                                .add(egui::Label::new(title).truncate().sense(Sense::click()))
+                                .on_hover_text(lang.text("ตั้งชื่อบิล", "Name this bill"));
+                            if r.clicked() && !app.busy {
+                                app.sell.editing_label = true;
                             }
                         }
-                        if menu_row(ui, Icon::Trash, lang.text("ล้างบิล", "Clear bill"), "", false)
+                    },
+                );
+                ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
+                    ui.spacing_mut().item_spacing.x = space::S2;
+                    let has_lines = !app.cart.lines.is_empty() && !app.busy;
+                    ui.add_enabled_ui(has_lines, |ui| {
+                        let more = w::icon_button_sized(
+                            ui,
+                            Icon::More,
+                            lang.text("เพิ่มเติม", "More"),
+                            None,
+                            false,
+                        );
+                        egui::Popup::menu(&more)
+                            .frame(
+                                t.raised(2)
+                                    .inner_margin(egui::Margin::same(space::S1 as i8)),
+                            )
+                            .width(220.0)
+                            .show(|ui| {
+                                if menu_row(
+                                    ui,
+                                    Icon::Pencil,
+                                    lang.text("ตั้งชื่อบิล", "Name bill"),
+                                    "",
+                                    false,
+                                )
+                                .clicked()
+                                {
+                                    app.sell.editing_label = true;
+                                }
+                                if !crate::tables_ui::active(app).is_empty() {
+                                    let label = if app.cart.table.is_some() {
+                                        lang.text("ย้ายโต๊ะ", "Move to another table")
+                                    } else {
+                                        lang.text("ให้บิลนี้นั่งโต๊ะ", "Seat this bill at a table")
+                                    };
+                                    if menu_row(ui, Icon::Sell, label, "", false).clicked() {
+                                        app.sell.moving = true;
+                                        app.sell.pane = Pane::Tables;
+                                    }
+                                }
+                                if app.data.promotions.iter().any(|p| p.is_coupon())
+                                    && menu_row(
+                                        ui,
+                                        Icon::Tag,
+                                        &if app.cart.coupons.is_empty() {
+                                            lang.text("ใส่คูปอง", "Enter coupon").to_owned()
+                                        } else {
+                                            format!(
+                                                "{} · {}",
+                                                lang.text("คูปอง", "Coupons"),
+                                                app.cart.coupons.join(", ")
+                                            )
+                                        },
+                                        "",
+                                        false,
+                                    )
+                                    .clicked()
+                                {
+                                    app.promotions.coupon = Some(String::new());
+                                }
+                                if menu_row(
+                                    ui,
+                                    Icon::Printer,
+                                    lang.text("ดูใบแจ้งยอด (เช็กบิล)", "Check bill"),
+                                    "",
+                                    false,
+                                )
+                                .clicked()
+                                {
+                                    app.preview_check_bill();
+                                }
+                                if app.data.pricing.service_bp > 0 {
+                                    let label = if app.cart.service_charge {
+                                        lang.text(
+                                            "ไม่คิด service charge (กลับบ้าน)",
+                                            "No service charge (takeaway)",
+                                        )
+                                    } else {
+                                        lang.text("คิด service charge", "Add service charge")
+                                    };
+                                    if menu_row(ui, Icon::Tag, label, "", false).clicked() {
+                                        app.cart.service_charge = !app.cart.service_charge;
+                                        app.payment_review = None;
+                                    }
+                                }
+                                if menu_row(
+                                    ui,
+                                    Icon::Trash,
+                                    lang.text("ล้างบิล", "Clear bill"),
+                                    "",
+                                    false,
+                                )
+                                .clicked()
+                                {
+                                    app.clear_cart();
+                                }
+                            });
+                        let has_current =
+                            app.sell.current.is_some_and(|c| c < app.cart.lines.len());
+                        ui.add_enabled_ui(has_current, |ui| {
+                            if w::icon_button(
+                                ui,
+                                Icon::Note,
+                                lang.text("หมายเหตุบรรทัด (F6)", "Line note (F6)"),
+                            )
                             .clicked()
-                        {
-                            app.clear_cart();
-                        }
+                            {
+                                app.sell.note_edit = app.sell.current;
+                            }
+                        });
                     });
-                let has_current = app.sell.current.is_some_and(|c| c < app.cart.lines.len());
-                ui.add_enabled_ui(has_current, |ui| {
-                    if w::icon_button(
-                        ui,
-                        Icon::Note,
-                        lang.text("หมายเหตุบรรทัด (F6)", "Line note (F6)"),
-                    )
-                    .clicked()
-                    {
-                        app.sell.note_edit = app.sell.current;
-                    }
                 });
             });
         });
-    });
-    // Keep room for scrollable bill lines. A split has more fields than can
-    // fit on a short touch screen, so only its payment details may scroll.
-    let footer_limit = (ui.available_height() - t.m.row_height * 2.0 - space::S2)
-        .max(t.m.control_lg + t.m.control_md * 2.0 + space::S4)
-        .min(ui.available_height());
-    let panel = egui::Panel::bottom("cart-footer").max_size(footer_limit);
-    let panel = if !app.cart.lines.is_empty() {
-        panel.exact_size(footer_limit)
-    } else {
-        panel
-    };
-    panel
+    egui::Panel::bottom("cart-footer")
         .resizable(false)
         .show_separator_line(false)
-        .frame(egui::Frame::NONE.inner_margin(egui::Margin {
-            left: 0,
-            right: 0,
-            top: space::S2 as i8,
-            bottom: 0,
-        }))
+        .frame(
+            egui::Frame::NONE.inner_margin(egui::Margin::same(if t.soft() { 10 } else { pad_x })),
+        )
         .show(ui, |ui| {
-            ui.spacing_mut().item_spacing.y = space::S2;
+            let top = ui.max_rect().top() - if t.soft() { 10.0 } else { pad_x as f32 };
+            let x = ui.max_rect().x_range().expand(pad_x as f32);
+            ui.painter().hline(
+                x,
+                top + 0.5,
+                Stroke::new(
+                    1.0,
+                    if t.soft() {
+                        t.p.border_subtle
+                    } else {
+                        t.p.border_default
+                    },
+                ),
+            );
+            ui.spacing_mut().item_spacing.y = space::S1 + 2.0;
             footer(app, ui);
         });
     egui::CentralPanel::no_frame().show(ui, |ui| {
         // Panels reserve layout space; explicitly clip tall cart rows to it.
         ui.set_clip_rect(ui.clip_rect().intersect(ui.max_rect()));
+        if paying(app) && !app.cart.lines.is_empty() {
+            let out = egui::ScrollArea::vertical()
+                .id_salt("cart-payment")
+                .auto_shrink([false, false])
+                .show(ui, |ui| {
+                    egui::Frame::new()
+                        .inner_margin(egui::Margin::symmetric(pad_x, 4))
+                        .show(ui, |ui| payment_panel(app, ui));
+                });
+            w::scroll_fade(ui, &out, Theme::of(ui).p.bg_surface);
+            return;
+        }
         let out = egui::ScrollArea::vertical()
             .id_salt("cart-lines")
             .auto_shrink([false, false])
@@ -561,11 +604,16 @@ fn current_bill(app: &mut App, ui: &mut egui::Ui) {
                         );
                     }
                 }
-                let mut i = 0;
-                while i < app.cart.lines.len() {
-                    cart_line(app, ui, i);
-                    i += 1;
-                }
+                egui::Frame::new()
+                    .inner_margin(egui::Margin::symmetric(if t.soft() { 6 } else { 0 }, 2))
+                    .show(ui, |ui| {
+                        ui.spacing_mut().item_spacing.y = if t.soft() { 4.0 } else { 0.0 };
+                        let mut i = 0;
+                        while i < app.cart.lines.len() {
+                            cart_line(app, ui, i);
+                            i += 1;
+                        }
+                    });
             });
         w::scroll_fade(ui, &out, Theme::of(ui).p.bg_surface);
     });
@@ -736,12 +784,19 @@ fn cart_line(app: &mut App, ui: &mut egui::Ui, index: usize) {
     let amount = gross
         .map(|g| Money::from_satang(g.satang() - line_off.map_or(0, |o| o.satang())).unwrap_or(g))
         .map_or("—".into(), format::money);
-    let pad = if t.touch() { space::S3 } else { space::S2 };
+    let pad = if t.touch() { space::S3 } else { 8.0 };
+    let pad_y = if t.touch() {
+        space::S3
+    } else if t.soft() {
+        7.0
+    } else {
+        6.0
+    };
     let width = ui.available_width();
-    let qty_w = 34.0;
+    let qty_w = if t.touch() { 36.0 } else { 30.0 };
     let amount_font = t.font(type_scale::MONEY);
     let amount_w = w::text_width(ui, &amount, amount_font.clone());
-    let name_w = (width - pad * 2.0 - qty_w - space::S3 * 2.0 - amount_w).max(60.0);
+    let name_w = (width - pad * 2.0 - qty_w - space::S2 * 2.0 - amount_w).max(60.0);
     let (name_g, _) = crate::ui::text::wrapped(
         ui.painter(),
         &name,
@@ -836,7 +891,7 @@ fn cart_line(app: &mut App, ui: &mut egui::Ui, index: usize) {
     }
     let sub = (!job.text.is_empty()).then(|| ui.painter().layout_job(job));
     let sub_h = sub.as_ref().map_or(0.0, |g| g.size().y + 2.0);
-    let row_h = (name_g.size().y.max(26.0) + sub_h + pad * 2.0).max(t.m.row_height);
+    let row_h = (name_g.size().y + sub_h + pad_y * 2.0).max(t.m.row_height);
     let (rect, response) = ui.allocate_exact_size(vec2(width, row_h), Sense::click());
     response.widget_info(|| {
         egui::WidgetInfo::selected(
@@ -861,50 +916,49 @@ fn cart_line(app: &mut App, ui: &mut egui::Ui, index: usize) {
     } else {
         Color32::TRANSPARENT
     };
-    ui.painter()
-        .rect_filled(rect, CornerRadius::same(t.radius(6)), bg);
+    // The editor bar of the current line shares its selected background.
+    let line_r = CornerRadius::same(t.radius(8));
+    ui.painter().rect_filled(rect, line_r, bg);
     if let Some(f) = flash {
+        ui.painter()
+            .rect_filled(rect, line_r, t.p.accent_soft.gamma_multiply(f));
+    }
+    if current && !t.soft() {
         ui.painter().rect_filled(
-            rect,
-            CornerRadius::same(t.radius(6)),
-            t.p.accent_soft.gamma_multiply(f),
+            Rect::from_min_size(rect.min, vec2(2.0, rect.height())),
+            0,
+            t.p.border_selected,
         );
     }
+    let gap_above = ui.spacing().item_spacing.y / 2.0;
     if index > 0 && !current && app.sell.current != Some(index - 1) {
-        ui.painter().line_segment(
-            [
-                rect.left_top() + vec2(pad, 0.0),
-                rect.right_top() - vec2(pad, 0.0),
-            ],
+        ui.painter().hline(
+            if t.soft() {
+                rect.x_range().shrink(pad)
+            } else {
+                rect.x_range()
+            },
+            rect.top() - gap_above,
             Stroke::new(1.0, t.p.border_subtle),
         );
     }
-    let qty_rect = Rect::from_min_size(rect.min + vec2(pad, pad), vec2(qty_w, 26.0));
-    ui.painter().rect_filled(
-        qty_rect,
-        CornerRadius::same(t.radius(6)),
-        if current {
-            t.p.bg_inverse
-        } else {
-            t.p.bg_sunken
-        },
-    );
+    let qty_rect = Rect::from_min_size(rect.min + vec2(pad, pad_y), vec2(qty_w, 20.0));
     ui.painter().text(
-        qty_rect.center(),
-        Align2::CENTER_CENTER,
+        pos2(qty_rect.right(), rect.top() + pad_y),
+        Align2::RIGHT_TOP,
         format::count(u64::from(line.quantity)),
-        t.strong_font(type_scale::MONEY_SM),
+        t.strong_font(type_scale::MONEY),
         if current {
-            t.p.fg_inverse
-        } else {
             t.p.fg_default
+        } else {
+            t.p.fg_muted
         },
     );
-    let name_pos = pos2(qty_rect.right() + space::S3, rect.top() + pad + 2.0);
+    let name_pos = pos2(qty_rect.right() + space::S2, rect.top() + pad_y);
     let name_h = name_g.size().y;
     ui.painter().galley(name_pos, name_g, t.p.fg_default);
     ui.painter().text(
-        pos2(rect.right() - pad, rect.top() + pad + 2.0),
+        pos2(rect.right() - pad, rect.top() + pad_y),
         Align2::RIGHT_TOP,
         &amount,
         amount_font,
@@ -1311,11 +1365,8 @@ pub fn quick_cash(total: Money) -> Vec<Money> {
         .collect()
 }
 
-/// "Send to kitchen (F10)" when the shop has tables and something changed.
-fn kitchen_button(app: &mut App, ui: &mut egui::Ui) {
-    if app.data.tables.is_empty() {
-        return;
-    }
+/// What "Send to kitchen" would send now: (short label, full label, ready).
+fn kitchen_state(app: &App) -> (String, String, bool) {
     let lang = app.lang;
     let kitchen = |id: uuid::Uuid| app.known.get(&id).is_some_and(|p| p.kitchen);
     let changes = pos_domain::kitchen_changes(&app.cart, kitchen).0;
@@ -1326,42 +1377,55 @@ fn kitchen_button(app: &mut App, ui: &mut egui::Ui) {
         .filter(|d| *d < 0)
         .sum::<i64>()
         .abs();
-    let label = match (new, cancel) {
-        (0, 0) => lang.text("ส่งครัวแล้ว", "Kitchen up to date").to_owned(),
-        (n, 0) => format!(
-            "{} · {} {n}",
-            lang.text("ส่งครัว", "Send to kitchen"),
-            lang.text("ใหม่", "new")
+    let send = lang.text("ส่งครัว", "Send to kitchen");
+    let (short, full) = match (new, cancel) {
+        (0, 0) => (
+            lang.text("ส่งแล้ว", "Sent").to_owned(),
+            lang.text("ส่งครัวแล้ว", "Kitchen up to date").to_owned(),
         ),
-        (0, c) => format!("{} · {c}", lang.text("ส่งยกเลิกเข้าครัว", "Send cancellation")),
-        (n, c) => format!("{} · +{n} / −{c}", lang.text("ส่งครัว", "Send to kitchen")),
+        (n, 0) => (
+            format!("{send} · {n}"),
+            format!("{send} · {} {n}", lang.text("ใหม่", "new")),
+        ),
+        (0, c) => (
+            format!("{send} · −{c}"),
+            format!("{} · {c}", lang.text("ส่งยกเลิกเข้าครัว", "Send cancellation")),
+        ),
+        (n, c) => (
+            format!("{send} · +{n}/−{c}"),
+            format!("{send} · +{n} / −{c}"),
+        ),
     };
-    let ready = !changes.is_empty() && !app.busy;
-    // Short windows keep bill lines visible with a smaller button.
-    let t = Theme::of(ui);
-    let short = ui.ctx().content_rect().height() < if t.touch() { 900.0 } else { 640.0 };
-    let clicked = w::button(label)
-        .icon(Icon::Sell)
-        .size(if short { w::Size::Md } else { w::Size::Lg })
-        .fill()
-        .shortcut("F10")
-        .enabled(ready)
-        .show(ui)
-        .clicked();
-    if (clicked || std::mem::take(&mut app.sell.kitchen_requested)) && ready {
+    (short, full, !changes.is_empty() && !app.busy)
+}
+/// F10 / the toolbar may ask to send while the button is not drawn.
+fn handle_kitchen_request(app: &mut App) {
+    if std::mem::take(&mut app.sell.kitchen_requested)
+        && !app.data.tables.is_empty()
+        && kitchen_state(app).2
+    {
         app.send_kitchen();
     }
 }
+fn paying(app: &App) -> bool {
+    app.sell.paying == Some(app.cart.id)
+}
+fn start_paying(app: &mut App) {
+    app.sell.paying = Some(app.cart.id);
+    app.sell.focus_cash = true;
+}
+
+/// The bill summary pinned under the lines (OrderSummary): rows, amount
+/// due and the step's buttons. Step 1 = Pay (F9); step 2 = confirm.
 fn footer(app: &mut App, ui: &mut egui::Ui) {
     let t = Theme::of(ui);
     let lang = app.lang;
+    handle_kitchen_request(app);
     if app.cart.lines.is_empty() {
         if app.data.shift.is_none() {
-            ui.add_space(space::S2);
             shift_gate(app, ui);
         } else {
-            ui.add_space(space::S2);
-            w::button(lang.text("รับเงิน", "Take payment"))
+            w::button(lang.text("ชำระเงิน", "Pay"))
                 .primary()
                 .size(w::Size::Xl)
                 .fill()
@@ -1370,57 +1434,21 @@ fn footer(app: &mut App, ui: &mut egui::Ui) {
                 .show(ui);
         }
         app.sell.pay_requested = false;
+        app.sell.paying = None;
         return;
-    }
-    if app.cart.table.is_some() {
-        if app.sell.paying != Some(app.cart.id) {
-            ordering_footer(app, ui);
-            return;
-        }
-        ui.horizontal(|ui| {
-            if w::button(lang.text("กลับไปสั่ง", "Back to ordering"))
-                .icon(Icon::ChevronLeft)
-                .ghost()
-                .size(w::Size::Sm)
-                .shortcut("Esc")
-                .show(ui)
-                .clicked()
-            {
-                app.sell.paying = None;
-            }
-        });
-        let waiting = crate::tables_ui::unsent(app, &app.cart);
-        if waiting > 0 {
-            w::inline_error(
-                ui,
-                &format!(
-                    "{} {waiting} {}",
-                    lang.text("ยังไม่ได้ส่งครัว", "Not sent to the kitchen:"),
-                    lang.text("รายการ", "items")
-                ),
-            );
-        }
     }
     let price = app.bill_price();
     let total = price.as_ref().map(|p| p.total).map_err(|e| *e);
-    let units: u64 = app.cart.lines.iter().map(|l| u64::from(l.quantity)).sum();
-    let cash = format::parse_money(&app.cash).ok();
-    let change = total
-        .as_ref()
-        .ok()
-        .and_then(|t| cash.and_then(|c| t.change_from(c).ok()));
-    // Short windows (touch at 1000×700) merge rows so several bill lines stay visible.
-    let compact = ui.ctx().content_rect().height() < if t.touch() { 900.0 } else { 640.0 };
+    let compact = ui.ctx().content_rect().height() < if t.touch() { 760.0 } else { 640.0 };
+    summary_rows(app, ui, &price, compact);
+    let (rect, _) = ui.allocate_exact_size(vec2(ui.available_width(), 1.0), Sense::hover());
+    ui.painter().hline(
+        rect.x_range(),
+        rect.center().y,
+        Stroke::new(1.0, t.p.border_default),
+    );
     ui.horizontal(|ui| {
         ui.label(t.text(lang.text("ยอดชำระ", "Amount due"), type_scale::BODY_STRONG));
-        ui.label(t.muted(
-            format!(
-                "{} {}",
-                format::count(units),
-                lang.noun(units, "ชิ้น", "item", "items")
-            ),
-            type_scale::CAPTION,
-        ));
         ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
             ui.label(
                 RichText::new(total.as_ref().map_or("—".into(), |m| format::baht(*m))).font(
@@ -1433,234 +1461,66 @@ fn footer(app: &mut App, ui: &mut egui::Ui) {
             );
         });
     });
-    let action_height = if app.data.shift.is_some() {
-        t.m.control_lg
-    } else {
-        t.m.control_lg * 2.0 + space::S2
-    };
-    let details_height = (ui.available_height() - action_height - space::S2).max(0.0);
-    egui::ScrollArea::vertical()
-        .id_salt("cart-payment-details")
-        .max_height(details_height)
-        .auto_shrink([false, true])
-        .show(ui, |ui| {
-    t.sunken().show(ui, |ui| {
-        ui.set_width(ui.available_width());
-        ui.spacing_mut().item_spacing.y = space::S1;
-        if !compact {
-            w::kv(
-                ui,
-                &format!(
-                    "{} · {} {} · {} {}",
-                    lang.text("รวมรายการ", "Items total"),
-                    app.cart.lines.len(),
-                    lang.noun(app.cart.lines.len() as u64, "รายการ", "line", "lines"),
-                    format::count(units),
-                    lang.noun(units, "ชิ้น", "item", "items")
-                ),
-                &price.as_ref().map_or("—".into(), |p| format::money(p.subtotal)),
-                w::Value::Plain,
-            );
-        }
-        let promo_names: Vec<String> = app
-            .promoted(&app.cart)
-            .map(|p| p.used())
-            .unwrap_or_default()
-            .iter()
-            .filter_map(|id| app.data.promotions.iter().find(|p| p.id == *id))
-            .map(|p| p.name.clone())
-            .collect();
-        if app.cart.has_discount() || !promo_names.is_empty() {
-            let mut label = lang.text("ส่วนลด", "Discount").to_owned();
-            if !promo_names.is_empty() {
-                label = format!("{label} · {} {}", lang.text("โปร", "promo"), promo_names.join(", "));
-            }
-            if let Some(rule) = app.cart.discount {
-                label = format!(
-                    "{label} · {} {}",
-                    lang.text("ทั้งบิล", "bill"),
-                    format::discount_rule(rule)
-                );
-            }
-            if !app.cart.discount_reason.is_empty() {
-                label = format!("{label} · {}", app.cart.discount_reason);
-            }
-            match &price {
-                Ok(p) => w::kv(ui, &label, &format::minus(p.discounts()), w::Value::Danger),
-                Err(_) => w::inline_error(
-                    ui,
-                    lang.text(
-                        "ส่วนลดมากกว่ายอด · แก้ส่วนลด (F7 / F8)",
-                        "A discount is more than the price · fix it (F7 / F8)",
-                    ),
-                ),
-            }
-        }
-        if let Ok(p) = &price {
-            let mut rows: Vec<(String, String)> = Vec::new();
-            if p.service_charge.satang() > 0 {
-                rows.push((
-                    format!(
-                        "Service charge {}",
-                        format::discount_rule(pos_domain::Discount::Percent(
-                            app.data.pricing.service_bp.max(1)
-                        ))
-                    ),
-                    format::money(p.service_charge),
-                ));
-            } else if app.data.pricing.service_bp > 0 && !app.cart.service_charge {
-                rows.push((
-                    lang.text("ไม่คิด service charge บิลนี้", "No service charge on this bill")
-                        .into(),
-                    format::money(Money::ZERO),
-                ));
-            }
-            if p.vat_added.satang() > 0 {
-                rows.push((
-                    format!(
-                        "VAT {}",
-                        crate::tax_ui::rate_label(app.data.tax.rate_bp)
-                    ),
-                    format::money(p.vat_added),
-                ));
-            }
-            if p.rounding != 0 {
-                rows.push((
-                    lang.text("ปัดเศษเงินสด", "Cash rounding").into(),
-                    format::signed(pos_domain::SignedMoney::from_satang(p.rounding)),
-                ));
-            }
-            if compact && rows.len() > 1 {
-                // One line on short windows so bill lines stay visible.
-                let text: Vec<String> = rows.iter().map(|(l, v)| format!("{l} {v}")).collect();
-                ui.label(t.muted(text.join(" · "), type_scale::CAPTION));
-            } else {
-                for (label, value) in rows {
-                    w::kv(ui, &label, &value, w::Value::Plain);
-                }
-            }
-        }
-        ui.horizontal(|ui| {
-            ui.add_enabled_ui(!app.busy, |ui| {
-                // None is "split between methods".
-                let before = if app.sell.split_pay.is_some() {
-                    None
-                } else {
-                    Some(app.payment_method)
-                };
-                let mut choice = before;
-                w::segmented(
-                    ui,
-                    &mut choice,
-                    &[
-                        (Some(PaymentMethod::Cash), lang.payment_method(PaymentMethod::Cash)),
-                        (Some(PaymentMethod::Transfer), lang.payment_method(PaymentMethod::Transfer)),
-                        (Some(PaymentMethod::Card), lang.payment_method(PaymentMethod::Card)),
-                        (None, lang.text("แบ่งจ่าย", "Split")),
-                    ],
-                );
-                if choice != before {
-                    app.payment_review = None;
-                    match choice {
-                        Some(method) => {
-                            app.payment_method = method;
-                            app.sell.split_pay = None;
-                        }
-                        None => {
-                            // Cash pays the rest; its field is the notes handed over.
-                            app.payment_method = PaymentMethod::Cash;
-                            app.sell.split_pay = Some(SplitDraft::default());
-                            app.cash.clear();
-                        }
-                    }
-                }
-            });
-        });
-        let splitting = app.sell.split_pay.is_some();
-        if splitting {
-            split_rows(app, ui, compact);
-        }
-        let cash_method = app.payment_method == PaymentMethod::Cash && !splitting;
-        if compact && cash_method {
-            // Cash received and change share one row in compact mode.
-            ui.horizontal(|ui| {
-                let field_w = (ui.available_width() * 0.52).clamp(120.0, 220.0);
-                cash_input(app, ui, field_w);
-                ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
-                    ui.label(
-                        RichText::new(change.map_or("—".into(), format::money))
-                            .font(t.strong_font(type_scale::MONEY_LG)),
-                    );
-                    ui.label(t.muted(lang.text("ทอน", "Change"), type_scale::LABEL));
-                });
-            });
-        }
-        if cash_method && !compact {
-            ui.horizontal(|ui| {
-                ui.label(t.muted(lang.text("รับเงินสด", "Cash received"), type_scale::BODY));
-                ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
-                    let field_w = (ui.available_width() * 0.62).clamp(150.0, 220.0);
-                    cash_input(app, ui, field_w);
-                });
-            });
-        }
-        if cash_method || splitting {
-            if let Some(short) = cash_short(app) {
-                w::inline_error(
-                    ui,
-                    &format!(
-                        "{} {}",
-                        lang.text("รับเงินน้อยกว่ายอดชำระ", "Cash is short of the amount due by"),
-                        format::money(short)
-                    ),
-                );
-            }
-            if !compact && !splitting {
-                w::kv_styled(
-                    ui,
-                    lang.text("เงินทอน", "Change"),
-                    &change.map_or("—".into(), format::money),
-                    w::Value::Strong,
-                    type_scale::MONEY_LG,
-                );
-            }
-        } else {
-            w::help_text(
-                ui,
-                lang.text(
-                    "ตรวจยอดกับธนาคารหรือเครื่องรับบัตรด้วยตัวเองก่อนยืนยัน แอปไม่โอน ไม่ตัดบัตร และไม่นับเข้าลิ้นชัก",
-                    "Verify with your bank or card terminal before confirming. The app does not transfer, charge cards, or add to the drawer.",
-                ),
-            );
-        }
-    });
-    if app.payment_method == PaymentMethod::Cash
-        && let Some(total) = cash_due(app).filter(|m| *m > Money::ZERO)
-    {
-        let options = quick_cash(total);
-        let mut labels = vec![(lang.text("พอดี", "Exact").to_owned(), cash == Some(total))];
-        labels.extend(options.iter().map(|m| {
-            (
-                format::count(u64::try_from(m.satang() / 100).unwrap_or_default()),
-                cash == Some(*m),
-            )
-        }));
-        ui.add_enabled_ui(!app.busy, |ui| {
-            if let Some(i) = w::chip_row(ui, &labels) {
-                let value = if i == 0 { total } else { options[i - 1] };
-                app.cash = format::money(value);
-            }
-        });
-    }
-    if app.cart.table.is_none() {
-        kitchen_button(app, ui);
-    }
-        });
     if app.data.shift.is_none() {
         shift_gate(app, ui);
         app.sell.pay_requested = false;
         return;
     }
+    if !paying(app) {
+        let requested = std::mem::take(&mut app.sell.pay_requested);
+        let can_pay = total.is_ok() && !app.busy;
+        let height = if compact {
+            t.m.control_lg.min(44.0)
+        } else {
+            t.m.control_lg
+        };
+        ui.horizontal(|ui| {
+            ui.spacing_mut().item_spacing.x = space::S2;
+            if !app.data.tables.is_empty() {
+                let (short, full, ready) = kitchen_state(app);
+                let width = (ui.available_width() * 0.4).floor();
+                let r = ui
+                    .allocate_ui_with_layout(
+                        vec2(width, height),
+                        egui::Layout::left_to_right(Align::Center),
+                        |ui| {
+                            w::button(short)
+                                .icon(Icon::Sell)
+                                .size(w::Size::Lg)
+                                .fill()
+                                .shortcut("F10")
+                                .enabled(ready)
+                                .show(ui)
+                        },
+                    )
+                    .inner
+                    .on_hover_text(full);
+                if r.clicked() && ready {
+                    app.send_kitchen();
+                }
+            }
+            if w::button(lang.text("ชำระเงิน", "Pay"))
+                .primary()
+                .size(w::Size::Lg)
+                .fill()
+                .shortcut("F9")
+                .enabled(can_pay)
+                .show(ui)
+                .clicked()
+            {
+                start_paying(app);
+            }
+        });
+        if requested && can_pay {
+            start_paying(app);
+        }
+        return;
+    }
+    let cash = format::parse_money(&app.cash).ok();
+    let change = total
+        .as_ref()
+        .ok()
+        .and_then(|t| cash.and_then(|c| t.change_from(c).ok()));
     let splitting = app.sell.split_pay.is_some();
     let ready = !app.busy
         && total.is_ok()
@@ -1669,9 +1529,15 @@ fn footer(app: &mut App, ui: &mut egui::Ui) {
         } else {
             app.payment_method != PaymentMethod::Cash || change.is_some()
         };
+    // A disabled commit button says why (design/docs/02).
     let label = match app.payment_method {
+        _ if splitting && !ready => lang.text("ใส่ยอดแต่ละวิธีให้ครบ", "Enter every part"),
         _ if splitting => lang.text("ตรวจรับเงินแบ่งจ่าย", "Review split payment"),
-        PaymentMethod::Cash => lang.text("รับเงินสด", "Take cash"),
+        PaymentMethod::Cash if !ready && cash.is_none() => {
+            lang.text("ใส่จำนวนเงินที่รับ", "Enter cash received")
+        }
+        PaymentMethod::Cash if !ready => lang.text("รับเงินไม่พอ", "Not enough cash"),
+        PaymentMethod::Cash => lang.text("ยืนยันรับเงินสด", "Confirm cash"),
         PaymentMethod::Transfer if !app.shop.promptpay.is_empty() => {
             lang.text("แสดง QR รับโอน", "Show transfer QR")
         }
@@ -1682,7 +1548,6 @@ fn footer(app: &mut App, ui: &mut egui::Ui) {
         .primary()
         .size(w::Size::Xl)
         .fill()
-        .money(total.as_ref().map_or(String::new(), |m| format::baht(*m)))
         .shortcut("F9")
         .enabled(ready)
         .loading(app.busy)
@@ -1696,85 +1561,247 @@ fn footer(app: &mut App, ui: &mut egui::Ui) {
         take_payment(app);
     }
 }
-/// A table bill while ordering: one total line, Send to kitchen and Take
-/// payment. Take payment (F9) opens the full payment section.
-fn ordering_footer(app: &mut App, ui: &mut egui::Ui) {
+/// Summary rows: items, discounts, service charge, VAT, cash rounding.
+fn summary_rows(
+    app: &mut App,
+    ui: &mut egui::Ui,
+    price: &Result<pos_domain::BillPrice, pos_domain::DomainError>,
+    compact: bool,
+) {
     let t = Theme::of(ui);
     let lang = app.lang;
-    let price = app.bill_price();
     let units: u64 = app.cart.lines.iter().map(|l| u64::from(l.quantity)).sum();
-    t.sunken().show(ui, |ui| {
-        ui.set_width(ui.available_width());
-        ui.horizontal(|ui| {
-            ui.label(t.text(lang.text("ยอดรวม", "Total"), type_scale::BODY_STRONG));
-            let mut detail = vec![format!(
-                "{} {}",
+    ui.spacing_mut().item_spacing.y = space::S1;
+    if !compact {
+        w::kv(
+            ui,
+            &format!(
+                "{} · {} {}",
+                lang.text("รวมรายการ", "Items total"),
                 format::count(units),
                 lang.noun(units, "ชิ้น", "item", "items")
-            )];
-            if let Ok(p) = &price {
-                if p.service_charge.satang() > 0 {
-                    detail.push(format!("SC {}", format::money(p.service_charge)));
-                }
-                if p.vat_added.satang() > 0 {
-                    detail.push(format!("VAT {}", format::money(p.vat_added)));
-                }
-                if p.discounts().satang() > 0 {
-                    detail.push(format!(
-                        "{} {}",
-                        lang.text("ลด", "off"),
-                        format::money(p.discounts())
-                    ));
-                }
-            }
-            ui.label(t.muted(detail.join(" · "), type_scale::CAPTION));
-            ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
-                ui.label(
-                    RichText::new(price.as_ref().map_or("—".into(), |p| format::baht(p.total)))
-                        .font(t.strong_font(type_scale::MONEY_LG)),
-                );
-            });
-        });
-        if price.is_err() {
-            w::inline_error(
+            ),
+            &price
+                .as_ref()
+                .map_or("—".into(), |p| format::money(p.subtotal)),
+            w::Value::Plain,
+        );
+    }
+    let promo_names: Vec<String> = app
+        .promoted(&app.cart)
+        .map(|p| p.used())
+        .unwrap_or_default()
+        .iter()
+        .filter_map(|id| app.data.promotions.iter().find(|p| p.id == *id))
+        .map(|p| p.name.clone())
+        .collect();
+    if app.cart.has_discount() || !promo_names.is_empty() {
+        let mut label = lang.text("ส่วนลด", "Discount").to_owned();
+        if !promo_names.is_empty() {
+            label = format!(
+                "{label} · {} {}",
+                lang.text("โปร", "promo"),
+                promo_names.join(", ")
+            );
+        }
+        if let Some(rule) = app.cart.discount {
+            label = format!(
+                "{label} · {} {}",
+                lang.text("ทั้งบิล", "bill"),
+                format::discount_rule(rule)
+            );
+        }
+        if !app.cart.discount_reason.is_empty() {
+            label = format!("{label} · {}", app.cart.discount_reason);
+        }
+        match price {
+            Ok(p) => w::kv(ui, &label, &format::minus(p.discounts()), w::Value::Danger),
+            Err(_) => w::inline_error(
                 ui,
                 lang.text(
                     "ส่วนลดมากกว่ายอด · แก้ส่วนลด (F7 / F8)",
                     "A discount is more than the price · fix it (F7 / F8)",
                 ),
-            );
+            ),
         }
-    });
-    let pay = |app: &mut App| {
-        app.sell.paying = Some(app.cart.id);
-        app.sell.focus_cash = true;
-    };
-    let requested = std::mem::take(&mut app.sell.pay_requested);
-    let can_pay = app.data.shift.is_some() && price.is_ok() && !app.busy;
-    // Stacked: the kitchen label's length varies (+2 / −1, English).
-    kitchen_button(app, ui);
-    if w::button(lang.text("รับเงิน", "Take payment"))
-        .primary()
-        .size(w::Size::Lg)
-        .fill()
-        .money(
-            price
-                .as_ref()
-                .map_or(String::new(), |p| format::baht(p.total)),
-        )
-        .shortcut("F9")
-        .enabled(can_pay)
+    }
+    if let Ok(p) = price {
+        let mut rows: Vec<(String, String)> = Vec::new();
+        if p.service_charge.satang() > 0 {
+            rows.push((
+                format!(
+                    "Service charge {}",
+                    format::discount_rule(pos_domain::Discount::Percent(
+                        app.data.pricing.service_bp.max(1)
+                    ))
+                ),
+                format::money(p.service_charge),
+            ));
+        } else if app.data.pricing.service_bp > 0 && !app.cart.service_charge {
+            rows.push((
+                lang.text("ไม่คิด service charge บิลนี้", "No service charge on this bill")
+                    .into(),
+                format::money(Money::ZERO),
+            ));
+        }
+        if p.vat_added.satang() > 0 {
+            rows.push((
+                format!("VAT {}", crate::tax_ui::rate_label(app.data.tax.rate_bp)),
+                format::money(p.vat_added),
+            ));
+        }
+        if p.rounding != 0 {
+            rows.push((
+                lang.text("ปัดเศษเงินสด", "Cash rounding").into(),
+                format::signed(pos_domain::SignedMoney::from_satang(p.rounding)),
+            ));
+        }
+        if compact && rows.len() > 1 {
+            let text: Vec<String> = rows.iter().map(|(l, v)| format!("{l} {v}")).collect();
+            ui.label(t.muted(text.join(" · "), type_scale::CAPTION));
+        } else {
+            for (label, value) in rows {
+                w::kv(ui, &label, &value, w::Value::Plain);
+            }
+        }
+    }
+}
+/// Step 2 (replaces the bill lines): method, cash received, quick cash,
+/// change. Esc or "Back to bill" returns to editing.
+fn payment_panel(app: &mut App, ui: &mut egui::Ui) {
+    let t = Theme::of(ui);
+    let lang = app.lang;
+    ui.spacing_mut().item_spacing.y = space::S2;
+    if w::button(lang.text("กลับไปแก้บิล", "Back to bill"))
+        .icon(Icon::ChevronLeft)
+        .ghost()
+        .size(w::Size::Sm)
+        .shortcut("Esc")
         .show(ui)
         .clicked()
     {
-        pay(app);
+        app.sell.paying = None;
+        return;
     }
-    if requested && can_pay {
-        pay(app);
+    if app.cart.table.is_some() {
+        let waiting = crate::tables_ui::unsent(app, &app.cart);
+        if waiting > 0 {
+            w::inline_error(
+                ui,
+                &format!(
+                    "{} {waiting} {}",
+                    lang.text("ยังไม่ได้ส่งครัว", "Not sent to the kitchen:"),
+                    lang.text("รายการ", "items")
+                ),
+            );
+        }
     }
-    if app.data.shift.is_none() {
-        shift_gate(app, ui);
+    let total = app.bill_price().map(|p| p.total).ok();
+    let cash = format::parse_money(&app.cash).ok();
+    let change = total.and_then(|t| cash.and_then(|c| t.change_from(c).ok()));
+    w::field_label(ui, lang.text("วิธีชำระ", "Payment method"), None);
+    ui.add_enabled_ui(!app.busy, |ui| {
+        // None is "split between methods".
+        let before = if app.sell.split_pay.is_some() {
+            None
+        } else {
+            Some(app.payment_method)
+        };
+        let mut choice = before;
+        w::segmented(
+            ui,
+            &mut choice,
+            &[
+                (
+                    Some(PaymentMethod::Cash),
+                    lang.payment_method(PaymentMethod::Cash),
+                ),
+                (
+                    Some(PaymentMethod::Transfer),
+                    lang.payment_method(PaymentMethod::Transfer),
+                ),
+                (
+                    Some(PaymentMethod::Card),
+                    lang.payment_method(PaymentMethod::Card),
+                ),
+                (None, lang.text("แบ่งจ่าย", "Split")),
+            ],
+        );
+        if choice != before {
+            app.payment_review = None;
+            match choice {
+                Some(method) => {
+                    app.payment_method = method;
+                    app.sell.split_pay = None;
+                }
+                None => {
+                    // Cash pays the rest; its field is the notes handed over.
+                    app.payment_method = PaymentMethod::Cash;
+                    app.sell.split_pay = Some(SplitDraft::default());
+                    app.cash.clear();
+                }
+            }
+        }
+    });
+    let splitting = app.sell.split_pay.is_some();
+    if splitting {
+        split_rows(app, ui, false);
     }
+    let cash_method = app.payment_method == PaymentMethod::Cash && !splitting;
+    if cash_method {
+        w::field_label(ui, lang.text("รับเงินสด", "Cash received"), None);
+        let width = ui.available_width();
+        cash_input(app, ui, width);
+    }
+    if cash_method || splitting {
+        if let Some(short) = cash_short(app) {
+            w::inline_error(
+                ui,
+                &format!(
+                    "{} {}",
+                    lang.text("รับเงินน้อยกว่ายอดชำระ", "Cash is short of the amount due by"),
+                    format::money(short)
+                ),
+            );
+        }
+    } else {
+        w::help_text(
+            ui,
+            lang.text(
+                "ตรวจยอดกับธนาคารหรือเครื่องรับบัตรด้วยตัวเองก่อนยืนยัน แอปไม่โอน ไม่ตัดบัตร และไม่นับเข้าลิ้นชัก",
+                "Verify with your bank or card terminal before confirming. The app does not transfer, charge cards, or add to the drawer.",
+            ),
+        );
+    }
+    if app.payment_method == PaymentMethod::Cash
+        && let Some(due) = cash_due(app).filter(|m| *m > Money::ZERO)
+    {
+        let options = quick_cash(due);
+        let mut labels = vec![(lang.text("พอดี", "Exact").to_owned(), cash == Some(due))];
+        labels.extend(options.iter().map(|m| {
+            (
+                format::count(u64::try_from(m.satang() / 100).unwrap_or_default()),
+                cash == Some(*m),
+            )
+        }));
+        ui.add_enabled_ui(!app.busy, |ui| {
+            if let Some(i) = w::chip_row(ui, &labels) {
+                let value = if i == 0 { due } else { options[i - 1] };
+                app.cash = format::money(value);
+            }
+        });
+    }
+    if cash_method {
+        ui.add_space(space::S2);
+        w::kv_styled(
+            ui,
+            lang.text("เงินทอน", "Change"),
+            &change.map_or("—".into(), format::money),
+            w::Value::Strong,
+            type_scale::MONEY_LG,
+        );
+    }
+    let _ = t;
 }
 fn cash_input(app: &mut App, ui: &mut egui::Ui, field_w: f32) {
     let short = cash_short(app).is_some();
@@ -1981,32 +2008,58 @@ fn held_list(app: &mut App, ui: &mut egui::Ui, held: Vec<Cart>) {
 
 // ───────────────────────────── Products ─────────────────────────────
 
+/// Category entries for Sell: (filter value, label, count, dot colour).
+fn category_entries(app: &App, t: &Theme) -> Vec<(Option<String>, String, u64, Option<Color32>)> {
+    let lang = app.lang;
+    let mut entries = vec![(
+        None,
+        lang.text("ทั้งหมด", "All").to_owned(),
+        app.data.counts.total,
+        None,
+    )];
+    entries.extend(
+        app.data
+            .counts
+            .categories
+            .iter()
+            .enumerate()
+            .map(|(i, (c, n))| {
+                if c.is_empty() {
+                    (
+                        Some(c.clone()),
+                        lang.text("ไม่มีหมวด", "Uncategorised").to_owned(),
+                        *n,
+                        None,
+                    )
+                } else {
+                    (Some(c.clone()), c.clone(), *n, Some(t.cat_color(i)))
+                }
+            }),
+    );
+    entries
+}
+/// Tile stripe / dot colour of a product's category.
+fn category_color(app: &App, t: &Theme, category: &str) -> Option<Color32> {
+    if category.is_empty() {
+        return None;
+    }
+    app.data
+        .counts
+        .categories
+        .iter()
+        .position(|(c, _)| c == category)
+        .map(|i| t.cat_color(i))
+}
 fn categories(app: &mut App, ui: &mut egui::Ui) {
     let t = Theme::of(ui);
-    let lang = app.lang;
     egui::ScrollArea::vertical()
         .id_salt("sell-categories")
         .auto_shrink([false, false])
         .show(ui, |ui| {
-            ui.spacing_mut().item_spacing.y = 2.0;
-            let mut entries = vec![(
-                None,
-                lang.text("ทั้งหมด", "All").to_owned(),
-                app.data.counts.total,
-            )];
-            entries.extend(app.data.counts.categories.iter().map(|(c, n)| {
-                (
-                    Some(c.clone()),
-                    if c.is_empty() {
-                        lang.text("ไม่มีหมวด", "Uncategorised").to_owned()
-                    } else {
-                        c.clone()
-                    },
-                    *n,
-                )
-            }));
-            for (value, label, n) in entries {
-                if nav_item(ui, &t, &label, n, app.sell.category == value).clicked() {
+            ui.add_space(space::S1);
+            ui.spacing_mut().item_spacing.y = if t.soft() { 2.0 } else { 0.0 };
+            for (value, label, n, dot) in category_entries(app, &t) {
+                if nav_row(ui, &t, &label, n, app.sell.category == value, dot).clicked() {
                     app.sell.category = value;
                     app.sell.more = 0;
                     app.refresh();
@@ -2014,10 +2067,42 @@ fn categories(app: &mut App, ui: &mut egui::Ui) {
             }
         });
 }
+/// Touch: categories as a chip row above the grid.
+fn category_chips(app: &mut App, ui: &mut egui::Ui) {
+    let t = Theme::of(ui);
+    egui::ScrollArea::horizontal()
+        .id_salt("sell-category-chips")
+        .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysHidden)
+        .show(ui, |ui| {
+            ui.horizontal(|ui| {
+                for (value, label, _, dot) in category_entries(app, &t) {
+                    if w::chip_dot(ui, &label, app.sell.category == value, dot).clicked() {
+                        app.sell.category = value;
+                        app.sell.more = 0;
+                        app.refresh();
+                    }
+                }
+            });
+        });
+}
 /// Side navigation row with a count (categories, saved views).
 pub fn nav_item(ui: &mut egui::Ui, t: &Theme, label: &str, n: u64, active: bool) -> egui::Response {
+    nav_row(ui, t, label, n, active, None)
+}
+/// Navigation row: soft = inset rounded row, square = full-width row with
+/// a 2 px selected bar; optional category dot.
+pub fn nav_row(
+    ui: &mut egui::Ui,
+    t: &Theme,
+    label: &str,
+    n: u64,
+    active: bool,
+    dot: Option<Color32>,
+) -> egui::Response {
+    let inset: f32 = if t.soft() { 6.0 } else { 0.0 };
     let width = ui.available_width();
-    let pad = space::S3;
+    let pad = if t.touch() { 14.0 } else { 12.0 } - inset.min(4.0);
+    let dot_w = if dot.is_some() { 8.0 + space::S2 } else { 0.0 };
     let count = format::count(n);
     let count_w = w::text_width(ui, &count, t.font(type_scale::MONEY_SM)) + 8.0;
     let (g, _) = crate::ui::text::wrapped(
@@ -2028,25 +2113,41 @@ pub fn nav_item(ui: &mut egui::Ui, t: &Theme, label: &str, n: u64, active: bool)
         } else {
             t.font(type_scale::BODY)
         },
-        if active { t.p.fg_default } else { t.p.fg_muted },
-        width - pad * 2.0 - count_w - space::S2,
+        t.p.fg_default,
+        width - inset * 2.0 - pad * 2.0 - count_w - dot_w - space::S2,
         0,
     );
-    let h = (g.size().y + space::S2 * 2.0).max(t.m.control_md);
-    let (rect, response) = ui.allocate_exact_size(vec2(width, h), Sense::click());
+    let pad_y = if t.touch() { 14.0 } else { 6.0 };
+    let h = g.size().y + pad_y * 2.0;
+    let (full, response) = ui.allocate_exact_size(vec2(width, h), Sense::click());
+    let rect = full.shrink2(vec2(inset, 0.0));
     response
         .widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::Button, true, active, label));
     let bg = if active {
-        t.p.bg_sunken
+        t.p.bg_selected
     } else if response.hovered() {
         t.p.bg_hover
     } else {
         Color32::TRANSPARENT
     };
-    ui.painter()
-        .rect_filled(rect, CornerRadius::same(t.radius(8)), bg);
+    let r = CornerRadius::same(t.radius(8));
+    ui.painter().rect_filled(rect, r, bg);
+    if active && !t.soft() {
+        ui.painter().rect_filled(
+            Rect::from_min_size(rect.min, vec2(2.0, rect.height())),
+            0,
+            t.p.border_selected,
+        );
+    }
+    if let Some(c) = dot {
+        ui.painter()
+            .circle_filled(pos2(rect.left() + pad + 4.0, rect.center().y), 4.0, c);
+    }
     ui.painter().galley(
-        pos2(rect.left() + pad, rect.center().y - g.size().y / 2.0),
+        pos2(
+            rect.left() + pad + dot_w,
+            rect.center().y - g.size().y / 2.0,
+        ),
         g,
         t.p.fg_default,
     );
@@ -2054,14 +2155,10 @@ pub fn nav_item(ui: &mut egui::Ui, t: &Theme, label: &str, n: u64, active: bool)
         pos2(rect.right() - pad, rect.center().y),
         Align2::RIGHT_CENTER,
         count,
-        if active {
-            t.strong_font(type_scale::MONEY_SM)
-        } else {
-            t.font(type_scale::MONEY_SM)
-        },
-        if active { t.p.fg_default } else { t.p.fg_muted },
+        t.font(type_scale::MONEY_SM),
+        if active { t.p.fg_muted } else { t.p.fg_subtle },
     );
-    w::focus_ring(ui, rect, CornerRadius::same(t.radius(8)), &response);
+    w::focus_ring(ui, rect, r, &response);
     response
 }
 
@@ -2089,6 +2186,10 @@ fn products(app: &mut App, ui: &mut egui::Ui) {
         app.sell.focus_search = true;
     }
     ui.add_space(space::S2);
+    if t.m.categories_as_chips {
+        category_chips(app, ui);
+        ui.add_space(space::S2);
+    }
     let in_cart = |id: uuid::Uuid| -> u32 {
         app.cart
             .lines
@@ -2099,6 +2200,10 @@ fn products(app: &mut App, ui: &mut egui::Ui) {
     };
     let list = app.data.products.clone();
     let counts: Vec<u32> = list.iter().map(|p| in_cart(p.id)).collect();
+    let stripes: Vec<Option<Color32>> = list
+        .iter()
+        .map(|p| category_color(app, &t, &p.category))
+        .collect();
     let mut add = None;
     egui::ScrollArea::vertical()
         .id_salt("sell-products")
@@ -2146,6 +2251,7 @@ fn products(app: &mut App, ui: &mut egui::Ui) {
                         let picture = Picture {
                             texture: textures[i],
                             height: image_h,
+                            stripe: stripes[row * cols + i],
                         };
                         if product_tile(ui, &t, lang, p, vec2(tile_w, row_h), n, app.busy, picture)
                         {
@@ -2289,6 +2395,8 @@ fn tile_height(ui: &egui::Ui, t: &Theme, p: &Product, width: f32) -> f32 {
 struct Picture {
     texture: Option<(egui::TextureId, egui::Vec2)>,
     height: f32,
+    /// Category colour on the left edge (design v0.2 tile).
+    stripe: Option<Color32>,
 }
 #[allow(clippy::too_many_arguments)]
 fn product_tile(
@@ -2328,22 +2436,45 @@ fn product_tile(
     });
     let pressed = response.is_pointer_button_down_on();
     let r = if pressed { rect.shrink(1.5) } else { rect };
+    let edge = if t.soft() {
+        t.p.border_subtle
+    } else {
+        t.p.border_default
+    };
     let (bg, stroke) = if unavailable {
-        (t.p.bg_sunken, Stroke::new(1.0, t.p.border_default))
+        (t.p.bg_sunken, Stroke::new(1.0, edge))
     } else if in_cart > 0 {
         (t.p.bg_raised, Stroke::new(2.0, t.p.tile_selected_border()))
     } else if response.hovered() {
         (t.p.bg_raised, Stroke::new(1.0, t.p.border_control))
     } else {
-        (t.p.bg_raised, Stroke::new(1.0, t.p.border_default))
+        (t.p.bg_raised, Stroke::new(1.0, edge))
     };
-    ui.painter().rect(
-        r,
-        CornerRadius::same(t.radius(8)),
-        bg,
-        stroke,
-        StrokeKind::Inside,
-    );
+    let corner = t.radius(crate::ui::tokens::radius::LG);
+    ui.painter().rect_filled(r, CornerRadius::same(corner), bg);
+    ui.painter()
+        .rect_stroke(r, CornerRadius::same(corner), stroke, StrokeKind::Inside);
+    if let Some(c) = picture.stripe {
+        // Inside the border so an in-bill tile keeps its blue outline.
+        let inner = r.shrink(stroke.width);
+        let w_ = if t.soft() { 4.0 } else { 3.0 };
+        let c = if unavailable {
+            c.gamma_multiply(0.7)
+        } else {
+            c
+        };
+        let ic = corner.saturating_sub(stroke.width as u8);
+        ui.painter().rect_filled(
+            Rect::from_min_size(inner.min, vec2(w_, inner.height())),
+            CornerRadius {
+                nw: ic,
+                sw: ic,
+                ne: 0,
+                se: 0,
+            },
+            c,
+        );
+    }
     let pad = tile_pad(t);
     let text_color = if unavailable {
         t.p.fg_muted
@@ -2465,7 +2596,12 @@ fn product_tile(
         ui.painter()
             .galley(pos2(r.left() + pad.x + icon_w, foot_y - h / 2.0), g, color);
     }
-    w::focus_ring(ui, r, CornerRadius::same(t.radius(8)), &response);
+    w::focus_ring(
+        ui,
+        r,
+        CornerRadius::same(t.radius(crate::ui::tokens::radius::LG)),
+        &response,
+    );
     let tip = if !p.on_sale {
         format!(
             "{}\n{}",

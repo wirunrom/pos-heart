@@ -1687,7 +1687,12 @@ impl eframe::App for App {
             .frame(
                 egui::Frame::new()
                     .fill(t.p.bg_chrome)
-                    .inner_margin(egui::Margin::symmetric(if soft { 10 } else { 0 }, 0)),
+                    .inner_margin(egui::Margin {
+                        left: if soft { 10 } else { 0 },
+                        right: 10,
+                        top: 0,
+                        bottom: 0,
+                    }),
             )
             .show(root, |ui| crate::chrome::title_bar(self, ui));
         egui::Panel::top("toolbar")

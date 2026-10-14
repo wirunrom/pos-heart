@@ -150,6 +150,19 @@ impl Theme {
     pub fn pane_gap(&self) -> f32 {
         if self.soft() { space::PANE_GAP } else { 1.0 }
     }
+    /// Pane header strip height (Navigation: 28 px, touch 38).
+    pub fn pane_header_h(&self) -> f32 {
+        if self.touch() { 38.0 } else { 28.0 }
+    }
+    /// Data colour for the i-th category (tile stripe, dot); never a status.
+    pub fn cat_color(&self, index: usize) -> Color32 {
+        [
+            self.p.cat_food,
+            self.p.cat_drink,
+            self.p.cat_goods,
+            self.p.cat_snack,
+        ][index % 4]
+    }
     /// Cart width for the window width (design/docs/07 §3).
     pub fn cart_width(&self, screen_width: f32) -> f32 {
         if screen_width < 1100.0 {

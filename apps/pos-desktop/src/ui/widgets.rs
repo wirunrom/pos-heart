@@ -695,88 +695,6 @@ pub fn segmented<T: Copy + PartialEq>(ui: &mut Ui, value: &mut T, options: &[(T,
     }
     changed
 }
-/// Underlined tabs with optional counts (บิลปัจจุบัน / พักไว้ 2).
-pub fn tabs<T: Copy + PartialEq>(
-    ui: &mut Ui,
-    value: &mut T,
-    options: &[(T, &str, Option<usize>)],
-) -> bool {
-    let t = Theme::of(ui);
-    let mut changed = false;
-    let height = t.m.control_md + 4.0;
-    ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = space::S5;
-        for (option, label, count) in options {
-            let active = *value == *option;
-            let font = if active {
-                t.strong_font(type_scale::BODY)
-            } else {
-                t.font(type_scale::BODY)
-            };
-            let g = galley(
-                ui,
-                *label,
-                font,
-                if active { t.p.fg_default } else { t.p.fg_muted },
-            );
-            let count_g = count.filter(|n| *n > 0).map(|n| {
-                galley(
-                    ui,
-                    n.to_string(),
-                    t.strong_font(type_scale::CAPTION),
-                    t.p.fg_inverse,
-                )
-            });
-            let count_w = count_g
-                .as_ref()
-                .map_or(0.0, |c| c.size().x.max(10.0) + 14.0);
-            let (rect, response) =
-                ui.allocate_exact_size(vec2(g.size().x + count_w + 4.0, height), Sense::click());
-            response.widget_info(|| {
-                WidgetInfo::selected(WidgetType::SelectableLabel, true, active, *label)
-            });
-            let text_pos = pos2(rect.left() + 2.0, rect.center().y - g.size().y / 2.0);
-            let gw = g.size().x;
-            ui.painter().galley(text_pos, g, t.p.fg_default);
-            if let Some(c) = count_g {
-                let r = Rect::from_center_size(
-                    pos2(
-                        rect.left() + 2.0 + gw + 6.0 + (count_w - 6.0) / 2.0,
-                        rect.center().y,
-                    ),
-                    vec2(count_w - 6.0, 20.0),
-                );
-                ui.painter()
-                    .rect_filled(r, t.radius(radius::XS), t.p.bg_inverse);
-                ui.painter()
-                    .galley(r.center() - c.size() / 2.0, c, t.p.fg_inverse);
-            }
-            if active {
-                ui.painter().line_segment(
-                    [
-                        pos2(rect.left(), rect.bottom() - 1.0),
-                        pos2(rect.right(), rect.bottom() - 1.0),
-                    ],
-                    Stroke::new(2.0, t.p.fg_default),
-                );
-            } else if response.hovered() {
-                ui.painter().line_segment(
-                    [
-                        pos2(rect.left(), rect.bottom() - 1.0),
-                        pos2(rect.right(), rect.bottom() - 1.0),
-                    ],
-                    Stroke::new(1.0, t.p.border_control),
-                );
-            }
-            focus_ring(ui, rect, CornerRadius::same(t.radius(4)), &response);
-            if response.clicked() && !active {
-                *value = *option;
-                changed = true;
-            }
-        }
-    });
-    changed
-}
 /// Pill chip; `selected` fills it with the inverse colour.
 pub fn chip(ui: &mut Ui, label: &str, selected: bool, money: bool) -> Response {
     let t = Theme::of(ui);
@@ -818,6 +736,45 @@ pub fn chip(ui: &mut Ui, label: &str, selected: bool, money: bool) -> Response {
     );
     ui.painter().galley(rect.center() - g.size() / 2.0, g, fg);
     focus_ring(ui, rect, CornerRadius::same(radius::FULL), &response);
+    response
+}
+/// Chip with an optional category dot (touch category row).
+pub fn chip_dot(ui: &mut Ui, label: &str, selected: bool, dot: Option<Color32>) -> Response {
+    let t = Theme::of(ui);
+    let fg = if selected {
+        t.p.fg_chrome
+    } else {
+        t.p.fg_default
+    };
+    let g = galley(ui, label, t.strong_font(type_scale::LABEL), fg);
+    let height = if t.touch() { 40.0 } else { 28.0 };
+    let pad = if t.touch() { 14.0 } else { 10.0 };
+    let dot_w = if dot.is_some() { 8.0 + 6.0 } else { 0.0 };
+    let (rect, response) =
+        ui.allocate_exact_size(vec2(g.size().x + pad * 2.0 + dot_w, height), Sense::click());
+    response.widget_info(|| WidgetInfo::selected(WidgetType::Button, true, selected, label));
+    let (bg, stroke) = if selected {
+        (t.p.bg_chrome_raised, Stroke::NONE)
+    } else if response.hovered() {
+        (t.p.bg_hover, Stroke::new(1.0, t.p.border_default))
+    } else {
+        (t.p.bg_raised, Stroke::new(1.0, t.p.border_default))
+    };
+    let r = CornerRadius::same(t.radius(radius::FULL));
+    ui.painter().rect(rect, r, bg, stroke, StrokeKind::Inside);
+    if let Some(c) = dot {
+        ui.painter()
+            .circle_filled(pos2(rect.left() + pad + 4.0, rect.center().y), 4.0, c);
+    }
+    ui.painter().galley(
+        pos2(
+            rect.left() + pad + dot_w,
+            rect.center().y - g.size().y / 2.0,
+        ),
+        g,
+        fg,
+    );
+    focus_ring(ui, rect, r, &response);
     response
 }
 /// Brand accent presets as colour swatches with names; true when changed.
@@ -1093,6 +1050,144 @@ pub fn paint_count(ui: &Ui, center: Pos2, n: u32, inverted: bool) -> Rect {
     rect
 }
 // ───────────────────────────── Layout helpers ─────────────────────────────
+
+/// A pane at `rect` (Navigation: bg-surface, header strip, own scrolling).
+/// `header` draws into the strip (left to right, centred); `body` gets the
+/// rest with no padding.
+pub fn pane_at<R>(
+    ui: &mut Ui,
+    rect: Rect,
+    header: impl FnOnce(&mut Ui),
+    body: impl FnOnce(&mut Ui) -> R,
+) -> R {
+    let (mut head_ui, mut body_ui) = pane_uis(ui, rect);
+    header(&mut head_ui);
+    body(&mut body_ui)
+}
+/// The pane's header strip and body as separate child Uis.
+pub fn pane_uis(ui: &mut Ui, rect: Rect) -> (Ui, Ui) {
+    let t = Theme::of(ui);
+    let r = CornerRadius::same(t.pane_radius());
+    ui.painter().rect_filled(rect, r, t.p.bg_surface);
+    let h = t.pane_header_h();
+    let head = Rect::from_min_size(rect.min, vec2(rect.width(), h));
+    if !t.soft() {
+        ui.painter().rect_filled(head, 0, t.p.border_subtle);
+    }
+    ui.painter().hline(
+        head.x_range(),
+        head.bottom() - 0.5,
+        Stroke::new(
+            1.0,
+            if t.soft() {
+                t.p.border_subtle
+            } else {
+                t.p.border_default
+            },
+        ),
+    );
+    let mut head_ui = ui.new_child(
+        egui::UiBuilder::new()
+            .max_rect(head.shrink2(vec2(if t.soft() { 6.0 } else { 0.0 }, 0.0)))
+            .layout(egui::Layout::left_to_right(Align::Center)),
+    );
+    head_ui.set_clip_rect(head.intersect(ui.clip_rect()));
+    head_ui.spacing_mut().item_spacing.x = space::S2;
+    let body_rect = Rect::from_min_max(pos2(rect.left(), head.bottom()), rect.max);
+    let mut body_ui = ui.new_child(
+        egui::UiBuilder::new()
+            .max_rect(body_rect)
+            .layout(egui::Layout::top_down(Align::Min)),
+    );
+    body_ui.set_clip_rect(body_rect.intersect(ui.clip_rect()));
+    (head_ui, body_ui)
+}
+/// Pane header title (soft: ink; square: muted, like the reference).
+pub fn pane_title(ui: &mut Ui, text: &str) {
+    let t = Theme::of(ui);
+    ui.add_space(if t.soft() { space::S1 } else { 10.0 });
+    ui.label(
+        RichText::new(text)
+            .font(t.strong_font(type_scale::LABEL))
+            .color(if t.soft() {
+                t.p.fg_default
+            } else {
+                t.p.fg_muted
+            }),
+    );
+}
+/// Right-aligned figure in a pane header (counts, totals).
+pub fn pane_count(ui: &mut Ui, text: &str) {
+    let t = Theme::of(ui);
+    ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
+        ui.add_space(if t.soft() { space::S1 } else { 10.0 });
+        ui.label(
+            RichText::new(text)
+                .font(t.font(type_scale::MONEY_SM))
+                .color(t.p.fg_muted),
+        );
+    });
+}
+/// Tabs inside a pane header (soft: pills; square: flat cells).
+pub fn pane_tabs<T: Copy + PartialEq>(
+    ui: &mut Ui,
+    value: &mut T,
+    options: &[(T, &str, Option<usize>)],
+) -> bool {
+    let t = Theme::of(ui);
+    let mut changed = false;
+    let full = ui.available_height();
+    for (v, label, count) in options {
+        let on = *value == *v;
+        let text = match count {
+            Some(n) if *n > 0 => format!("{label} · {n}"),
+            _ => (*label).to_owned(),
+        };
+        let g = galley(
+            ui,
+            &text,
+            t.strong_font(type_scale::LABEL),
+            if on { t.p.fg_default } else { t.p.fg_muted },
+        );
+        let pad = if t.touch() { 18.0 } else { 10.0 };
+        let height = if t.soft() {
+            (full - 4.0).min(if t.touch() { 30.0 } else { 24.0 })
+        } else {
+            full
+        };
+        let (rect, response) =
+            ui.allocate_exact_size(vec2(g.size().x + pad * 2.0, height), Sense::click());
+        response.widget_info(|| WidgetInfo::selected(WidgetType::Button, true, on, &text));
+        if t.soft() {
+            if on {
+                ui.painter().rect_filled(rect, t.radius(7), t.p.bg_sunken);
+            } else if response.hovered() {
+                ui.painter().rect_filled(rect, t.radius(7), t.p.bg_hover);
+            }
+        } else {
+            if on {
+                ui.painter()
+                    .rect_filled(rect.expand2(vec2(0.0, 0.5)), 0, t.p.bg_surface);
+            }
+            ui.painter().vline(
+                rect.right(),
+                rect.y_range(),
+                Stroke::new(1.0, t.p.border_default),
+            );
+        }
+        ui.painter().galley(
+            rect.center() - g.size() / 2.0,
+            g,
+            if on { t.p.fg_default } else { t.p.fg_muted },
+        );
+        focus_ring(ui, rect, CornerRadius::same(t.radius(7)), &response);
+        if response.clicked() && !on {
+            *value = *v;
+            changed = true;
+        }
+    }
+    changed
+}
 
 pub fn title(ui: &mut Ui, text: &str) -> Response {
     let t = Theme::of(ui);
