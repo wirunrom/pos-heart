@@ -76,7 +76,7 @@ pub(crate) fn find_product(conn: &mut SqliteConnection, id: Uuid) -> Result<Prod
 }
 
 /// Saved views shown in the product side navigation.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum ProductView {
     #[default]
     All,
@@ -84,7 +84,7 @@ pub enum ProductView {
     OutOfStock,
     NotForSale,
 }
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ProductQuery {
     pub search: String,
     /// Exact category; None for every category.
@@ -105,7 +105,7 @@ impl Default for ProductQuery {
     }
 }
 /// Counts for the category list and saved views, over active products.
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct CatalogCounts {
     pub total: u64,
     pub categories: Vec<(String, u64)>,

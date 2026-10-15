@@ -1,7 +1,7 @@
 use crate::{Money, SignedMoney};
 use uuid::Uuid;
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, serde::Serialize, serde::Deserialize)]
 pub struct DailySummary {
     /// First Bangkok calendar date, YYYY-MM-DD. Activity uses
     /// [first midnight, midnight after `end_date`).
@@ -48,7 +48,7 @@ pub struct DailySummary {
     /// this period, by name.
     pub ingredients: Vec<IngredientUsage>,
 }
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct PromoSales {
     pub id: Uuid,
     pub name: String,
@@ -57,7 +57,7 @@ pub struct PromoSales {
     /// What it took off, net of voids.
     pub amount: SignedMoney,
 }
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct IngredientUsage {
     pub ingredient_id: Uuid,
     pub name: String,
@@ -69,7 +69,7 @@ pub struct IngredientUsage {
     /// Cost of `used` at the current cost per unit, when known.
     pub cost: Option<Money>,
 }
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct StaffSales {
     pub staff_id: uuid::Uuid,
     pub name: String,
@@ -78,7 +78,7 @@ pub struct StaffSales {
     pub refunds: Money,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ProductMovement {
     pub product_id: Uuid,
     pub sku: String,
@@ -87,13 +87,13 @@ pub struct ProductMovement {
     pub net_sales: SignedMoney,
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct DaySales {
     pub date: String,
     pub gross: Money,
     pub refunds: Money,
 }
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct CategorySales {
     pub category: String,
     pub net_quantity: i64,
@@ -102,7 +102,7 @@ pub struct CategorySales {
 
 /// Standard-cost estimate, not net business profit or inventory valuation.
 /// Unknown-cost lines never silently count as free and never enter gross profit.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ProfitSummary {
     pub covered_revenue: SignedMoney,
     pub cost_of_goods: SignedMoney,

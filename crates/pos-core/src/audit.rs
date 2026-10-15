@@ -41,7 +41,7 @@ pub struct ActivityEvent {
     /// Business snapshots only. Never contains PINs or PIN hashes.
     pub detail: serde_json::Value,
 }
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct ActivityQuery {
     pub kind: Option<ActivityKind>,
     pub search: String,

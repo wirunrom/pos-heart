@@ -150,8 +150,7 @@ fn a_completed_signin_reply_stays_stale_and_refresh_cannot_restore_its_identity(
     let query = Query {
         products: ProductQuery::default(),
         sale_offset: 0,
-        report_start: today(),
-        report_end: today(),
+        report: pos_service::Period::day(today()),
         shift_offset: 0,
         movement_shift: None,
         movement_offset: 0,

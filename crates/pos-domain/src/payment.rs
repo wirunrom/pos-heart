@@ -19,7 +19,7 @@ impl PaymentMethod {
     }
 }
 /// Amount is cash tender for Cash, or the exact reviewed total for non-cash.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct PaymentRequest {
     pub method: PaymentMethod,
     pub amount: Money,
@@ -33,7 +33,7 @@ pub struct Tender {
 }
 /// Several methods for one bill, e.g. part cash, part transfer. Split bills
 /// are priced without cash rounding; the parts must add up to the exact total.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SplitPayment {
     pub tenders: Vec<Tender>,
     /// Notes handed over for the cash part (zero without a cash part).
@@ -76,7 +76,7 @@ impl SplitPayment {
             .try_fold(Money::ZERO, |sum, t| sum.checked_add(t.amount))
     }
 }
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct MethodSummary {
     pub sales: Money,
     pub refunds: Money,
@@ -86,7 +86,7 @@ impl MethodSummary {
         SignedMoney::from_satang(self.sales.satang() - self.refunds.satang())
     }
 }
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct PaymentSummary {
     pub cash: MethodSummary,
     pub transfer: MethodSummary,

@@ -7,12 +7,14 @@ POS Heart is an offline desktop modular monolith. There is no HTTP server in the
 ```text
 apps/pos-desktop    egui screens, input state, worker messages, OS data paths
        ↓
+crates/pos-service  serializable Request/Reply protocol + handle() over Pos (one dispatcher)
+       ↓
 crates/pos-core     catalog, checkout, held carts, history, persistence
        ↓
 crates/pos-domain   Money, Product, Cart, Sale and validation
 ```
 
-Three crates are deliberate: keep the business rules reusable and the UI independent without introducing speculative repository traits, network services, or one-method layers. Split pos-core only when a second real persistence implementation or frontend makes the split useful.
+The crates keep the business rules reusable and the UI independent without speculative repository traits or one-method layers. `pos-service` exists because a second frontend is now planned (paired devices, docs/multi-device.md): it owns the business protocol — `Request` / `Reply` (serde), `Query` / `Data` (the screen snapshot), `Period` and `PROTOCOL_VERSION` — and `handle(&mut Pos, Request, now)`, which is the only place business commands are dispatched. The desktop worker converts its `Command`s into `Request`s (`worker::request`; background autosave/discard/restore map to Hold/RemoveHeld/Resume with quiet results) and maps `Reply`s back to its `Event`s, so screens did not change; device-local commands (backups, recovery, file import/export paths, auto-backup policy, demo seeding) stay in the worker. `Request::Approved` wraps one request with an approver and clears the approval afterwards. Every request/reply type and the stored domain/report types derive Serialize/Deserialize (existing JSON field names unchanged). Sessions (`sign_in`, approval) still live in `Pos`, i.e. one per database; per-device sessions belong to phase 1. `crates/pos-service/tests/protocol.rs` runs a counter day (product, open shift, hold, pay, retried pay, refresh, close) with every request and reply round-tripped through JSON.
 
 ## Money and checkout
 

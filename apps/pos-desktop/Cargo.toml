@@ -10,6 +10,7 @@ path = "src/main.rs"
 [dependencies]
 pos-domain.workspace = true
 pos-core.workspace = true
+pos-service.workspace = true
 eframe.workspace = true
 directories.workspace = true
 uuid.workspace = true

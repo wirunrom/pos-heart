@@ -462,8 +462,7 @@ impl App {
         Query {
             products,
             sale_offset: self.history.offset,
-            report_start: self.report.start,
-            report_end: self.report.end,
+            report: self.report,
             shift_offset: self.drawer.history_offset,
             movement_shift: self.drawer.selected.as_ref().map(|s| s.id),
             movement_offset: self.drawer.movement_offset,

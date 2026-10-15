@@ -166,7 +166,7 @@ pub struct StaffRef {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub role_name: String,
 }
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Staff {
     pub id: Uuid,
     pub name: String,
@@ -183,7 +183,7 @@ impl Staff {
         }
     }
 }
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct StaffInput {
     pub id: Option<Uuid>,
     pub name: String,

@@ -2,7 +2,7 @@ use crate::{DomainError, Money, Sale};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VoidRequest {
     pub sale_id: Uuid,
     pub refund_method: crate::PaymentMethod,
@@ -62,7 +62,7 @@ impl SaleVoid {
         }
     }
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct SaleRecord {
     pub sale: Sale,
     pub cancellation: Option<SaleVoid>,
@@ -81,7 +81,7 @@ pub struct RefundLine {
     pub quantity: u32,
 }
 /// Return some items of a paid sale. `id` makes a lost response safe to retry.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RefundRequest {
     pub id: Uuid,
     pub sale_id: Uuid,

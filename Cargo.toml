@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/pos-domain", "crates/pos-core", "apps/pos-desktop"]
+members = ["crates/pos-domain", "crates/pos-core", "crates/pos-service", "apps/pos-desktop"]
 resolver = "3"
 default-members = ["apps/pos-desktop"]
 
@@ -12,6 +12,7 @@ publish = false
 [workspace.dependencies]
 pos-domain = { path = "crates/pos-domain" }
 pos-core = { path = "crates/pos-core" }
+pos-service = { path = "crates/pos-service" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"
@@ -20,7 +21,7 @@ diesel = { version = "2.3.14", default-features = false, features = ["sqlite", "
 libsqlite3-sys = { version = "0.38", features = ["bundled"] }
 eframe = { version = "0.36.2", default-features = false, features = ["default_fonts", "wgpu", "accesskit", "x11", "wayland"] }
 directories = "6"
-time = { version = "0.3", features = ["formatting", "macros", "parsing"] }
+time = { version = "0.3", features = ["formatting", "macros", "parsing", "serde"] }
 tempfile = "3"
 
 [workspace.lints.rust]

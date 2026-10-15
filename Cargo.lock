@@ -773,6 +773,9 @@ name = "deranged"
 version = "0.5.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7cd812cc2bc1d69d4764bd80df88b4317eaef9e773c75226407d9bc0876b211c"
+dependencies = [
+ "serde_core",
+]
 
 [[package]]
 name = "diesel"
@@ -2539,6 +2542,7 @@ dependencies = [
  "image",
  "pos-core",
  "pos-domain",
+ "pos-service",
  "qrcodegen",
  "serde",
  "serde_json",
@@ -2555,6 +2559,19 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror 2.0.21",
+ "uuid",
+]
+
+[[package]]
+name = "pos-service"
+version = "0.1.0"
+dependencies = [
+ "pos-core",
+ "pos-domain",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "time",
  "uuid",
 ]
 

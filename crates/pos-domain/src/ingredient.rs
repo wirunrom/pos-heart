@@ -202,7 +202,7 @@ pub struct IngredientMovement {
     pub staff: crate::Attribution,
 }
 /// An operator's ingredient change. `id` makes a lost response safe to retry.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct IngredientRequest {
     pub id: Uuid,
     pub ingredient_id: Uuid,

@@ -1,11 +1,9 @@
 use eframe::egui;
-use pos_core::{CatalogCounts, Error, Pos, ProductQuery};
+use pos_core::{Error, Pos, ProductQuery};
 use pos_domain::{
-    Cart, DailySummary, Money, PaymentRequest, Product, ProductInput, Sale, SaleRecord, SaleVoid,
-    ShiftCount, VoidRequest,
+    Cart, Money, PaymentRequest, Product, ProductInput, Sale, SaleVoid, ShiftCount, VoidRequest,
 };
 use std::{
-    collections::HashMap,
     io::Write,
     path::{Path, PathBuf},
     sync::{
@@ -17,48 +15,7 @@ use std::{
 };
 use uuid::Uuid;
 
-#[derive(Default)]
-pub struct Data {
-    pub products: Vec<Product>,
-    pub counts: CatalogCounts,
-    pub held: Vec<Cart>,
-    pub sales: Vec<SaleRecord>,
-    pub summary: DailySummary,
-    /// Same weekday one week earlier, for report comparisons.
-    pub compare: DailySummary,
-    pub today_summary: DailySummary,
-    pub shift: Option<pos_domain::Shift>,
-    pub shifts: Vec<pos_domain::Shift>,
-    pub shift_numbers: HashMap<Uuid, u64>,
-    pub movements: Vec<pos_domain::CashMovement>,
-    /// Stock history of the product open in the Products inspector.
-    pub stock_history: Vec<pos_domain::StockMovement>,
-    /// Roster (active first). Sign-in is required while any staff is active.
-    pub staff: Vec<pos_domain::Staff>,
-    pub staff_enabled: bool,
-    pub signed_in: Option<pos_domain::StaffRef>,
-    /// Owner first, then built-in and custom roles.
-    pub roles: Vec<pos_domain::RoleDef>,
-    pub tax: pos_domain::TaxSettings,
-    pub pricing: pos_domain::PricingSettings,
-    pub tables: Vec<pos_domain::DiningTable>,
-    pub promotions: Vec<pos_domain::Promotion>,
-    pub ingredients: Vec<pos_domain::Ingredient>,
-    pub option_sets: Vec<(pos_domain::OptionGroup, u64)>,
-    /// Open kitchen tickets oldest first, then recently bumped ones.
-    pub kitchen: Vec<pos_domain::KitchenTicket>,
-}
-#[derive(Clone)]
-pub struct Query {
-    pub products: ProductQuery,
-    pub sale_offset: u32,
-    pub report_start: time::Date,
-    pub report_end: time::Date,
-    pub shift_offset: u32,
-    pub movement_shift: Option<Uuid>,
-    pub movement_offset: u32,
-    pub stock_product: Option<Uuid>,
-}
+pub use pos_service::{Data, Query};
 #[derive(Clone)]
 pub enum Command {
     Refresh(Query),
@@ -329,8 +286,7 @@ impl Worker {
                 let initial = Query {
                     products: ProductQuery::default(),
                     sale_offset: 0,
-                    report_start: today(),
-                    report_end: today(),
+                    report: pos_service::Period::day(today()),
                     shift_offset: 0,
                     movement_shift: None,
                     movement_offset: 0,
@@ -339,7 +295,7 @@ impl Worker {
                 send(EventEnvelope {
                     generation: 0,
                     background: false,
-                    event: match load(&mut pos, &initial) {
+                    event: match pos_service::load(&mut pos, &initial, now()) {
                         Ok(data) => Event::Ready(Box::new(data)),
                         Err(e) => Event::Failed(e),
                     },
@@ -420,61 +376,181 @@ fn send_automatic(
     }
 }
 
+/// How a business reply maps back to the screens' events.
+enum Shape {
+    Normal,
+    /// Background saves report nothing.
+    Quiet,
+    /// The startup restore of the current bill.
+    Restored,
+}
+/// Splits a command into a business request (and how to report it) or
+/// returns it unchanged when it is device-local.
+fn request(command: Command) -> Result<(pos_service::Request, Shape), Box<Command>> {
+    use pos_service::Request as R;
+    let normal = |r| Ok((r, Shape::Normal));
+    match command {
+        Command::Refresh(q) => normal(R::Refresh(Box::new(q))),
+        Command::Save(input) => normal(R::SaveProduct(Box::new(input))),
+        Command::Archive(id) => normal(R::Archive(id)),
+        Command::SetOnSale(ids, on) => normal(R::SetOnSale(ids, on)),
+        Command::SetCategory(ids, c) => normal(R::SetCategory(ids, c)),
+        Command::AdjustStock(r) => normal(R::AdjustStock(r)),
+        Command::Pay(cart, p, shift) => normal(R::Pay(Box::new(cart), p, shift)),
+        Command::PaySplit(cart, p, shift) => normal(R::PaySplit(Box::new(cart), p, shift)),
+        Command::SplitBill(cart, take, id) => normal(R::SplitBill(Box::new(cart), take, id)),
+        Command::Void(r, shift) => normal(R::Void(r, shift)),
+        Command::RefundItems(r, shift) => normal(R::RefundItems(r, shift)),
+        Command::OpenShift(id, m) => normal(R::OpenShift(id, m)),
+        Command::MoveCash(m) => normal(R::MoveCash(m)),
+        Command::CloseShift(id, rev, count) => normal(R::CloseShift(id, rev, count)),
+        Command::Hold(cart) => normal(R::Hold(Box::new(cart))),
+        Command::RemoveHeld(id) => normal(R::RemoveHeld(id)),
+        Command::Resume(id) => normal(R::Resume(id)),
+        Command::Lookup(code) => normal(R::Lookup(code)),
+        Command::ImportProducts(source) => normal(R::ImportProducts(source)),
+        Command::Activity(q) => normal(R::Activity(q)),
+        Command::SignIn(id, pin) => normal(R::SignIn(id, pin)),
+        Command::RevokeSession => normal(R::SignOut),
+        Command::SaveStaff(i) => normal(R::SaveStaff(i)),
+        Command::SaveRole(r) => normal(R::SaveRole(r)),
+        Command::DeleteRole(id) => normal(R::DeleteRole(id)),
+        Command::SetTax(t) => normal(R::SetTax(t)),
+        Command::SetPricing(p) => normal(R::SetPricing(p)),
+        Command::SaveTable(t) => normal(R::SaveTable(t)),
+        Command::SavePromotion(p) => normal(R::SavePromotion(Box::new(p))),
+        Command::DeletePromotion(id) => normal(R::DeletePromotion(id)),
+        Command::SaveIngredient(i) => normal(R::SaveIngredient(i)),
+        Command::AdjustIngredient(r) => normal(R::AdjustIngredient(r)),
+        Command::IngredientHistory(id) => normal(R::IngredientHistory(id)),
+        Command::LoadPurchases(o) => normal(R::LoadPurchases(o)),
+        Command::PurchaseDetail(id, o) => normal(R::PurchaseDetail(id, o)),
+        Command::PurchaseProducts(s) => normal(R::PurchaseProducts(s)),
+        Command::SaveSupplier(s) => normal(R::SaveSupplier(s)),
+        Command::CreatePurchase(r) => normal(R::CreatePurchase(r)),
+        Command::ReceivePurchase(r) => normal(R::ReceivePurchase(r)),
+        Command::CancelPurchase(r) => normal(R::CancelPurchase(r)),
+        Command::AddCategory(n) => normal(R::AddCategory(n)),
+        Command::RenameCategory(a, b) => normal(R::RenameCategory(a, b)),
+        Command::ReorderCategories(n) => normal(R::ReorderCategories(n)),
+        Command::DeleteCategory(n, into) => normal(R::DeleteCategory(n, into)),
+        Command::SaveOptionSet(s) => normal(R::SaveOptionSet(s)),
+        Command::DeleteOptionSet(id) => normal(R::DeleteOptionSet(id)),
+        Command::LinkOptionSet(id, p, l) => normal(R::LinkOptionSet(id, p, l)),
+        Command::ProductImage(id) => normal(R::ProductImage(id)),
+        Command::SetProductImage(id, png) => normal(R::SetProductImage(id, png)),
+        Command::SendKitchen(cart) => normal(R::SendKitchen(Box::new(cart))),
+        Command::BumpTicket(id, at) => normal(R::BumpTicket(id, at)),
+        Command::TicketLine(id, line, done) => normal(R::TicketLine(id, line, done)),
+        Command::IssueInvoice(id, buyer) => normal(R::IssueInvoice(id, buyer)),
+        Command::Autosave(cart) => Ok((R::Hold(Box::new(cart)), Shape::Quiet)),
+        Command::Discard(id) => Ok((R::RemoveHeld(id), Shape::Quiet)),
+        Command::Restore(id) => Ok((R::Resume(id), Shape::Restored)),
+        Command::Approved {
+            approver,
+            pin,
+            permission,
+            inner,
+        } => match request(*inner) {
+            Ok((inner, shape)) => Ok((
+                R::Approved {
+                    approver,
+                    pin,
+                    permission,
+                    inner: Box::new(inner),
+                },
+                shape,
+            )),
+            Err(local) => Err(Box::new(Command::Approved {
+                approver,
+                pin,
+                permission,
+                inner: local,
+            })),
+        },
+        local => Err(Box::new(local)),
+    }
+}
+/// The screens' event for a business reply.
+fn event(reply: pos_service::Reply, shape: Shape) -> Event {
+    use pos_service::Reply as R;
+    match (shape, reply) {
+        (Shape::Quiet, _) => Event::Quiet,
+        (Shape::Restored, R::Resumed(cart, products)) => Event::Restored(*cart, products),
+        (_, R::Data(d)) => Event::Ready(d),
+        (_, R::ProductSaved(p)) => Event::Saved(p),
+        (_, R::Archived) => Event::Archived,
+        (_, R::Bulk(n)) => Event::Bulk(n),
+        (_, R::StockAdjusted(m)) => Event::StockAdjusted(m),
+        (_, R::Paid(sale)) => Event::Paid(*sale),
+        (_, R::Split(rest, moved)) => Event::Split(*rest, *moved),
+        (_, R::Voided(v)) => Event::Voided(*v),
+        (_, R::Refunded(r)) => Event::Refunded(*r),
+        (_, R::ShiftOpened) => Event::ShiftOpened,
+        (_, R::CashMoved) => Event::CashMoved,
+        (_, R::ShiftClosed(s)) => Event::ShiftClosed(s),
+        (_, R::Held(id)) => Event::Held(id),
+        (_, R::Removed) => Event::Removed,
+        (_, R::Resumed(cart, products)) => Event::Resumed(*cart, products),
+        (_, R::Found(code, p)) => Event::Found(code, p),
+        (_, R::ProductsImported(n)) => Event::ProductsImported(n),
+        (_, R::Activity(a)) => Event::Activity(a),
+        (_, R::SignedIn(s)) => Event::SignedIn(s),
+        (_, R::SignedOut) => Event::SignedOut,
+        (_, R::StaffSaved(s)) => Event::StaffSaved(s),
+        (_, R::RoleSaved) => Event::RoleSaved,
+        (_, R::TaxSaved) => Event::TaxSaved,
+        (_, R::PricingSaved) => Event::PricingSaved,
+        (_, R::TableSaved) => Event::TableSaved,
+        (_, R::PromotionSaved) => Event::PromotionSaved,
+        (_, R::IngredientSaved) => Event::IngredientSaved,
+        (_, R::IngredientHistory(id, m)) => Event::IngredientHistory(id, m),
+        (
+            _,
+            R::Purchases {
+                suppliers,
+                orders,
+                offset,
+            },
+        ) => Event::Purchases {
+            suppliers,
+            orders,
+            offset,
+        },
+        (
+            _,
+            R::PurchaseDetail {
+                order,
+                receipts,
+                offset,
+            },
+        ) => Event::PurchaseDetail {
+            order: *order,
+            receipts,
+            offset,
+        },
+        (_, R::PurchaseProducts(s, p)) => Event::PurchaseProducts(s, p),
+        (_, R::SupplierSaved(s)) => Event::SupplierSaved(s),
+        (_, R::PurchaseCreated(o)) => Event::PurchaseCreated(*o),
+        (_, R::PurchaseReceived(o)) => Event::PurchaseReceived(*o),
+        (_, R::PurchaseCancelled(o)) => Event::PurchaseCancelled(*o),
+        (_, R::CategoriesSaved) => Event::CategoriesSaved,
+        (_, R::OptionSetsSaved) => Event::OptionSetsSaved,
+        (_, R::ProductImage(id, png)) => Event::ProductImage(id, png),
+        (_, R::ImageSaved) => Event::ImageSaved,
+        (_, R::KitchenSent(cart, ticket)) => Event::KitchenSent(*cart, ticket),
+        (_, R::Kitchen(k)) => Event::Kitchen(k),
+        (_, R::InvoiceIssued(i)) => Event::InvoiceIssued(*i),
+    }
+}
 fn run(pos: &mut Pos, command: Command) -> pos_core::Result<Event> {
+    // Business commands run through the shared protocol (pos-service), the
+    // same path a paired device will use; the rest is device-local.
+    let command = match request(command) {
+        Ok((request, shape)) => return Ok(event(pos_service::handle(pos, request, now())?, shape)),
+        Err(local) => *local,
+    };
     Ok(match command {
-        Command::Refresh(query) => Event::Ready(Box::new(load(pos, &query)?)),
-        Command::Save(input) => Event::Saved(Box::new(pos.save_product_at(input, now())?)),
-        Command::Archive(id) => {
-            pos.archive_product(id)?;
-            Event::Archived
-        }
-        Command::SetOnSale(ids, on) => Event::Bulk(pos.set_on_sale(&ids, on)?),
-        Command::SetCategory(ids, category) => Event::Bulk(pos.set_category(&ids, &category)?),
-        Command::AdjustStock(request) => Event::StockAdjusted(pos.adjust_stock(&request, now())?),
-        Command::Pay(cart, payment, shift) => {
-            Event::Paid(pos.checkout_with_payment(&cart, payment, Some(shift), now())?)
-        }
-        Command::PaySplit(cart, split, shift) => {
-            Event::Paid(pos.checkout_split(&cart, &split, Some(shift), now())?)
-        }
-        Command::SplitBill(cart, take, id) => {
-            let (rest, moved) = pos.split_bill(&cart, &take, id, now())?;
-            Event::Split(rest, moved)
-        }
-        Command::Void(request, shift) => {
-            Event::Voided(pos.void_sale_for_shift(&request, Some(shift), now())?)
-        }
-        Command::RefundItems(request, shift) => {
-            Event::Refunded(pos.refund_items(&request, Some(shift), now())?)
-        }
-        Command::OpenShift(id, opening) => {
-            pos.open_shift(id, opening, now())?;
-            Event::ShiftOpened
-        }
-        Command::MoveCash(mut movement) => {
-            movement.created_at = now();
-            pos.move_cash(&movement)?;
-            Event::CashMoved
-        }
-        Command::CloseShift(id, revision, count) => Event::ShiftClosed(Box::new(
-            pos.close_shift_with(id, revision, &count, now())?,
-        )),
-        Command::Hold(cart) => {
-            pos.hold(&cart, now())?;
-            Event::Held(cart.id)
-        }
-        Command::RemoveHeld(id) => {
-            pos.remove_held(id)?;
-            Event::Removed
-        }
-        Command::Resume(id) => {
-            let (cart, products) = pos.resume(id)?;
-            Event::Resumed(cart, products)
-        }
-        Command::Lookup(code) => {
-            let found = pos.find_by_code(&code)?.map(Box::new);
-            Event::Found(code, found)
-        }
         Command::Demo => {
             pos.seed_demo()?;
             Event::Demo
@@ -532,8 +608,6 @@ fn run(pos: &mut Pos, command: Command) -> pos_core::Result<Event> {
                 .read_to_string(&mut source)?;
             Event::ImportPreview(pos.preview_product_import(&source)?)
         }
-        Command::ImportProducts(source) => Event::ProductsImported(pos.import_products(&source)?),
-        Command::Activity(query) => Event::Activity(pos.activity(&query)?),
         Command::ExportProducts(path) => {
             export_products(pos, &path)?;
             Event::Exported(path)
@@ -541,146 +615,6 @@ fn run(pos: &mut Pos, command: Command) -> pos_core::Result<Event> {
         Command::ExportReport(path, start, end) => {
             export_report(pos, &path, start, end)?;
             Event::Exported(path)
-        }
-        Command::Autosave(cart) => {
-            pos.hold(&cart, now())?;
-            Event::Quiet
-        }
-        Command::Discard(id) => {
-            pos.remove_held(id)?;
-            Event::Quiet
-        }
-        Command::Restore(id) => {
-            let (cart, products) = pos.resume(id)?;
-            Event::Restored(cart, products)
-        }
-        Command::SignIn(id, pin) => Event::SignedIn(pos.sign_in(id, &pin)?),
-        Command::RevokeSession => {
-            pos.sign_out();
-            Event::SignedOut
-        }
-        Command::SaveStaff(input) => Event::StaffSaved(pos.save_staff(&input, now())?),
-        Command::ProductImage(id) => Event::ProductImage(id, pos.product_image(id)?),
-        Command::SetProductImage(id, png) => {
-            pos.set_product_image(id, png.as_deref(), now())?;
-            Event::ImageSaved
-        }
-        Command::SaveOptionSet(set) => {
-            pos.save_option_set(&set, now())?;
-            Event::OptionSetsSaved
-        }
-        Command::DeleteOptionSet(id) => {
-            pos.delete_option_set(id, now())?;
-            Event::OptionSetsSaved
-        }
-        Command::LinkOptionSet(id, products, link) => {
-            pos.link_option_set(id, &products, link, now())?;
-            Event::OptionSetsSaved
-        }
-        Command::AddCategory(name) => {
-            pos.add_category(&name, now())?;
-            Event::CategoriesSaved
-        }
-        Command::RenameCategory(old, new) => {
-            pos.rename_category(&old, &new, now())?;
-            Event::CategoriesSaved
-        }
-        Command::ReorderCategories(names) => {
-            pos.reorder_categories(&names)?;
-            Event::CategoriesSaved
-        }
-        Command::DeleteCategory(name, into) => {
-            pos.delete_category(&name, into.as_deref(), now())?;
-            Event::CategoriesSaved
-        }
-        Command::LoadPurchases(offset) => Event::Purchases {
-            suppliers: pos.suppliers("", true)?,
-            orders: pos.purchase_orders(offset)?,
-            offset,
-        },
-        Command::PurchaseDetail(id, offset) => Event::PurchaseDetail {
-            order: pos.purchase_order(id)?,
-            receipts: pos.purchase_receipts(id, offset)?,
-            offset,
-        },
-        Command::PurchaseProducts(search) => {
-            let products = pos
-                .catalog(&ProductQuery {
-                    search: search.clone(),
-                    limit: 50,
-                    ..Default::default()
-                })?
-                .into_iter()
-                .filter(|p| p.stock.is_some())
-                .collect();
-            Event::PurchaseProducts(search, products)
-        }
-        Command::SaveSupplier(supplier) => {
-            Event::SupplierSaved(pos.save_supplier(&supplier, now())?)
-        }
-        Command::CreatePurchase(request) => {
-            Event::PurchaseCreated(pos.create_purchase_order(&request, now())?)
-        }
-        Command::ReceivePurchase(request) => {
-            pos.receive_purchase_order(&request, now())?;
-            Event::PurchaseReceived(pos.purchase_order(request.order_id)?)
-        }
-        Command::CancelPurchase(request) => {
-            Event::PurchaseCancelled(pos.cancel_purchase_order(&request, now())?)
-        }
-        Command::SaveIngredient(i) => {
-            pos.save_ingredient(&i, now())?;
-            Event::IngredientSaved
-        }
-        Command::AdjustIngredient(r) => {
-            pos.adjust_ingredient(&r, now())?;
-            Event::IngredientSaved
-        }
-        Command::IngredientHistory(id) => {
-            Event::IngredientHistory(id, pos.ingredient_movements(id, 0)?)
-        }
-        Command::SavePromotion(p) => {
-            pos.save_promotion(&p, now())?;
-            Event::PromotionSaved
-        }
-        Command::DeletePromotion(id) => {
-            pos.delete_promotion(id)?;
-            Event::PromotionSaved
-        }
-        Command::SaveTable(t) => {
-            pos.save_table(&t)?;
-            Event::TableSaved
-        }
-        Command::SendKitchen(cart) => {
-            let (cart, ticket) = pos.send_to_kitchen(&cart, now())?;
-            Event::KitchenSent(cart, ticket.map(Box::new))
-        }
-        Command::BumpTicket(id, at) => {
-            pos.bump_ticket(id, at)?;
-            Event::Kitchen(pos.kitchen_tickets()?)
-        }
-        Command::TicketLine(id, line, done) => {
-            pos.set_ticket_line(id, line, done)?;
-            Event::Kitchen(pos.kitchen_tickets()?)
-        }
-        Command::SetPricing(p) => {
-            pos.set_pricing_settings(&p)?;
-            Event::PricingSaved
-        }
-        Command::SetTax(tax) => {
-            pos.set_tax_settings(&tax)?;
-            Event::TaxSaved
-        }
-        Command::IssueInvoice(sale, buyer) => {
-            Event::InvoiceIssued(pos.issue_tax_invoice(sale, &buyer, now())?)
-        }
-        Command::SaveRole(role) => {
-            pos.save_role(&role)?;
-            Event::RoleSaved
-        }
-        Command::DeleteRole(id) => {
-            pos.delete_role(&id)?;
-            Event::RoleSaved
         }
         Command::Approved {
             approver,
@@ -694,65 +628,12 @@ fn run(pos: &mut Pos, command: Command) -> pos_core::Result<Event> {
             pos.clear_approval();
             result?
         }
+        // `request` already routed every business command to pos-service.
+        _ => {
+            return Err(std::io::Error::other("business command reached the local worker").into());
+        }
     })
 }
-fn load(pos: &mut Pos, q: &Query) -> pos_core::Result<Data> {
-    let period = crate::report_ui::Period {
-        start: q.report_start,
-        end: q.report_end,
-    };
-    let summary = pos.summary(period.start, period.end)?;
-    let compare = match period.previous() {
-        Some(p) => pos.summary(p.start, p.end)?,
-        None => DailySummary::default(),
-    };
-    let today_summary = if period == crate::report_ui::Period::day(today()) {
-        summary.clone()
-    } else {
-        pos.daily_summary(today())?
-    };
-    let shift = pos.active_shift()?;
-    let movements = q
-        .movement_shift
-        .or_else(|| shift.as_ref().map(|s| s.id))
-        .map(|id| pos.cash_movements(id, q.movement_offset))
-        .transpose()?
-        .unwrap_or_default();
-    let shifts = pos.shift_history(q.shift_offset)?;
-    let shift_numbers = pos.shift_numbers()?;
-    let stock_history = q
-        .stock_product
-        .map(|id| pos.stock_movements(id, 0))
-        .transpose()?
-        .unwrap_or_default();
-    let staff = pos.staff()?;
-    Ok(Data {
-        staff_enabled: staff.iter().any(|s| s.active),
-        staff,
-        signed_in: pos.signed_in()?,
-        roles: pos.roles()?,
-        tax: pos.tax_settings()?,
-        pricing: pos.pricing_settings()?,
-        tables: pos.dining_tables()?,
-        promotions: pos.promotions()?,
-        ingredients: pos.ingredients()?,
-        option_sets: pos.option_sets()?,
-        kitchen: pos.kitchen_tickets()?,
-        stock_history,
-        shift,
-        shifts,
-        shift_numbers,
-        movements,
-        products: pos.catalog(&q.products)?,
-        counts: pos.catalog_counts()?,
-        held: pos.held()?,
-        sales: pos.history(q.sale_offset)?,
-        summary,
-        compare,
-        today_summary,
-    })
-}
-
 fn is_number(text: &str) -> bool {
     let digits = text.strip_prefix('-').unwrap_or(text);
     !digits.is_empty() && digits.chars().all(|c| c.is_ascii_digit() || c == '.')
@@ -1034,18 +915,18 @@ mod tests {
         let mut pos = Pos::open(dir.path().join("test.sqlite3"))?;
         let today = today();
         let yesterday = today.previous_day().ok_or("date underflow")?;
-        let data = load(
+        let data = pos_service::load(
             &mut pos,
             &Query {
                 products: ProductQuery::default(),
                 sale_offset: 0,
-                report_start: yesterday,
-                report_end: yesterday,
+                report: pos_service::Period::day(yesterday),
                 shift_offset: 0,
                 movement_shift: None,
                 movement_offset: 0,
                 stock_product: None,
             },
+            now(),
         )?;
         assert_eq!(data.summary.date, yesterday.to_string());
         assert_eq!(data.today_summary.date, today.to_string());

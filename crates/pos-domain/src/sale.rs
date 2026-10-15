@@ -71,7 +71,7 @@ impl Product {
         crate::price_with_options(self.price, &self.options, chosen).map(|(unit, _)| unit)
     }
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProductInput {
     pub id: Option<Uuid>,
     pub sku: String,

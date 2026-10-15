@@ -31,35 +31,13 @@ pub enum Group {
     Promotions,
     Ingredients,
 }
-/// Bangkok dates `start..=end` shown in Reports (at most 366 days).
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub struct Period {
-    pub start: time::Date,
-    pub end: time::Date,
+pub use pos_service::Period;
+/// "15 ต.ค. 2569" or a range, for the period picker.
+pub trait PeriodLabel {
+    fn label(self, lang: Language) -> String;
 }
-impl Period {
-    pub fn day(date: time::Date) -> Self {
-        Self {
-            start: date,
-            end: date,
-        }
-    }
-    pub fn single(self) -> bool {
-        self.start == self.end
-    }
-    pub fn days(self) -> i64 {
-        (self.end - self.start).whole_days() + 1
-    }
-    /// The comparison period: same weekday last week for one day, otherwise
-    /// the equally long period right before.
-    pub fn previous(self) -> Option<Self> {
-        let back = if self.single() { 7 } else { self.days() };
-        Some(Self {
-            start: self.start.checked_sub(time::Duration::days(back))?,
-            end: self.end.checked_sub(time::Duration::days(back))?,
-        })
-    }
-    pub fn label(self, lang: Language) -> String {
+impl PeriodLabel for Period {
+    fn label(self, lang: Language) -> String {
         if self.single() {
             format::date(lang, self.start)
         } else {

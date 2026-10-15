@@ -52,7 +52,7 @@ pub struct CashCount {
     pub count: u32,
 }
 /// What the operator confirms when closing a shift.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ShiftCount {
     pub counted: Money,
     pub reason: String,

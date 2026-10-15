@@ -69,6 +69,7 @@ apps/pos-desktop/src/
   preview.rs       debug-only `--preview` presets for screenshots
 apps/pos-desktop/examples/seed_screens.rs   sample data folder for layout captures
 crates/pos-domain/  money, product/options/cart/sale data, discounts, PromptPay payload and validation
+crates/pos-service/ serializable business protocol (Request/Reply) and the one dispatcher the app and future paired devices use
 crates/pos-core/    Diesel catalog, checkout, held carts, voids, shifts and reports
   migrations/      versioned SQLite schema (001–023)
 assets/fonts/      IBM Plex Sans / Sans Thai / Mono, Noto Sans Thai fallback, OFL licenses

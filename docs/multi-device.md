@@ -4,7 +4,7 @@
 
 ลำดับ: **เฟส 0** เตรียมภายใน (ไม่มีเครือข่าย ผู้ใช้ไม่เห็นความต่าง) → **เฟส 1** เครื่องลูกใน LAN → **เฟส 2** คลาวด์ (สำรองนอกร้าน + รายงานบนเว็บ + แก้สินค้าจากส่วนกลาง) → **เฟส 3** หลายสาขา
 
-Status: decided direction; phase 0 in progress. Nothing listens on the network yet; the app is still single-register and offline.
+Status: decided direction; phase 0 in progress — **0a and 0b done (2026-10-16)**: request/result types are serializable and `crates/pos-service` is the single dispatcher the desktop worker uses. Nothing listens on the network yet; the app is still single-register and offline.
 
 ## 1. Constraints that shape the design
 

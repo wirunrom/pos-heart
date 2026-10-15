@@ -53,7 +53,7 @@ impl StockMovement {
     }
 }
 /// An operator's stock change. `id` makes a lost response safe to retry.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct StockRequest {
     pub id: Uuid,
     pub product_id: Uuid,
