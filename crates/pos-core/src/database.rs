@@ -27,7 +27,37 @@ struct SchemaVersion {
     #[diesel(sql_type = Integer)]
     user_version: i32,
 }
+/// One paired device's sign-in, approval and register, kept by the hub
+/// between that device's requests (multi-device phase 1). PIN lockout
+/// counts per device.
+#[derive(Debug, Clone)]
+pub struct DeviceContext {
+    session: crate::staff::Session,
+    register: uuid::Uuid,
+}
+impl DeviceContext {
+    pub fn new(register: uuid::Uuid) -> Self {
+        Self {
+            session: crate::staff::Session::default(),
+            register,
+        }
+    }
+    pub fn register(&self) -> uuid::Uuid {
+        self.register
+    }
+}
 impl Pos {
+    /// Runs `f` as the device: its session and register replace this
+    /// connection's for the call and are written back afterwards, so the
+    /// counter's own sign-in is untouched.
+    pub fn as_device<R>(&mut self, device: &mut DeviceContext, f: impl FnOnce(&mut Pos) -> R) -> R {
+        std::mem::swap(&mut self.session, &mut device.session);
+        std::mem::swap(&mut self.register, &mut device.register);
+        let out = f(self);
+        std::mem::swap(&mut self.session, &mut device.session);
+        std::mem::swap(&mut self.register, &mut device.register);
+        out
+    }
     pub fn open(path: impl AsRef<Path>) -> Result<Self> {
         let path = path.as_ref().to_str().ok_or_else(|| {
             Error::Io(std::io::Error::new(

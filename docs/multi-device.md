@@ -44,6 +44,9 @@ Each step lands with tests and keeps the app working exactly as today.
 
 ## 4. Phase 1 — devices on the shop LAN
 
+Progress (2026-10-16): **1a done** — `crates/pos-hub`: length-prefixed JSON frames (`wire`: Hello/Call ↔ Welcome/Refused/Answer/Changed, `WireError` kind + message, 16 MiB limit), `Hub` (accept thread, one thread per device, a newer connection of a device replaces the older, change notices to every device after each successful write, `Hub::notify` for writes made on the counter itself), `Executor` (runs jobs on the database owner as the device via `pos_core::DeviceContext` / `Pos::as_device`, so sign-in, approvals, PIN lockout and register are per device) and a blocking `Client`. The transport is plain TCP and nothing starts it in the app yet: TLS and pairing (1b) come before the desktop can enable it. Tests (`crates/pos-hub/tests/hub.rs`, loopback): two registers selling shared stock, a payment resent after a dropped connection returns the same receipt, cross-register shift refused, per-register drawers, change notices, refusals for unknown devices/tokens, per-device sign-in.
+
+
 - **Hub setting:** Settings → Devices → "Allow other devices" (off by default; requires the Settings permission). Shows hub name, address and paired devices.
 - **Pairing:** the hub shows a 6-digit code valid for 5 minutes. The device sends the code and its public key; the hub issues a per-device token and the device pins the hub's certificate fingerprint. Pairing and revocation are Activity events. Wrong codes are rate-limited.
 - **Transport:** TLS (rustls, blocking) on a LAN-bound port; length-prefixed JSON frames carrying `{version, device, request_id, request}`. `request_id` doubles as retry identity, so a resent payment after a dropped connection returns the stored result, as today.

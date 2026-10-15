@@ -23,7 +23,7 @@ mod void;
 pub use audit::{ActivityEvent, ActivityKind, ActivityQuery};
 pub use catalog::MAX_IMAGE_BYTES;
 pub use catalog::{CatalogCounts, ProductQuery, ProductView};
-pub use database::{Pos, SCHEMA_VERSION};
+pub use database::{DeviceContext, Pos, SCHEMA_VERSION};
 pub use import::{ImportIssue, ImportPreview, ImportRow, MAX_IMPORT_BYTES, MAX_IMPORT_ROWS};
 use pos_domain::DomainError;
 pub use pos_domain::MAIN_REGISTER;

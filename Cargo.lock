@@ -2563,6 +2563,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "pos-hub"
+version = "0.1.0"
+dependencies = [
+ "pos-core",
+ "pos-domain",
+ "pos-service",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "time",
+ "uuid",
+]
+
+[[package]]
 name = "pos-service"
 version = "0.1.0"
 dependencies = [
