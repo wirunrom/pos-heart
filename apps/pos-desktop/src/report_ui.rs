@@ -173,7 +173,8 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
     let left_w = (full.width() * 0.62).floor();
     let left = egui::Rect::from_min_size(full.min, vec2(left_w, full.height()));
     let right_x = left.right() + gap;
-    let pay_h = (full.height() * 0.38).clamp(200.0, 300.0);
+    // Room for the share bar, three methods and the total.
+    let pay_h = (if t.touch() { 320.0_f32 } else { 240.0 }).min(full.height() * 0.6);
     let pay = egui::Rect::from_min_max(
         egui::pos2(right_x, full.top()),
         egui::pos2(full.right(), full.top() + pay_h),
