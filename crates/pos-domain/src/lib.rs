@@ -59,7 +59,9 @@ pub use void::{
     VoidRequest,
 };
 
-#[derive(Debug, Clone, Copy, thiserror::Error, PartialEq, Eq)]
+#[derive(
+    Debug, Clone, Copy, thiserror::Error, PartialEq, Eq, serde::Serialize, serde::Deserialize,
+)]
 pub enum DomainError {
     #[error("ข้อมูลผู้ขาย ใบสั่งซื้อ หรือจำนวนรับเข้าไม่ถูกต้อง")]
     InvalidPurchase,

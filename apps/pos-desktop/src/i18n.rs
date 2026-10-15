@@ -316,6 +316,12 @@ impl Language {
                 "บาร์โค้ดนี้เป็นของสินค้าอื่นแล้ว",
                 "This barcode already belongs to another product.",
             ),
+            Error::Remote(message) => {
+                return format!(
+                    "{}: {message}",
+                    self.text("เครื่องหลักแจ้ง", "Main register says")
+                );
+            }
             Error::NotForSale(name) => {
                 return format!(
                     "{}: {name}",

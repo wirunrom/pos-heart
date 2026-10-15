@@ -179,6 +179,8 @@ pub enum Event {
     InvoiceIssued(pos_domain::TaxInvoice),
     /// A paired device changed shop data: refresh in the background.
     DevicesChanged,
+    /// Client mode: connected to (true) or lost (false) the main register.
+    Connection(bool),
     DeviceRevoked(Uuid),
     /// Background command finished (successfully or not); never changes `busy`.
     Quiet,
@@ -394,6 +396,181 @@ impl Worker {
                             &send,
                         );
                     }
+                }
+            })?;
+        Ok(Self {
+            tx,
+            rx,
+            epoch,
+            jobs,
+        })
+    }
+}
+
+/// This computer as a paired device (client mode): commands go to the main
+/// register over the LAN instead of a local database.
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+pub struct DeviceFile {
+    pub hub: std::net::SocketAddr,
+    pub device: Uuid,
+    pub token: String,
+    /// Pinned hub certificate (hex SHA-256).
+    pub fingerprint: String,
+    pub name: String,
+    pub kind: pos_core::DeviceKind,
+    pub register: Uuid,
+}
+impl DeviceFile {
+    pub const FILE: &'static str = "device.json";
+    pub fn load(dir: &Path) -> Option<Self> {
+        std::fs::read(dir.join(Self::FILE))
+            .ok()
+            .and_then(|b| serde_json::from_slice(&b).ok())
+    }
+    pub fn save(&self, dir: &Path) -> std::io::Result<()> {
+        std::fs::write(dir.join(Self::FILE), serde_json::to_vec_pretty(self)?)
+    }
+    pub fn pin(&self) -> Option<[u8; 32]> {
+        let bytes: Vec<u8> = (0..self.fingerprint.len())
+            .step_by(2)
+            .filter_map(|i| u8::from_str_radix(self.fingerprint.get(i..i + 2)?, 16).ok())
+            .collect();
+        bytes.try_into().ok()
+    }
+    pub fn hex(fingerprint: &[u8; 32]) -> String {
+        fingerprint.iter().map(|b| format!("{b:02x}")).collect()
+    }
+}
+fn remote_error(message: &str) -> Error {
+    Error::Remote(message.to_owned())
+}
+impl Worker {
+    /// Client mode: the same commands and events as the local worker, run
+    /// on the main register through `pos_hub::Client`. Device-local work
+    /// (backups, recovery, files) is refused; it belongs to the main register.
+    pub fn start_remote(device: DeviceFile, context: egui::Context) -> std::io::Result<Self> {
+        let (tx, commands) = mpsc::sync_channel::<CommandEnvelope>(16);
+        let (events, rx) = mpsc::channel();
+        let (jobs, _unused) = mpsc::channel::<pos_hub::Job>();
+        let epoch = Arc::new(AtomicU64::new(0));
+        let worker_epoch = Arc::clone(&epoch);
+        thread::Builder::new()
+            .name("pos-device".into())
+            .spawn(move || {
+                let send = |event: Event, background: bool, generation: u64| {
+                    let _ = events.send(EventEnvelope {
+                        generation,
+                        background,
+                        event,
+                    });
+                    context.request_repaint();
+                };
+                let Some(pin) = device.pin() else {
+                    send(
+                        Event::Failed(remote_error("device.json: invalid fingerprint")),
+                        false,
+                        0,
+                    );
+                    return;
+                };
+                let connect = || {
+                    pos_hub::Client::connect(device.hub, device.device, &device.token, pin)
+                        .map(|(c, _)| c)
+                };
+                let mut client: Option<pos_hub::Client> = None;
+                let mut next_try = std::time::Instant::now();
+                let mut observed = 0;
+                loop {
+                    if client.is_none() && std::time::Instant::now() >= next_try {
+                        match connect() {
+                            Ok(c) => {
+                                client = Some(c);
+                                send(Event::Connection(true), true, 0);
+                            }
+                            Err(_) => {
+                                next_try =
+                                    std::time::Instant::now() + std::time::Duration::from_secs(2);
+                            }
+                        }
+                    }
+                    let envelope = match commands
+                        .recv_timeout(std::time::Duration::from_millis(300))
+                    {
+                        Ok(envelope) => envelope,
+                        Err(mpsc::RecvTimeoutError::Timeout) => {
+                            // Change notices from the main register.
+                            if let Some(c) = client.as_mut() {
+                                match c.changes() {
+                                    Ok(v) if !v.is_empty() => send(Event::DevicesChanged, true, 0),
+                                    Ok(_) => {}
+                                    Err(_) => {
+                                        client = None;
+                                        send(Event::Connection(false), true, 0);
+                                    }
+                                }
+                            }
+                            continue;
+                        }
+                        Err(mpsc::RecvTimeoutError::Disconnected) => break,
+                    };
+                    let current = worker_epoch.load(Ordering::SeqCst);
+                    let background = envelope.command.background();
+                    if observed != current {
+                        // A local revocation also signs out on the main register.
+                        observed = current;
+                        if let Some(c) = client.as_mut() {
+                            let _ = c.call(Uuid::new_v4(), pos_service::Request::SignOut);
+                        }
+                    }
+                    let event = match request(envelope.command) {
+                        Ok((request, shape)) => {
+                            let id = Uuid::new_v4();
+                            let mut result = None;
+                            // One retry with the same id after reconnecting.
+                            for _ in 0..2 {
+                                if client.is_none() {
+                                    client = connect().ok();
+                                    if client.is_some() {
+                                        send(Event::Connection(true), true, 0);
+                                    }
+                                }
+                                let Some(c) = client.as_mut() else {
+                                    break;
+                                };
+                                match c.call(id, request.clone()) {
+                                    Ok(reply) => {
+                                        result = Some(Ok(event(reply, shape)));
+                                        break;
+                                    }
+                                    Err(pos_hub::ClientError::Business(e)) => {
+                                        result = Some(Err(e.into_core()));
+                                        break;
+                                    }
+                                    Err(_) => {
+                                        client = None;
+                                        send(Event::Connection(false), true, 0);
+                                    }
+                                }
+                            }
+                            match result {
+                                Some(Ok(event)) => event,
+                                Some(Err(_)) if background => Event::Quiet,
+                                Some(Err(e)) => Event::Failed(e),
+                                None if background => Event::Quiet,
+                                None => Event::Failed(remote_error(
+                                    "ไม่ได้เชื่อมต่อเครื่องหลัก / Not connected to the main register",
+                                )),
+                            }
+                        }
+                        Err(local) => match *local {
+                            Command::SetHub(_) => continue,
+                            _ if background => Event::Quiet,
+                            _ => Event::Failed(remote_error(
+                                "ทำได้ที่เครื่องหลักเท่านั้น / Only on the main register",
+                            )),
+                        },
+                    };
+                    send(event, background, envelope.generation);
                 }
             })?;
         Ok(Self {

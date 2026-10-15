@@ -179,7 +179,10 @@ impl App {
             Ok(Some(shop)) => (shop, None),
             Ok(None) => (
                 crate::shop::ShopSettings {
-                    setup_complete: existing || demo,
+                    // A paired device uses the main register's shop.
+                    setup_complete: existing
+                        || demo
+                        || data_dir.join(crate::worker::DeviceFile::FILE).exists(),
                     ..Default::default()
                 },
                 None,
@@ -228,9 +231,15 @@ impl App {
             Page::Home
         });
         let restore = Uuid::parse_str(read(CURRENT_BILL).trim()).ok();
-        let worker = Worker::start(data_dir.join("pos-heart.sqlite3"), cc.egui_ctx.clone())?;
+        // A paired device (device.json) works on the main register's data.
+        let device = crate::worker::DeviceFile::load(&data_dir);
+        let worker = match device.clone() {
+            Some(device) => Worker::start_remote(device, cc.egui_ctx.clone())?,
+            None => Worker::start(data_dir.join("pos-heart.sqlite3"), cc.egui_ctx.clone())?,
+        };
         let hub = crate::hub_ui::State {
             settings: crate::hub_ui::Settings::load(&data_dir),
+            device: device.clone(),
             ..Default::default()
         };
         Ok(Self {
@@ -714,6 +723,12 @@ impl App {
                     }
                     if self.purchase_followup.is_some() {
                         self.send(Command::LoadPurchases(self.purchasing.offset));
+                    }
+                }
+                Event::Connection(up) => {
+                    self.hub.connected = up;
+                    if up && !self.busy {
+                        self.refresh();
                     }
                 }
                 Event::DevicesChanged => {

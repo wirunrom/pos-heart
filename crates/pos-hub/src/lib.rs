@@ -184,10 +184,7 @@ impl Shared {
 }
 
 fn stopped() -> WireError {
-    WireError {
-        kind: "Stopped".into(),
-        message: "The main register stopped".into(),
-    }
+    WireError::new("Stopped", "The main register stopped")
 }
 fn ask(submit: &Submit, device: Uuid, work: Work) -> Result<Done, WireError> {
     let (tx, rx) = mpsc::channel();

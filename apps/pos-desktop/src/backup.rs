@@ -311,6 +311,7 @@ pub fn prepare(pos: &mut Pos, data: &Path, reviewed: &Review) -> pos_core::Resul
             "hub.json",
             "hub-cert.der",
             "hub-key.der",
+            "device.json",
         ] {
             if data.join(name).exists() {
                 copy_file(&data.join(name), &stage.join(name))?;

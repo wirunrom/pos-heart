@@ -525,15 +525,34 @@ pub fn status_bar(app: &mut App, ui: &mut egui::Ui) {
                 });
             divider(ui, &t);
         }
-        let offline = if narrow {
-            lang.text("ออฟไลน์", "Offline")
+        if app.hub.device.is_some() {
+            // Client mode: the link to the main register replaces "offline".
+            let (text, dot) = if app.hub.connected {
+                (
+                    lang.text("เชื่อมต่อเครื่องหลัก", "Main register connected"),
+                    Dot::Solid(t.p.success_solid),
+                )
+            } else {
+                (
+                    lang.text("ไม่ได้เชื่อมต่อเครื่องหลัก", "Main register not connected"),
+                    Dot::Solid(t.p.danger_solid),
+                )
+            };
+            if item(ui, &t, text, Some(dot)).clicked() {
+                app.settings_section = crate::settings_ui::Section::Devices;
+                app.navigate(Page::Settings);
+            }
         } else {
-            lang.text("ออฟไลน์ · ข้อมูลอยู่ในเครื่องนี้", "Offline · data on this device")
-        };
-        item(ui, &t, offline, Some(Dot::Hollow)).on_hover_text(lang.text(
-            "ทำงานในเครื่องนี้ ไม่ต้องใช้อินเทอร์เน็ต",
-            "Works on this device without internet",
-        ));
+            let offline = if narrow {
+                lang.text("ออฟไลน์", "Offline")
+            } else {
+                lang.text("ออฟไลน์ · ข้อมูลอยู่ในเครื่องนี้", "Offline · data on this device")
+            };
+            item(ui, &t, offline, Some(Dot::Hollow)).on_hover_text(lang.text(
+                "ทำงานในเครื่องนี้ ไม่ต้องใช้อินเทอร์เน็ต",
+                "Works on this device without internet",
+            ));
+        }
         divider(ui, &t);
         if !app.onboarding {
             let (text, dot) = match &app.data.shift {

@@ -67,18 +67,134 @@ pub enum Refusal {
 pub struct WireError {
     pub kind: String,
     pub message: String,
+    /// Payloads of errors that carry one (approval, stock, schema, …).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub permission: Option<pos_domain::Permission>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub text: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub number: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub domain: Option<pos_domain::DomainError>,
+}
+impl WireError {
+    pub fn new(kind: &str, message: &str) -> Self {
+        Self {
+            kind: kind.to_owned(),
+            message: message.to_owned(),
+            permission: None,
+            text: None,
+            number: None,
+            domain: None,
+        }
+    }
 }
 impl From<&pos_core::Error> for WireError {
     fn from(e: &pos_core::Error) -> Self {
+        use pos_core::Error as E;
         let debug = format!("{e:?}");
         let kind = debug
             .split(|c: char| !c.is_alphanumeric())
             .next()
             .unwrap_or_default()
             .to_owned();
-        Self {
-            kind,
-            message: e.to_string(),
+        let mut out = Self::new(&kind, &e.to_string());
+        match e {
+            E::ApprovalRequired(p) | E::Forbidden(p) => out.permission = Some(*p),
+            E::NotForSale(t) | E::InsufficientStock(t) | E::StockTrackingChanged(t) => {
+                out.text = Some(t.clone());
+            }
+            E::UnsupportedSchema(n) => out.number = Some(*n),
+            E::PinLocked(n) => out.number = i64::try_from(*n).ok(),
+            E::Domain(d) => out.domain = Some(*d),
+            E::Remote(m) => out.message = m.clone(),
+            _ => {}
+        }
+        out
+    }
+}
+impl WireError {
+    /// The hub's error as the local error type, so devices show the same
+    /// messages and approval prompts as the main register.
+    pub fn into_core(self) -> pos_core::Error {
+        use pos_core::Error as E;
+        let text = self.text.clone().unwrap_or_default();
+        match self.kind.as_str() {
+            "Domain" if self.domain.is_some() => match self.domain {
+                Some(d) => E::Domain(d),
+                None => E::Remote(self.message),
+            },
+            "ApprovalRequired" if self.permission.is_some() => match self.permission {
+                Some(p) => E::ApprovalRequired(p),
+                None => E::Remote(self.message),
+            },
+            "Forbidden" if self.permission.is_some() => match self.permission {
+                Some(p) => E::Forbidden(p),
+                None => E::Remote(self.message),
+            },
+            "NotForSale" => E::NotForSale(text),
+            "InsufficientStock" => E::InsufficientStock(text),
+            "StockTrackingChanged" => E::StockTrackingChanged(text),
+            "UnsupportedSchema" => E::UnsupportedSchema(self.number.unwrap_or_default()),
+            "PinLocked" => {
+                E::PinLocked(u64::try_from(self.number.unwrap_or_default()).unwrap_or_default())
+            }
+            "SupplierNotFound" => E::SupplierNotFound,
+            "PurchaseOrderNotFound" => E::PurchaseOrderNotFound,
+            "PurchaseOrderChanged" => E::PurchaseOrderChanged,
+            "PurchaseOrderClosed" => E::PurchaseOrderClosed,
+            "PurchaseExceedsOrder" => E::PurchaseExceedsOrder,
+            "DuplicateSku" => E::DuplicateSku,
+            "DuplicateBarcode" => E::DuplicateBarcode,
+            "ProductUnavailable" => E::ProductUnavailable,
+            "AlreadyPaid" => E::AlreadyPaid,
+            "CartNotFound" => E::CartNotFound,
+            "CorruptData" => E::CorruptData,
+            "SaleNotFound" => E::SaleNotFound,
+            "LegacyStockReviewRequired" => E::LegacyStockReviewRequired,
+            "InvalidStockSelection" => E::InvalidStockSelection,
+            "InvalidVoidTime" => E::InvalidVoidTime,
+            "PaymentTotalChanged" => E::PaymentTotalChanged,
+            "InvalidRefundMethod" => E::InvalidRefundMethod,
+            "RefundExceedsMethod" => E::RefundExceedsMethod,
+            "DuplicateCoupon" => E::DuplicateCoupon,
+            "OptionSetNotFound" => E::OptionSetNotFound,
+            "InvalidCategory" => E::InvalidCategory,
+            "DuplicateCategory" => E::DuplicateCategory,
+            "CategoryNotFound" => E::CategoryNotFound,
+            "InvalidImage" => E::InvalidImage,
+            "IngredientNotFound" => E::IngredientNotFound,
+            "DuplicateIngredient" => E::DuplicateIngredient,
+            "NoOpenShift" => E::NoOpenShift,
+            "ShiftAlreadyOpen" => E::ShiftAlreadyOpen,
+            "RegisterNotFound" => E::RegisterNotFound,
+            "DeviceNotFound" => E::DeviceNotFound,
+            "InvalidDevice" => E::InvalidDevice,
+            "InvalidRegister" => E::InvalidRegister,
+            "ShiftChanged" => E::ShiftChanged,
+            "ShiftClosed" => E::ShiftClosed,
+            "InvalidCashMovement" => E::InvalidCashMovement,
+            "ConflictingRequest" => E::ConflictingRequest,
+            "InvalidShiftTime" => E::InvalidShiftTime,
+            "InvalidReportDate" => E::InvalidReportDate,
+            "StockChanged" => E::StockChanged,
+            "StockNotTracked" => E::StockNotTracked,
+            "SaleVoided" => E::SaleVoided,
+            "PartiallyRefunded" => E::PartiallyRefunded,
+            "RefundExceedsSale" => E::RefundExceedsSale,
+            "SignInRequired" => E::SignInRequired,
+            "WrongPin" => E::WrongPin,
+            "StaffNotFound" => E::StaffNotFound,
+            "LastOwner" => E::LastOwner,
+            "RoleNotFound" => E::RoleNotFound,
+            "RoleInUse" => E::RoleInUse,
+            "TableNotFound" => E::TableNotFound,
+            "TableBusy" => E::TableBusy,
+            "DuplicateTable" => E::DuplicateTable,
+            "TicketNotFound" => E::TicketNotFound,
+            "NotTaxReceipt" => E::NotTaxReceipt,
+            "SaleRefunded" => E::SaleRefunded,
+            _ => E::Remote(self.message),
         }
     }
 }

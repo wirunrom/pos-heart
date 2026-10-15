@@ -52,6 +52,21 @@ pub struct State {
     /// The pairing code on screen and when it was opened.
     pub pairing: Option<(String, Instant)>,
     pub error: Option<String>,
+    /// Client mode: this computer is a paired device of a main register.
+    pub device: Option<crate::worker::DeviceFile>,
+    /// Client mode: currently connected to the main register.
+    pub connected: bool,
+    /// "Use this computer as a device" form.
+    pub join: Join,
+}
+#[derive(Default)]
+pub struct Join {
+    pub address: String,
+    pub code: String,
+    pub name: String,
+    pub kitchen: bool,
+    pub running: Option<std::sync::mpsc::Receiver<Result<crate::worker::DeviceFile, String>>>,
+    pub done: Option<Result<(), String>>,
 }
 
 /// This computer's address on the shop LAN, as devices type it. Finds the
@@ -64,7 +79,7 @@ pub fn lan_address() -> Option<std::net::IpAddr> {
 
 /// Starts the hub when `hub.json` says so (app start and the switch).
 pub fn start(app: &mut App) {
-    if app.hub.hub.is_some() || !app.hub.settings.enabled {
+    if app.hub.hub.is_some() || !app.hub.settings.enabled || app.hub.device.is_some() {
         return;
     }
     let result = (|| -> std::io::Result<pos_hub::Hub> {
@@ -112,7 +127,234 @@ fn kind_label(lang: crate::i18n::Language, kind: DeviceKind) -> &'static str {
     }
 }
 
+/// Client mode: which main register this computer uses, and leaving it.
+fn device_card(app: &mut App, ui: &mut egui::Ui, device: &crate::worker::DeviceFile) {
+    let t = Theme::of(ui);
+    let lang = app.lang;
+    w::title(
+        ui,
+        lang.text("เครื่องนี้เป็นเครื่องลูก", "This computer is a shop device"),
+    );
+    w::help_text(
+        ui,
+        lang.text(
+            "ขาย พักบิล และดูข้อมูลผ่านเครื่องหลัก การสำรองและกู้คืนข้อมูลทำที่เครื่องหลัก",
+            "Selling, held bills and data go through the main register. Backups and recovery are done there.",
+        ),
+    );
+    w::kv(
+        ui,
+        lang.text("เครื่องหลัก", "Main register"),
+        &device.hub.to_string(),
+        w::Value::Plain,
+    );
+    w::kv(
+        ui,
+        lang.text("ชื่อเครื่องนี้", "This device"),
+        &device.name,
+        w::Value::Plain,
+    );
+    w::kv(
+        ui,
+        lang.text("ประเภท", "Kind"),
+        kind_label(lang, device.kind),
+        w::Value::Plain,
+    );
+    w::kv(
+        ui,
+        lang.text("สถานะ", "Status"),
+        if app.hub.connected {
+            lang.text("เชื่อมต่ออยู่", "Connected")
+        } else {
+            lang.text("ไม่ได้เชื่อมต่อ กำลังลองใหม่…", "Not connected, retrying…")
+        },
+        if app.hub.connected {
+            w::Value::Plain
+        } else {
+            w::Value::Danger
+        },
+    );
+    ui.add_space(space::S2);
+    if w::button(lang.text("เลิกเป็นเครื่องลูก", "Stop being a shop device"))
+        .danger_quiet()
+        .size(w::Size::Sm)
+        .show(ui)
+        .clicked()
+    {
+        match std::fs::remove_file(app.data_dir.join(crate::worker::DeviceFile::FILE)) {
+            Ok(()) => {
+                app.toast(lang.text(
+                    "เลิกเป็นเครื่องลูกแล้ว ปิดแอปแล้วเปิดใหม่เพื่อใช้ข้อมูลในเครื่องนี้",
+                    "Done. Restart the app to use this computer's own data.",
+                ));
+            }
+            Err(e) => app.error = Some(e.to_string()),
+        }
+    }
+    let _ = t;
+}
+/// "Use this computer as a shop device": address + code from the main
+/// register; pairing runs in the background and writes device.json.
+fn join_card(app: &mut App, ui: &mut egui::Ui) {
+    let t = Theme::of(ui);
+    let lang = app.lang;
+    ui.add_space(space::S4);
+    w::divider(ui);
+    ui.label(t.text(
+        lang.text("ใช้เครื่องนี้เป็นเครื่องลูก", "Use this computer as a shop device"),
+        type_scale::BODY_STRONG,
+    ));
+    w::help_text(
+        ui,
+        lang.text(
+            "เช่น เครื่องขายที่สองหรือจอครัว ที่เครื่องหลักกด \"จับคู่เครื่องใหม่\" แล้วใส่ที่อยู่และรหัสที่เห็น",
+            "For a second register or a kitchen PC. On the main register press \"Pair a device\", then enter the address and code shown there.",
+        ),
+    );
+    if let Some(rx) = &app.hub.join.running
+        && let Ok(result) = rx.try_recv()
+    {
+        app.hub.join.running = None;
+        app.hub.join.done = Some(result.map(|_| ()));
+    }
+    let busy = app.hub.join.running.is_some();
+    w::field_label(ui, lang.text("ที่อยู่เครื่องหลัก", "Main register address"), None);
+    w::text_input(
+        ui,
+        &mut app.hub.join.address,
+        w::FieldOpts {
+            hint: "192.168.1.10:47810",
+            limit: 64,
+            ..Default::default()
+        },
+    );
+    w::field_label(ui, lang.text("รหัสจับคู่ 6 หลัก", "6-digit pairing code"), None);
+    w::text_input(
+        ui,
+        &mut app.hub.join.code,
+        w::FieldOpts {
+            hint: "123 456",
+            limit: 7,
+            ..Default::default()
+        },
+    );
+    w::field_label(ui, lang.text("ชื่อเครื่องนี้", "Name of this device"), None);
+    w::text_input(
+        ui,
+        &mut app.hub.join.name,
+        w::FieldOpts {
+            hint: lang.text("เช่น เคาน์เตอร์ 2", "e.g. Counter 2"),
+            limit: 80,
+            ..Default::default()
+        },
+    );
+    let mut kitchen = app.hub.join.kitchen;
+    w::segmented(
+        ui,
+        &mut kitchen,
+        &[
+            (
+                false,
+                lang.text("เครื่องขาย (ลิ้นชักของตัวเอง)", "Register (own drawer)"),
+            ),
+            (true, lang.text("จอครัว", "Kitchen screen")),
+        ],
+    );
+    app.hub.join.kitchen = kitchen;
+    let code: String = app
+        .hub
+        .join
+        .code
+        .chars()
+        .filter(char::is_ascii_digit)
+        .collect();
+    let address = app.hub.join.address.trim().to_owned();
+    let address = if address.contains(':') {
+        address
+    } else {
+        format!("{address}:{DEFAULT_PORT}")
+    };
+    let parsed: Option<std::net::SocketAddr> = address.parse().ok();
+    let ready =
+        parsed.is_some() && code.len() == 6 && !app.hub.join.name.trim().is_empty() && !busy;
+    if w::button(if busy {
+        lang.text("กำลังจับคู่…", "Pairing…")
+    } else {
+        lang.text("จับคู่กับเครื่องหลัก", "Pair with the main register")
+    })
+    .primary()
+    .enabled(ready)
+    .loading(busy)
+    .show(ui)
+    .clicked()
+        && let Some(hub) = parsed
+    {
+        let name = app.hub.join.name.trim().to_owned();
+        let kind = if kitchen {
+            DeviceKind::Kitchen
+        } else {
+            DeviceKind::Register
+        };
+        let dir = app.data_dir.clone();
+        let (tx, rx) = std::sync::mpsc::channel();
+        app.hub.join.running = Some(rx);
+        app.hub.join.done = None;
+        std::thread::spawn(move || {
+            let device = uuid::Uuid::new_v4();
+            let result = pos_hub::Client::pair(hub, &code, device, &name, kind)
+                .map_err(|e| e.to_string())
+                .and_then(|p| {
+                    let file = crate::worker::DeviceFile {
+                        hub,
+                        device,
+                        token: p.token,
+                        fingerprint: crate::worker::DeviceFile::hex(&p.fingerprint),
+                        name,
+                        kind,
+                        register: p.register,
+                    };
+                    file.save(&dir).map_err(|e| e.to_string())?;
+                    Ok(file)
+                });
+            let _ = tx.send(result);
+        });
+    }
+    if busy {
+        ui.ctx()
+            .request_repaint_after(std::time::Duration::from_millis(200));
+    }
+    match &app.hub.join.done {
+        Some(Ok(())) => w::banner(
+            ui,
+            w::Tone::Success,
+            lang.text(
+                "จับคู่สำเร็จ ปิดแอปแล้วเปิดใหม่เพื่อเริ่มใช้งานเป็นเครื่องลูก",
+                "Paired. Restart the app to start working as a shop device.",
+            ),
+            None,
+        ),
+        Some(Err(e)) => {
+            w::inline_error(
+                ui,
+                &format!("{} {e}", lang.text("จับคู่ไม่สำเร็จ:", "Pairing failed:")),
+            );
+            false
+        }
+        None => false,
+    };
+}
+
 pub fn card(app: &mut App, ui: &mut egui::Ui) {
+    if let Some(device) = app.hub.device.clone() {
+        device_card(app, ui, &device);
+        return;
+    }
+    hub_card(app, ui);
+    if !app.hub.settings.enabled && app.data.devices.is_empty() {
+        join_card(app, ui);
+    }
+}
+fn hub_card(app: &mut App, ui: &mut egui::Ui) {
     let t = Theme::of(ui);
     let lang = app.lang;
     let may = crate::staff_ui::may(app, pos_domain::Permission::Settings) && !app.busy;

@@ -81,3 +81,67 @@ fn a_paired_device_works_through_the_desktop_worker() -> Result {
     ));
     Ok(())
 }
+
+#[test]
+fn a_client_mode_worker_runs_commands_on_the_main_register() -> Result {
+    use crate::worker::DeviceFile;
+    let dir = tempfile::tempdir()?;
+    let main = Worker::start(
+        dir.path().join("pos-heart.sqlite3"),
+        eframe::egui::Context::default(),
+    )?;
+    wait_for(&main, |e| matches!(e, Event::Ready(_)))?;
+    let identity = Identity::load_or_create(dir.path())?;
+    let hub = Hub::start(
+        TcpListener::bind("127.0.0.1:0")?,
+        &identity,
+        main.hub_submit(),
+    )?;
+    assert!(main.send(Command::SetHub(Some(hub.notifier()))));
+    let device = Uuid::new_v4();
+    let paired = Client::pair(
+        hub.address(),
+        &hub.open_pairing(),
+        device,
+        "เคาน์เตอร์ 2",
+        DeviceKind::Register,
+    )?;
+    let file = DeviceFile {
+        hub: hub.address(),
+        device,
+        token: paired.token,
+        fingerprint: DeviceFile::hex(&paired.fingerprint),
+        name: "เคาน์เตอร์ 2".into(),
+        kind: DeviceKind::Register,
+        register: paired.register,
+    };
+    let client_dir = tempfile::tempdir()?;
+    file.save(client_dir.path())?;
+    let loaded = DeviceFile::load(client_dir.path()).ok_or("device.json")?;
+    assert_eq!(loaded.pin(), Some(paired.fingerprint));
+    let remote = Worker::start_remote(loaded, eframe::egui::Context::default())?;
+    wait_for(&remote, |e| matches!(e, Event::Connection(true)))?;
+    // A product saved on the device lands in the main register's database.
+    assert!(remote.send(Command::Save(pos_domain::ProductInput {
+        sku: "R-1".into(),
+        name: "กาแฟ".into(),
+        price: "50".parse()?,
+        ..Default::default()
+    })));
+    wait_for(&remote, |e| matches!(e, Event::Saved(_)))?;
+    wait_for(&main, |e| matches!(e, Event::DevicesChanged))?;
+    // The device's own register has its own shift.
+    assert!(remote.send(Command::OpenShift(Uuid::new_v4(), "200".parse()?)));
+    wait_for(&remote, |e| matches!(e, Event::ShiftOpened))?;
+    // Business errors come back as the same local errors.
+    assert!(remote.send(Command::OpenShift(Uuid::new_v4(), "1".parse()?)));
+    wait_for(&remote, |e| {
+        matches!(e, Event::Failed(pos_core::Error::ShiftAlreadyOpen))
+    })?;
+    // Device-local work is refused on a device.
+    assert!(remote.send(Command::Demo));
+    wait_for(&remote, |e| {
+        matches!(e, Event::Failed(pos_core::Error::Remote(_)))
+    })?;
+    Ok(())
+}

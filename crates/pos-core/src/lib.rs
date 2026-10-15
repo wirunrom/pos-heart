@@ -111,6 +111,9 @@ pub enum Error {
     NoOpenShift,
     #[error("A shift is already open")]
     ShiftAlreadyOpen,
+    /// An error reported by the shop hub that has no local equivalent.
+    #[error("{0}")]
+    Remote(String),
     #[error("Register not found or retired")]
     RegisterNotFound,
     #[error("Device not found")]
