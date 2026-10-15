@@ -12,13 +12,15 @@ use std::path::Path;
 use uuid::Uuid;
 
 /// Highest supported business schema. Backups and recovery use the same gate.
-pub const SCHEMA_VERSION: i32 = 23;
+pub const SCHEMA_VERSION: i32 = 24;
 
 /// Owned by the database worker. Diesel and raw SQL share this one connection.
 pub struct Pos {
     pub(crate) conn: SqliteConnection,
     /// Signed-in staff and a one-shot approval (see staff.rs).
     pub(crate) session: crate::staff::Session,
+    /// The register this connection sells for: its shift and drawer.
+    pub(crate) register: uuid::Uuid,
 }
 #[derive(QueryableByName)]
 struct SchemaVersion {
@@ -119,12 +121,16 @@ impl Pos {
             if version < 23 {
                 conn.batch_execute(include_str!("../migrations/023_purchasing.sql"))?;
             }
+            if version < 24 {
+                conn.batch_execute(include_str!("../migrations/024_registers.sql"))?;
+            }
             crate::staff::ensure_roles(conn)?;
             Ok(())
         })?;
         Ok(Self {
             conn,
             session: crate::staff::Session::default(),
+            register: crate::MAIN_REGISTER,
         })
     }
     pub fn hold(&mut self, cart: &Cart, now: i64) -> Result<()> {

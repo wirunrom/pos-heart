@@ -3,9 +3,18 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 /// Drawer totals are distinct from calendar-day sales reports.
+/// The register every shop starts with (and every pre-register shift).
+pub const MAIN_REGISTER: Uuid = Uuid::from_u128(1);
+fn main_register() -> Uuid {
+    MAIN_REGISTER
+}
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Shift {
     pub id: Uuid,
+    /// The register (drawer) this shift belongs to; older snapshots belong
+    /// to the main register.
+    #[serde(default = "main_register")]
+    pub register_id: Uuid,
     pub opened_at: i64,
     pub last_activity_at: i64,
     pub opening: Money,

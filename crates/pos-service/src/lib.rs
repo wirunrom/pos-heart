@@ -99,6 +99,10 @@ pub struct Data {
     pub option_sets: Vec<(pos_domain::OptionGroup, u64)>,
     /// Open kitchen tickets oldest first, then recently bumped ones.
     pub kitchen: Vec<pos_domain::KitchenTicket>,
+    /// Every register (drawer), the main one first; `shift` is this
+    /// connection's register's open shift.
+    #[serde(default)]
+    pub registers: Vec<pos_core::Register>,
 }
 
 /// A business request. Writes carry their own retry identity (cart ID,
@@ -158,6 +162,8 @@ pub enum Request {
     BumpTicket(Uuid, Option<i64>),
     TicketLine(Uuid, usize, bool),
     IssueInvoice(Uuid, pos_domain::Buyer),
+    /// Adds a register (retry-safe by ID).
+    AddRegister(Uuid, String),
     /// Runs `inner` once with an approver's PIN for a restricted action.
     Approved {
         approver: Uuid,
@@ -221,6 +227,7 @@ pub enum Reply {
     KitchenSent(Box<Cart>, Option<Box<pos_domain::KitchenTicket>>),
     Kitchen(Vec<pos_domain::KitchenTicket>),
     InvoiceIssued(Box<pos_domain::TaxInvoice>),
+    RegisterAdded(pos_core::Register),
 }
 
 /// Runs one request at `now` (Unix seconds). Approval covers only the
@@ -419,6 +426,7 @@ pub fn handle(pos: &mut Pos, request: Request, now: i64) -> Result<Reply> {
         Request::IssueInvoice(sale, buyer) => {
             Reply::InvoiceIssued(Box::new(pos.issue_tax_invoice(sale, &buyer, now)?))
         }
+        Request::AddRegister(id, name) => Reply::RegisterAdded(pos.add_register(id, &name, now)?),
         Request::Approved {
             approver,
             pin,
@@ -475,6 +483,7 @@ pub fn load(pos: &mut Pos, q: &Query, now: i64) -> Result<Data> {
         ingredients: pos.ingredients()?,
         option_sets: pos.option_sets()?,
         kitchen: pos.kitchen_tickets()?,
+        registers: pos.registers()?,
         stock_history,
         shift,
         shifts,

@@ -33,6 +33,7 @@ impl Pos {
         now: i64,
     ) -> Result<SaleRefund> {
         let session = self.session.clone();
+        let register = self.register;
         self.conn.immediate_transaction(|conn| {
             if let Some(json) = sale_refunds::table
                 .find(request.id.to_string())
@@ -48,7 +49,7 @@ impl Pos {
                 };
             }
             request.validate()?;
-            let shift = crate::shifts::active(conn, shift_id, now)?;
+            let shift = crate::shifts::active(conn, register, shift_id, now)?;
             let staff =
                 crate::staff::authorize(conn, &session, Some(pos_domain::Permission::Refund))?;
             let json = sales::table

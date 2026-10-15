@@ -328,3 +328,103 @@ fn version_two_migration_keeps_old_receipt_bytes_and_does_not_fabricate_shifts()
     );
     Ok(())
 }
+
+#[test]
+fn each_register_has_its_own_shift_and_drawer()
+-> std::result::Result<(), Box<dyn std::error::Error>> {
+    use pos_domain::{Cart, CartLine, MAIN_REGISTER, PaymentMethod, PaymentRequest};
+    let dir = tempfile::tempdir()?;
+    let path = dir.path().join("shop.sqlite3");
+    let mut pos = Pos::open(&path)?;
+    assert_eq!(pos.register(), MAIN_REGISTER);
+    assert_eq!(pos.registers()?.len(), 1);
+    let second = uuid::Uuid::new_v4();
+    let added = pos.add_register(second, "เคาน์เตอร์ 2", 10)?;
+    // A retried add returns the same register; another name is a conflict.
+    assert_eq!(pos.add_register(second, "เคาน์เตอร์ 2", 11)?.id, added.id);
+    assert!(matches!(
+        pos.add_register(second, "อื่น", 12),
+        Err(pos_core::Error::ConflictingRequest)
+    ));
+    assert!(matches!(
+        pos.use_register(uuid::Uuid::new_v4()),
+        Err(pos_core::Error::RegisterNotFound)
+    ));
+    let product = pos.save_product(pos_domain::ProductInput {
+        sku: "A".into(),
+        name: "a".into(),
+        price: "10".parse()?,
+        stock: Some(5),
+        ..Default::default()
+    })?;
+    let main_shift = uuid::Uuid::new_v4();
+    pos.open_shift(main_shift, "100".parse()?, 20)?;
+    assert!(matches!(
+        pos.open_shift(uuid::Uuid::new_v4(), "1".parse()?, 21),
+        Err(pos_core::Error::ShiftAlreadyOpen)
+    ));
+    // The second register opens its own shift while the main one is open.
+    pos.use_register(second)?;
+    assert!(pos.active_shift()?.is_none());
+    let second_shift = uuid::Uuid::new_v4();
+    pos.open_shift(second_shift, "50".parse()?, 22)?;
+    let mut cart = Cart::new();
+    cart.lines.push(CartLine {
+        product_id: product.id,
+        quantity: 2,
+        ..Default::default()
+    });
+    pos.checkout_with_payment(
+        &cart,
+        PaymentRequest {
+            method: PaymentMethod::Cash,
+            amount: "20".parse()?,
+        },
+        Some(second_shift),
+        23,
+    )?;
+    // Paying against the other register's shift is refused.
+    let mut other = Cart::new();
+    other.lines = cart.lines.clone();
+    assert!(
+        pos.checkout_with_payment(
+            &other,
+            PaymentRequest {
+                method: PaymentMethod::Cash,
+                amount: "20".parse()?,
+            },
+            Some(main_shift),
+            24,
+        )
+        .is_err()
+    );
+    let s2 = pos.active_shift()?.ok_or("second shift")?;
+    assert_eq!(s2.register_id, second);
+    assert_eq!(s2.expected()?.to_string(), "70.00");
+    pos.use_register(MAIN_REGISTER)?;
+    let s1 = pos.active_shift()?.ok_or("main shift")?;
+    assert_eq!(s1.id, main_shift);
+    assert_eq!(s1.expected()?.to_string(), "100.00");
+    // Stock is shared by the shop.
+    assert_eq!(pos.products("", 0)?[0].stock, Some(3));
+    // A reopened connection sells for the main register again.
+    drop(pos);
+    let mut reopened = Pos::open(&path)?;
+    assert_eq!(reopened.active_shift()?.ok_or("main")?.id, main_shift);
+    Ok(())
+}
+
+#[test]
+fn pre_register_shift_snapshots_belong_to_the_main_register()
+-> std::result::Result<(), Box<dyn std::error::Error>> {
+    // A snapshot written before registers existed has no register_id.
+    let dir = tempfile::tempdir()?;
+    let mut pos = Pos::open(dir.path().join("shop.sqlite3"))?;
+    let current = pos.open_shift(Uuid::new_v4(), Money::ZERO, 1)?;
+    let mut json = serde_json::to_value(&current)?;
+    json.as_object_mut().ok_or("object")?.remove("register_id");
+    let legacy = serde_json::to_string(&json)?;
+    let shift: pos_domain::Shift = serde_json::from_str(&legacy)?;
+    assert_eq!(shift.register_id, pos_domain::MAIN_REGISTER);
+    Ok(())
+}

@@ -57,6 +57,15 @@ diesel::table! {
         opened_at -> BigInt,
         closed_at -> Nullable<BigInt>,
         shift_json -> Text,
+        register_id -> Text,
+    }
+}
+diesel::table! {
+    registers (id) {
+        id -> Text,
+        name -> Text,
+        created_at -> BigInt,
+        retired_at -> Nullable<BigInt>,
     }
 }
 diesel::table! {
@@ -201,6 +210,7 @@ diesel::table! {
     }
 }
 diesel::allow_tables_to_appear_in_same_query!(
+    registers,
     option_sets,
     categories,
     product_images,

@@ -218,7 +218,7 @@ Settings → Pricing (roles with Settings allowed) sets an optional service char
 - **Activity log** (workspace / Settings, `Alt 8`): search, type filters and newest-first pages of 50; product/price/cost changes, discounts, refunds, voids, stock, staff and roles. Actor/approver snapshots never include PINs/hashes. Events start with schema 14; no fabricated historical log. Uses Reports permission.
 - **Products → Unit cost; Reports → Estimated gross profit:** optional standard per-unit cost is snapshotted at checkout. Profit excludes VAT, includes service and reverses original revenue/cost on refund day; unknown-cost lines appear separately. This estimates standard-cost gross profit before operating expenses, not inventory averaging. Enter an inclusive standard cost for products with options; option-specific costs are not modeled. CSV exports include cost and profit coverage. Legacy costs stay unknown and receipts are never rewritten.
 
-Schemas 13–14 added costs and activity; the current schema is 23, including tables, credit notes, promotions, ingredients, pictures, categories, shared option sets and purchasing below. Back up with the previous build before upgrading a real shop.
+Schemas 13–14 added costs and activity; the current schema is 24, including tables, credit notes, promotions, ingredients, pictures, categories, shared option sets, purchasing and registers (one shift and drawer per register; existing shifts belong to the main register) below. Back up with the previous build before upgrading a real shop.
 
 ## Tables and kitchen (2026-10-13)
 

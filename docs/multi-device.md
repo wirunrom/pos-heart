@@ -4,7 +4,7 @@
 
 ลำดับ: **เฟส 0** เตรียมภายใน (ไม่มีเครือข่าย ผู้ใช้ไม่เห็นความต่าง) → **เฟส 1** เครื่องลูกใน LAN → **เฟส 2** คลาวด์ (สำรองนอกร้าน + รายงานบนเว็บ + แก้สินค้าจากส่วนกลาง) → **เฟส 3** หลายสาขา
 
-Status: decided direction; phase 0 in progress — **0a and 0b done (2026-10-16)**: request/result types are serializable and `crates/pos-service` is the single dispatcher the desktop worker uses. Nothing listens on the network yet; the app is still single-register and offline.
+Status: decided direction; phase 0 in progress — **0a, 0b and 0c done (2026-10-16)**: request/result types are serializable, `crates/pos-service` is the single dispatcher the desktop worker uses, and schema 24 adds registers with one shift per register (sales/refunds/movements are attributed through their shift rather than new columns). Tablet decision: **iPad first** (see §6). Nothing listens on the network yet; the app is still single-register and offline.
 
 ## 1. Constraints that shape the design
 
@@ -62,6 +62,6 @@ Each step lands with tests and keeps the app working exactly as today.
 
 ## 6. Decisions still open
 
-- **Tablet platform.** Options: (a) the hub serves a small web app over HTTPS on the LAN — works on Android and iPad without app stores, needs a web front end that follows the design system; (b) the egui desktop app built for Android/iPad — one code base but immature mobile support and store distribution. Recommendation: (a) for ordering tablets, the desktop client mode for second registers and kitchen PCs. Needs the owner's tablet choice (Android or iPad).
+- **Tablet platform — decided: iPad first (2026-10-16).** Ordering tablets use a small web app served by the hub over the shop LAN and opened in Safari (added to the Home Screen), so no App Store app is needed. Safari only trusts the hub's TLS certificate after the iPad installs the hub's own root certificate: pairing shows a QR code that downloads a configuration profile (`.mobileconfig`) with that root, the staff installs it and enables full trust once (Settings → General → About → Certificate Trust Settings). The web app follows the design system (one theme, accent, Touch density) and only talks to the hub's protocol; it cannot take payment by default. A native iPad app stays an option if the web app falls short (e.g. printing from the tablet). Second registers and kitchen PCs use the desktop client mode.
 - **Cloud hosting and budget** (phase 2): managed hosting in Thailand/Singapore region, cost per shop.
 - **Real-shop trial:** Wi-Fi quality, wired hub, number of devices — phase 1 must be tried in a real shop before phase 2 starts. Windows runtime and real printers/drawers are still unverified (docs/validation.md).

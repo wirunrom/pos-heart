@@ -1,6 +1,6 @@
 use crate::{
     Error, Pos, Result,
-    schema::{cash_movements, shifts},
+    schema::{cash_movements, registers, shifts},
 };
 use diesel::prelude::*;
 use pos_domain::{
@@ -10,11 +10,13 @@ use uuid::Uuid;
 
 pub(crate) fn active(
     conn: &mut SqliteConnection,
+    register: Uuid,
     expected: Option<Uuid>,
     now: i64,
 ) -> Result<Shift> {
     let json = shifts::table
         .filter(shifts::closed_at.is_null())
+        .filter(shifts::register_id.eq(register.to_string()))
         .select(shifts::shift_json)
         .first::<String>(conn)
         .optional()?
@@ -106,10 +108,102 @@ fn apply(shift: &mut Shift, movement: &CashMovement, count: bool) -> Result<()> 
     }
     Ok(())
 }
+/// A register: one drawer and its own shift (multi-device phase 0c).
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct Register {
+    pub id: Uuid,
+    pub name: String,
+    pub created_at: i64,
+    pub retired_at: Option<i64>,
+}
 impl Pos {
+    /// The register this connection sells for.
+    pub fn register(&self) -> Uuid {
+        self.register
+    }
+    /// Sells for another (existing, not retired) register from now on.
+    pub fn use_register(&mut self, id: Uuid) -> Result<()> {
+        let retired = registers::table
+            .find(id.to_string())
+            .select(registers::retired_at)
+            .first::<Option<i64>>(&mut self.conn)
+            .optional()?
+            .ok_or(Error::RegisterNotFound)?;
+        if retired.is_some() {
+            return Err(Error::RegisterNotFound);
+        }
+        self.register = id;
+        Ok(())
+    }
+    /// Every register, the main one first.
+    pub fn registers(&mut self) -> Result<Vec<Register>> {
+        registers::table
+            .order((registers::created_at, registers::id))
+            .select((
+                registers::id,
+                registers::name,
+                registers::created_at,
+                registers::retired_at,
+            ))
+            .load::<(String, String, i64, Option<i64>)>(&mut self.conn)?
+            .into_iter()
+            .map(|(id, name, created_at, retired_at)| {
+                Ok(Register {
+                    id: Uuid::parse_str(&id).map_err(|_| Error::CorruptData)?,
+                    name,
+                    created_at,
+                    retired_at,
+                })
+            })
+            .collect()
+    }
+    /// Adds a register (Settings permission). A retried request with the same
+    /// ID and name returns the stored register.
+    pub fn add_register(&mut self, id: Uuid, name: &str, now: i64) -> Result<Register> {
+        let name = name.trim();
+        if name.is_empty() || name.chars().count() > 80 {
+            return Err(Error::InvalidRegister);
+        }
+        let session = self.session.clone();
+        self.conn.immediate_transaction(|conn| {
+            crate::staff::authorize(conn, &session, Some(pos_domain::Permission::Settings))?;
+            if let Some(existing) = registers::table
+                .find(id.to_string())
+                .select(registers::name)
+                .first::<String>(conn)
+                .optional()?
+            {
+                return if existing == name {
+                    Ok(Register {
+                        id,
+                        name: existing,
+                        created_at: now,
+                        retired_at: None,
+                    })
+                } else {
+                    Err(Error::ConflictingRequest)
+                };
+            }
+            diesel::insert_into(registers::table)
+                .values((
+                    registers::id.eq(id.to_string()),
+                    registers::name.eq(name),
+                    registers::created_at.eq(now),
+                ))
+                .execute(conn)?;
+            Ok(Register {
+                id,
+                name: name.to_owned(),
+                created_at: now,
+                retired_at: None,
+            })
+        })
+    }
+    /// The open shift of this connection's register.
     pub fn active_shift(&mut self) -> Result<Option<Shift>> {
         shifts::table
             .filter(shifts::closed_at.is_null())
+            .filter(shifts::register_id.eq(self.register.to_string()))
             .select(shifts::shift_json)
             .first::<String>(&mut self.conn)
             .optional()?
@@ -172,6 +266,7 @@ impl Pos {
     /// Stable request ID makes a lost response safe to retry, including after closing.
     pub fn open_shift(&mut self, id: Uuid, opening: Money, now: i64) -> Result<Shift> {
         let session = self.session.clone();
+        let register = self.register;
         self.conn.immediate_transaction(|conn| {
             if let Some(json) = shifts::table
                 .find(id.to_string())
@@ -188,6 +283,7 @@ impl Pos {
             }
             if shifts::table
                 .filter(shifts::closed_at.is_null())
+                .filter(shifts::register_id.eq(register.to_string()))
                 .count()
                 .get_result::<i64>(conn)?
                 != 0
@@ -195,6 +291,7 @@ impl Pos {
                 return Err(Error::ShiftAlreadyOpen);
             }
             let last = shifts::table
+                .filter(shifts::register_id.eq(register.to_string()))
                 .select(diesel::dsl::max(shifts::closed_at))
                 .first::<Option<i64>>(conn)?;
             if last.is_some_and(|closed| now < closed) {
@@ -203,6 +300,7 @@ impl Pos {
             let staff = crate::staff::authorize(conn, &session, None)?;
             let shift = Shift {
                 id,
+                register_id: register,
                 opened_at: now,
                 last_activity_at: now,
                 opening,
@@ -223,6 +321,7 @@ impl Pos {
             diesel::insert_into(shifts::table)
                 .values((
                     shifts::id.eq(id.to_string()),
+                    shifts::register_id.eq(register.to_string()),
                     shifts::opened_at.eq(now),
                     shifts::shift_json.eq(serde_json::to_string(&shift)?),
                 ))
@@ -232,6 +331,7 @@ impl Pos {
     }
     pub fn move_cash(&mut self, movement: &CashMovement) -> Result<()> {
         let session = self.session.clone();
+        let register = self.register;
         self.conn.immediate_transaction(|conn| {
             if !matches!(movement.kind, CashKind::CashIn | CashKind::CashOut)
                 || movement.payment_method != pos_domain::PaymentMethod::Cash
@@ -260,7 +360,7 @@ impl Pos {
                     Err(Error::ConflictingRequest)
                 };
             }
-            let shift = active(conn, Some(movement.shift_id), movement.created_at)?;
+            let shift = active(conn, register, Some(movement.shift_id), movement.created_at)?;
             let staff = crate::staff::authorize(
                 conn,
                 &session,

@@ -68,6 +68,7 @@ impl Pos {
             Paying::Single(_) => None,
         };
         let session = self.session.clone();
+        let register = self.register;
         self.conn.immediate_transaction(|conn| {
             if let Some(json) = sales::table
                 .filter(sales::cart_id.eq(cart.id.to_string()))
@@ -77,7 +78,7 @@ impl Pos {
             {
                 return Ok(serde_json::from_str(&json)?);
             }
-            let shift = crate::shifts::active(conn, shift_id, now)?;
+            let shift = crate::shifts::active(conn, register, shift_id, now)?;
             let mut staff = crate::staff::authorize(conn, &session, None)?;
             let mut quantities = HashMap::new();
             for line in &cart.lines {

@@ -238,7 +238,7 @@ fn validation_retry_before_authorization_and_migration() -> Result {
     // A genuine schema22 database has none of the new tables.
     let mut db =
         diesel::SqliteConnection::establish(dir.path().join("db").to_str().ok_or("path")?)?;
-    db.batch_execute("DROP TABLE purchase_cancellations; DROP TABLE purchase_receipts; DROP TABLE purchase_orders; DROP TABLE suppliers; PRAGMA user_version=22;")?;
+    db.batch_execute("DROP INDEX one_open_shift_per_register; ALTER TABLE shifts DROP COLUMN register_id; DROP TABLE registers; CREATE UNIQUE INDEX one_open_shift ON shifts ((1)) WHERE closed_at IS NULL; DROP TABLE purchase_cancellations; DROP TABLE purchase_receipts; DROP TABLE purchase_orders; DROP TABLE suppliers; PRAGMA user_version=22;")?;
     drop(db);
     let mut upgraded = Pos::open(dir.path().join("db"))?;
     assert!(upgraded.purchase_orders(0)?.is_empty());

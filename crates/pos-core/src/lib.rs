@@ -26,8 +26,10 @@ pub use catalog::{CatalogCounts, ProductQuery, ProductView};
 pub use database::{Pos, SCHEMA_VERSION};
 pub use import::{ImportIssue, ImportPreview, ImportRow, MAX_IMPORT_BYTES, MAX_IMPORT_ROWS};
 use pos_domain::DomainError;
+pub use pos_domain::MAIN_REGISTER;
 pub use recovery::{BackupInfo, inspect_database};
 pub use reporting::MAX_REPORT_DAYS;
+pub use shifts::Register;
 pub use staff::DEFAULT_DISCOUNT_LIMIT_BP;
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -107,6 +109,10 @@ pub enum Error {
     NoOpenShift,
     #[error("A shift is already open")]
     ShiftAlreadyOpen,
+    #[error("Register not found or retired")]
+    RegisterNotFound,
+    #[error("Register name must be 1–80 characters")]
+    InvalidRegister,
     #[error("Shift changed; refresh and review the current totals")]
     ShiftChanged,
     #[error("Shift is closed or does not exist")]

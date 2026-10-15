@@ -541,6 +541,8 @@ fn event(reply: pos_service::Reply, shape: Shape) -> Event {
         (_, R::KitchenSent(cart, ticket)) => Event::KitchenSent(*cart, ticket),
         (_, R::Kitchen(k)) => Event::Kitchen(k),
         (_, R::InvoiceIssued(i)) => Event::InvoiceIssued(*i),
+        // Registers are managed from Settings → Devices (multi-device phase 1).
+        (_, R::RegisterAdded(_)) => Event::Quiet,
     }
 }
 fn run(pos: &mut Pos, command: Command) -> pos_core::Result<Event> {

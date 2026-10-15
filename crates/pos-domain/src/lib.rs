@@ -42,7 +42,9 @@ pub use reporting::{
     PromoSales, StaffSales,
 };
 pub use sale::{Cart, CartLine, LOW_STOCK, Product, ProductInput, Sale, SaleLine, split_cart};
-pub use shift::{CashCount, CashKind, CashMovement, Shift, ShiftClosing, ShiftCount};
+pub use shift::{
+    CashCount, CashKind, CashMovement, MAIN_REGISTER, Shift, ShiftClosing, ShiftCount,
+};
 pub use staff::{
     Access, Attribution, CASHIER, MANAGER, OWNER, Permission, RoleDef, Staff, StaffInput, StaffRef,
     discount_share_bp, valid_pin,
