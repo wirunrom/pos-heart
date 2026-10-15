@@ -337,15 +337,16 @@ fn refuse(stream: &mut ServerStream, reason: Refusal) {
 }
 fn serve(tcp: TcpStream, config: Arc<rustls::ServerConfig>, shared: &Shared, submit: &Submit) {
     // Accepted sockets inherit the listener's non-blocking mode on BSDs.
-    if tcp.set_nonblocking(false).is_err()
-        || tcp.set_read_timeout(Some(POLL)).is_err()
-        || tcp.set_nodelay(true).is_err()
-    {
+    let mut tcp = tcp;
+    if tcp.set_nonblocking(false).is_err() || tcp.set_nodelay(true).is_err() {
         return;
     }
-    let Ok(conn) = ServerConnection::new(config) else {
+    let Ok(mut conn) = ServerConnection::new(config) else {
         return;
     };
+    if handshake(&mut conn, &mut tcp).is_err() || tcp.set_read_timeout(Some(POLL)).is_err() {
+        return;
+    }
     let mut stream = StreamOwned::new(conn, tcp);
     let mut framer = Framer::default();
     let started = Instant::now();
@@ -528,12 +529,26 @@ pub struct Paired {
     pub fingerprint: [u8; 32],
 }
 fn open(address: SocketAddr, pin: Option<[u8; 32]>) -> Result<ClientStream, ClientError> {
-    let tcp = TcpStream::connect_timeout(&address, Duration::from_secs(5))?;
+    let mut tcp = TcpStream::connect_timeout(&address, Duration::from_secs(5))?;
     tcp.set_nodelay(true)?;
-    tcp.set_read_timeout(Some(POLL))?;
-    let conn = ClientConnection::new(tls::client_config(pin)?, tls::server_name())
+    let mut conn = ClientConnection::new(tls::client_config(pin)?, tls::server_name())
         .map_err(std::io::Error::other)?;
+    handshake(&mut conn, &mut tcp)?;
+    tcp.set_read_timeout(Some(POLL))?;
     Ok(StreamOwned::new(conn, tcp))
+}
+/// Completes the TLS handshake with a generous blocking timeout, before the
+/// short polling timeout applies (a timed-out read mid-handshake fails).
+fn handshake<C, D>(conn: &mut C, tcp: &mut TcpStream) -> std::io::Result<()>
+where
+    C: std::ops::DerefMut<Target = rustls::ConnectionCommon<D>>,
+    D: rustls::SideData,
+{
+    tcp.set_read_timeout(Some(Duration::from_secs(10)))?;
+    while conn.is_handshaking() {
+        conn.complete_io(tcp)?;
+    }
+    Ok(())
 }
 fn wait(
     stream: &mut ClientStream,
