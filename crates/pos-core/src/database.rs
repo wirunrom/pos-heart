@@ -21,6 +21,9 @@ pub struct Pos {
     pub(crate) session: crate::staff::Session,
     /// The register this connection sells for: its shift and drawer.
     pub(crate) register: uuid::Uuid,
+    /// The paired device acting (None: the main register itself); recorded
+    /// as a held bill's editor.
+    pub(crate) device: Option<uuid::Uuid>,
 }
 #[derive(QueryableByName)]
 struct SchemaVersion {
@@ -34,13 +37,20 @@ struct SchemaVersion {
 pub struct DeviceContext {
     session: crate::staff::Session,
     register: uuid::Uuid,
+    device: Option<uuid::Uuid>,
 }
 impl DeviceContext {
     pub fn new(register: uuid::Uuid) -> Self {
         Self {
             session: crate::staff::Session::default(),
             register,
+            device: None,
         }
+    }
+    /// The paired device these requests come from.
+    pub fn device(mut self, device: uuid::Uuid) -> Self {
+        self.device = Some(device);
+        self
     }
     pub fn register(&self) -> uuid::Uuid {
         self.register
@@ -53,9 +63,11 @@ impl Pos {
     pub fn as_device<R>(&mut self, device: &mut DeviceContext, f: impl FnOnce(&mut Pos) -> R) -> R {
         std::mem::swap(&mut self.session, &mut device.session);
         std::mem::swap(&mut self.register, &mut device.register);
+        std::mem::swap(&mut self.device, &mut device.device);
         let out = f(self);
         std::mem::swap(&mut self.session, &mut device.session);
         std::mem::swap(&mut self.register, &mut device.register);
+        std::mem::swap(&mut self.device, &mut device.device);
         out
     }
     pub fn open(path: impl AsRef<Path>) -> Result<Self> {
@@ -164,10 +176,12 @@ impl Pos {
             conn,
             session: crate::staff::Session::default(),
             register: crate::MAIN_REGISTER,
+            device: None,
         })
     }
     pub fn hold(&mut self, cart: &Cart, now: i64) -> Result<()> {
         cart.validate()?;
+        let editor = self.device;
         self.conn.immediate_transaction(|conn| {
             let paid = diesel::select(diesel::dsl::exists(
                 sales::table.filter(sales::cart_id.eq(cart.id.to_string())),
@@ -180,13 +194,9 @@ impl Pos {
             // Only `send_to_kitchen` changes what the kitchen has: an autosave
             // queued before a send must not roll that state back.
             let mut cart = cart.clone();
-            if let Some(stored) = held_carts::table
-                .find(cart.id.to_string())
-                .select(held_carts::cart_json)
-                .first::<String>(conn)
-                .optional()?
-            {
-                let stored: Cart = serde_json::from_str(&stored)?;
+            let stored = crate::dining::stored_cart(conn, cart.id)?;
+            crate::dining::claim(stored.as_ref(), &mut cart, editor)?;
+            if let Some(stored) = stored {
                 cart.sent = stored.sent;
             }
             let json = serde_json::to_string(&cart)?;

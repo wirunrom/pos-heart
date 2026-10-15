@@ -98,7 +98,7 @@ Follow AGENTS.md and the matching docs/architecture.md sections. Recovery includ
 
 ## Tables and kitchen (schema 15)
 
-Follow the AGENTS.md "Tables and kitchen" rules and docs/architecture.md. One open bill per table (`hold()` refuses `TableNotFound` / `TableBusy`); `send_to_kitchen` diffs against the stored `sent` state in one IMMEDIATE transaction; `hold()` never rewrites `sent`; cancellations of sent dishes are audited in Activity; kitchen-screen actions are background worker commands that never block the counter. The floor is Sell's Tables tab (`Alt 9`, `--page tables`, `tables_ui::floor`; `SellState.pane`/`moving`); sending, paying or holding a table bill returns to it and Held lists counter bills only; the kitchen screen is a second OS window (`kitchen_ui.rs`). Multi-device is postponed: docs/multi-device.md.
+Follow the AGENTS.md "Tables and kitchen" rules and docs/architecture.md. One open bill per table (`hold()` refuses `TableNotFound` / `TableBusy`); a copy of a held bill another device saved since is refused (`BillChanged`, `dining::claim` on `Cart.revision`/`editor`, also send/split/pay; same-device saves always pass); `send_to_kitchen` diffs against the stored `sent` state in one IMMEDIATE transaction; `hold()` never rewrites `sent`; cancellations of sent dishes are audited in Activity; kitchen-screen actions are background worker commands that never block the counter. The floor is Sell's Tables tab (`Alt 9`, `--page tables`, `tables_ui::floor`; `SellState.pane`/`moving`); sending, paying or holding a table bill returns to it and Held lists counter bills only; the kitchen screen is a second OS window (`kitchen_ui.rs`). Multi-device is postponed: docs/multi-device.md.
 
 ## Print templates, preview and check bill
 

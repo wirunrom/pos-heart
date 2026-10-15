@@ -185,3 +185,75 @@ fn autosave_never_rolls_back_the_kitchen_state_and_paying_frees_the_table() -> R
     assert!(s.pos.held()?.is_empty());
     Ok(())
 }
+
+#[test]
+fn a_bill_changed_by_another_device_is_refused_until_reloaded() -> Result {
+    let mut s = shop()?;
+    let ipad = Uuid::new_v4();
+    let mut tablet = pos_core::DeviceContext::new(pos_core::MAIN_REGISTER).device(ipad);
+    // The counter opens table T1 and keeps saving it (its own saves never
+    // conflict, even from an old copy).
+    let mut counter = Cart::new();
+    counter.table = Some(s.t1.id);
+    counter.lines.push(line(&s.rice, 1, ""));
+    s.pos.hold(&counter, 1)?;
+    s.pos.hold(&counter, 2)?;
+    assert_eq!(s.pos.held()?[0].revision, 2);
+    assert_eq!(s.pos.held()?[0].editor, None);
+
+    // The iPad loads it, adds water and sends it; a retry of its own send is fine.
+    let mut on_ipad = s.pos.held()?.remove(0);
+    on_ipad.lines.push(line(&s.water, 2, ""));
+    s.pos
+        .as_device(&mut tablet, |pos| pos.send_to_kitchen(&on_ipad, 3))?;
+    s.pos.as_device(&mut tablet, |pos| pos.hold(&on_ipad, 4))?;
+    let stored = s.pos.held()?.remove(0);
+    assert_eq!(stored.editor, Some(ipad));
+    assert_eq!(stored.lines.len(), 2);
+
+    // The counter's old copy can neither overwrite nor pay nor split it.
+    counter.lines[0].quantity = 3;
+    assert!(matches!(s.pos.hold(&counter, 5), Err(Error::BillChanged)));
+    assert!(matches!(
+        s.pos.send_to_kitchen(&counter, 5),
+        Err(Error::BillChanged)
+    ));
+    let cash = PaymentRequest {
+        method: PaymentMethod::Cash,
+        amount: "500".parse()?,
+    };
+    assert!(matches!(
+        s.pos
+            .checkout_with_payment(&counter, cash, Some(s.shift), 5),
+        Err(Error::BillChanged)
+    ));
+    assert!(matches!(
+        s.pos.split_bill(&counter, &[(0, 1)], Uuid::new_v4(), 5),
+        Err(Error::BillChanged)
+    ));
+    assert_eq!(s.pos.held()?[0].lines.len(), 2, "nothing was overwritten");
+
+    // After reloading, the counter edits; now the iPad's copy is stale.
+    let mut reloaded = s.pos.held()?.remove(0);
+    reloaded.lines[0].quantity = 2;
+    s.pos.hold(&reloaded, 6)?;
+    assert!(matches!(
+        s.pos.as_device(&mut tablet, |pos| pos.hold(&on_ipad, 7)),
+        Err(Error::BillChanged)
+    ));
+    // The counter keeps saving and pays its own latest copy.
+    s.pos.hold(&reloaded, 8)?;
+    let sale = s
+        .pos
+        .checkout_with_payment(&reloaded, cash, Some(s.shift), 9)?;
+    assert_eq!(sale.lines.len(), 2);
+    assert!(s.pos.held()?.is_empty());
+
+    // Bills saved before revisions existed load as revision 0, no editor.
+    let legacy: Cart = serde_json::from_str(&format!(
+        r#"{{"id":"{}","label":"","lines":[]}}"#,
+        Uuid::new_v4()
+    ))?;
+    assert_eq!((legacy.revision, legacy.editor), (0, None));
+    Ok(())
+}

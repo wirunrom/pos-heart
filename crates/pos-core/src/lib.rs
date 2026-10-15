@@ -166,6 +166,8 @@ pub enum Error {
     TableNotFound,
     #[error("This table already has an open bill")]
     TableBusy,
+    #[error("Another device changed this bill; reload it")]
+    BillChanged,
     #[error("A table with this name already exists in the zone")]
     DuplicateTable,
     #[error("Kitchen ticket not found")]

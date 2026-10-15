@@ -149,3 +149,70 @@ fn a_client_mode_worker_runs_commands_on_the_main_register() -> Result {
     })?;
     Ok(())
 }
+
+#[test]
+fn the_counter_hears_when_a_device_changed_its_open_bill() -> Result {
+    let dir = tempfile::tempdir()?;
+    let worker = Worker::start(
+        dir.path().join("pos-heart.sqlite3"),
+        eframe::egui::Context::default(),
+    )?;
+    wait_for(&worker, |e| matches!(e, Event::Ready(_)))?;
+    let identity = Identity::load_or_create(dir.path())?;
+    let hub = Hub::start(
+        TcpListener::bind("127.0.0.1:0")?,
+        &identity,
+        worker.hub_submit(),
+    )?;
+    assert!(worker.send(Command::SetHub(Some(hub.notifier()))));
+    let device = Uuid::new_v4();
+    let paired = Client::pair(
+        hub.address(),
+        &hub.open_pairing(),
+        device,
+        "iPad",
+        DeviceKind::Ordering,
+    )?;
+    let (mut client, _) =
+        Client::connect(hub.address(), device, &paired.token, paired.fingerprint)?;
+    assert!(worker.send(Command::Save(pos_domain::ProductInput {
+        sku: "K-1".into(),
+        name: "ข้าวผัด".into(),
+        price: "60".parse()?,
+        ..Default::default()
+    })));
+    let mut product = None;
+    wait_for(&worker, |e| match e {
+        Event::Saved(p) => {
+            product = Some(p.id);
+            true
+        }
+        _ => false,
+    })?;
+    let mut counter = pos_domain::Cart::new();
+    counter.lines.push(pos_domain::CartLine {
+        product_id: product.ok_or("product")?,
+        quantity: 1,
+        ..Default::default()
+    });
+    // The counter autosaves its bill; the device loads it and changes it.
+    assert!(worker.send(Command::Autosave(counter.clone())));
+    wait_for(&worker, |e| matches!(e, Event::Quiet))?;
+    let Reply::Resumed(mut on_device, _) =
+        client.call(Uuid::new_v4(), Request::Resume(counter.id))?
+    else {
+        return Err("expected Resumed".into());
+    };
+    on_device.lines[0].quantity = 4;
+    client.call(Uuid::new_v4(), Request::Hold(on_device))?;
+    // The counter's next autosave of its old copy is refused and reported,
+    // as is an explicit hold.
+    counter.lines[0].quantity = 2;
+    assert!(worker.send(Command::Autosave(counter.clone())));
+    wait_for(&worker, |e| matches!(e, Event::BillChanged))?;
+    assert!(worker.send(Command::Hold(counter)));
+    wait_for(&worker, |e| {
+        matches!(e, Event::Failed(pos_core::Error::BillChanged))
+    })?;
+    Ok(())
+}

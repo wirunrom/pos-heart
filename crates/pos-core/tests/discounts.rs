@@ -201,7 +201,14 @@ fn held_bills_keep_their_discounts() -> Result {
     let cart = cart(&s)?;
     s.pos.hold(&cart, 5)?;
     let held = s.pos.held()?;
-    assert_eq!(held[0], cart);
+    // The store numbers each save.
+    assert_eq!(
+        held[0],
+        pos_domain::Cart {
+            revision: 1,
+            ..cart
+        }
+    );
     assert_eq!(held[0].lines[0].discount, Some(Discount::Percent(1_000)));
     Ok(())
 }

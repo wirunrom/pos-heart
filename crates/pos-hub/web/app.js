@@ -66,6 +66,7 @@ const ERRORS = {
   WrongCode: "รหัสไม่ถูกต้องหรือหมดอายุ ขอรหัสใหม่ที่เครื่องหลัก",
   Stopped: "เครื่องหลักหยุดทำงาน",
   Domain: "ข้อมูลบิลไม่ถูกต้อง",
+  BillChanged: "บิลนี้ถูกแก้จากเครื่องอื่น โหลดบิลล่าสุดแล้ว ตรวจรายการอีกครั้ง",
 };
 function describe(err) {
   return ERRORS[err.kind] || err.message || "เกิดข้อผิดพลาด";
@@ -119,7 +120,12 @@ async function refresh() {
   state = s; total = s.total;
   if (open && !open.dirty) {
     const held = state.held.find((c) => c.id === open.cart.id) || state.held.find((c) => c.table === open.table.id);
-    if (held) open.cart = held;
+    if (held) open.cart = structuredClone(held);
+    else if (open.cart.revision) {
+      // Paid or cleared on another device.
+      open = null;
+      toast("บิลนี้ปิดไปแล้วจากเครื่องอื่น");
+    }
   }
   setStatus(true);
   render();
@@ -333,6 +339,13 @@ function guests() {
   open.cart.guests = n;
   edited();
 }
+// Another device saved this bill first: show its version instead.
+async function reloadIfChanged(e) {
+  if (open && e instanceof ApiError && e.error.kind === "BillChanged") {
+    open.dirty = false;
+    await refresh().catch(() => {});
+  }
+}
 async function send() {
   if (busy) return;
   busy = true; render();
@@ -345,6 +358,7 @@ async function send() {
     }
   } catch (e) {
     toast(e instanceof ApiError ? describe(e.error) : "ส่งไม่สำเร็จ ตรวจการเชื่อมต่อแล้วลองอีกครั้ง", true);
+    await reloadIfChanged(e);
   } finally {
     busy = false; render();
   }
@@ -361,6 +375,7 @@ async function hold() {
     }
   } catch (e) {
     toast(e instanceof ApiError ? describe(e.error) : "บันทึกไม่สำเร็จ", true);
+    await reloadIfChanged(e);
   } finally {
     busy = false; render();
   }

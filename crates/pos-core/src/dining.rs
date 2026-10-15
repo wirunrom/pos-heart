@@ -54,9 +54,7 @@ fn bill_on(conn: &mut SqliteConnection, table: Uuid, except: Uuid) -> Result<Opt
     }
     Ok(None)
 }
-/// Checks a bill's table before it is held: the table exists, is active,
-/// and holds no other open bill.
-fn stored_cart(conn: &mut SqliteConnection, id: Uuid) -> Result<Option<Cart>> {
+pub(crate) fn stored_cart(conn: &mut SqliteConnection, id: Uuid) -> Result<Option<Cart>> {
     held_carts::table
         .find(id.to_string())
         .select(held_carts::cart_json)
@@ -96,6 +94,7 @@ impl Pos {
         now: i64,
     ) -> Result<(Cart, Cart)> {
         cart.validate()?;
+        let editor = self.device;
         self.conn.immediate_transaction(|conn| {
             if let Some(moved) = stored_cart(conn, new_id)? {
                 let rest = stored_cart(conn, cart.id)?.ok_or(Error::CartNotFound)?;
@@ -111,10 +110,13 @@ impl Pos {
                 }
             }
             let mut cart = cart.clone();
-            if let Some(stored) = stored_cart(conn, cart.id)? {
+            let stored = stored_cart(conn, cart.id)?;
+            claim(stored.as_ref(), &mut cart, editor)?;
+            if let Some(stored) = stored {
                 cart.sent = stored.sent;
             }
-            let (rest, moved) = pos_domain::split_cart(&cart, take, new_id)?;
+            let (rest, mut moved) = pos_domain::split_cart(&cart, take, new_id)?;
+            claim(None, &mut moved, editor)?;
             rest.validate()?;
             moved.validate()?;
             check_table(conn, &rest)?;
@@ -124,6 +126,23 @@ impl Pos {
         })
     }
 }
+/// Optimistic check before saving a held bill: refused when another device
+/// saved it after the revision `cart` was loaded from. The same device may
+/// always save again (its own autosaves and retries). On success `cart`
+/// carries the next revision and `editor`.
+pub(crate) fn claim(stored: Option<&Cart>, cart: &mut Cart, editor: Option<Uuid>) -> Result<()> {
+    if let Some(stored) = stored
+        && stored.editor != editor
+        && stored.revision != cart.revision
+    {
+        return Err(Error::BillChanged);
+    }
+    cart.revision = stored.map_or(0, |s| s.revision).saturating_add(1);
+    cart.editor = editor;
+    Ok(())
+}
+/// Checks a bill's table before it is held: the table exists, is active,
+/// and holds no other open bill.
 pub(crate) fn check_table(conn: &mut SqliteConnection, cart: &Cart) -> Result<()> {
     let Some(table) = cart.table else {
         return Ok(());
@@ -247,6 +266,7 @@ impl Pos {
         if !cart.lines.is_empty() {
             cart.validate()?;
         }
+        let editor = self.device;
         let session = self.session.clone();
         self.conn.immediate_transaction(|conn| {
             let paid = diesel::select(diesel::dsl::exists(
@@ -261,13 +281,10 @@ impl Pos {
             // Diff against what is stored, never the screen's copy: a send
             // whose reply was lost must not fire the same dishes again.
             let mut cart = cart.clone();
-            if let Some(json) = held_carts::table
-                .find(cart.id.to_string())
-                .select(held_carts::cart_json)
-                .first::<String>(conn)
-                .optional()?
-            {
-                cart.sent = serde_json::from_str::<Cart>(&json)?.sent;
+            let stored = stored_cart(conn, cart.id)?;
+            claim(stored.as_ref(), &mut cart, editor)?;
+            if let Some(stored) = stored {
+                cart.sent = stored.sent;
             }
             let cart = &cart;
             // Names and kitchen flags from the catalog, archived included:

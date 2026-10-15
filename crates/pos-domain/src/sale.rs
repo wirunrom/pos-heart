@@ -175,6 +175,14 @@ pub struct Cart {
     /// Coupon codes entered on this bill (for coupon promotions).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub coupons: Vec<String>,
+    /// How many times the held bill was saved; set by the store. A device
+    /// saving a bill another device changed since this revision is refused.
+    #[serde(default, skip_serializing_if = "is_zero_u64")]
+    pub revision: u64,
+    /// The paired device that saved the held bill last (None: the main
+    /// register itself); set by the store.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub editor: Option<Uuid>,
 }
 impl Default for Cart {
     fn default() -> Self {
@@ -194,6 +202,8 @@ impl Cart {
             guests: 0,
             sent: Vec::new(),
             coupons: Vec::new(),
+            revision: 0,
+            editor: None,
         }
     }
     /// True when any line or the bill has a discount.
@@ -257,6 +267,8 @@ pub fn split_cart(
         guests: 0,
         sent: Vec::new(),
         coupons: cart.coupons.clone(),
+        revision: 0,
+        editor: None,
     };
     let mut seen = std::collections::HashSet::new();
     for &(index, quantity) in take {
@@ -347,6 +359,9 @@ pub struct SaleLine {
     /// Promotion that gave this line's discount, by name at the time.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub promotion: Option<String>,
+}
+fn is_zero_u64(n: &u64) -> bool {
+    *n == 0
 }
 fn is_zero_u32(n: &u32) -> bool {
     *n == 0

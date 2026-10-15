@@ -182,6 +182,9 @@ pub enum Event {
     /// Client mode: connected to (true) or lost (false) the main register.
     Connection(bool),
     DeviceRevoked(Uuid),
+    /// A background save of the open bill was refused: another device
+    /// changed it (reload it).
+    BillChanged,
     /// Background command finished (successfully or not); never changes `busy`.
     Quiet,
     Failed(Error),
@@ -229,6 +232,7 @@ fn execute(
         }
     } else {
         match run(pos, envelope.command, notifier) {
+            Err(pos_core::Error::BillChanged) if background => Event::BillChanged,
             Err(_) if background => Event::Quiet,
             other => other.unwrap_or_else(Event::Failed),
         }
@@ -576,6 +580,9 @@ impl Worker {
                             }
                             match result {
                                 Some(Ok(event)) => event,
+                                Some(Err(pos_core::Error::BillChanged)) if background => {
+                                    Event::BillChanged
+                                }
                                 Some(Err(_)) if background => Event::Quiet,
                                 Some(Err(e)) => Event::Failed(e),
                                 None if background => Event::Quiet,

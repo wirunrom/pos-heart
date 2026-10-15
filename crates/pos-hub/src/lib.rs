@@ -98,9 +98,9 @@ impl Executor {
                 let device = self
                     .devices
                     .entry(job.device)
-                    .or_insert_with(|| DeviceContext::new(register));
+                    .or_insert_with(|| DeviceContext::new(register).device(job.device));
                 if device.register() != register {
-                    *device = DeviceContext::new(register);
+                    *device = DeviceContext::new(register).device(job.device);
                 }
                 pos.as_device(device, |pos| pos_service::handle(pos, *request, now))
                     .map(|r| Done::Reply(Box::new(r)))

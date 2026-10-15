@@ -190,6 +190,7 @@ impl WireError {
             "RoleInUse" => E::RoleInUse,
             "TableNotFound" => E::TableNotFound,
             "TableBusy" => E::TableBusy,
+            "BillChanged" => E::BillChanged,
             "DuplicateTable" => E::DuplicateTable,
             "TicketNotFound" => E::TicketNotFound,
             "NotTaxReceipt" => E::NotTaxReceipt,

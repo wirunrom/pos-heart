@@ -260,6 +260,37 @@ fn ipad_pairs_and_sends_a_table_bill() -> Result {
     assert_eq!(state["held"][0]["table"], json!(table.id));
     assert_eq!(state["held"][0]["sent"][0]["quantity"], 2);
 
+    // The counter changes the bill: the iPad's older copy is refused and
+    // the reloaded one is accepted.
+    let stale = state["held"][0].clone();
+    let (done_tx, done_rx) = mpsc::channel();
+    control.send(Owner::Do(Box::new(move |pos, _| {
+        let result = (|| -> pos_core::Result<()> {
+            let mut bill = pos.held()?.remove(0);
+            bill.lines[0].quantity = 3;
+            pos.hold(&bill, 1_900_000_000)
+        })();
+        let _ = done_tx.send(result);
+    })))?;
+    done_rx.recv()??;
+    let (_, answer) = web.send(
+        "POST",
+        "/api/call",
+        Some(&auth),
+        Some(&json!({"id": Uuid::new_v4(), "request": {"Hold": stale}})),
+    )?;
+    assert_eq!(answer["error"]["kind"], "BillChanged");
+    let (_, state) = web.send("GET", "/api/state", Some(&auth), None)?;
+    let fresh = state["held"][0].clone();
+    assert_eq!(fresh["lines"][0]["quantity"], 3);
+    let (_, answer) = web.send(
+        "POST",
+        "/api/call",
+        Some(&auth),
+        Some(&json!({"id": Uuid::new_v4(), "request": {"Hold": fresh}})),
+    )?;
+    assert!(answer["ok"]["Held"].is_string(), "{answer}");
+
     // Revoked: the cached token stops working at once.
     let device = Uuid::parse_str(paired["device"].as_str().ok_or("device")?)?;
     let (done_tx, done_rx) = mpsc::channel();

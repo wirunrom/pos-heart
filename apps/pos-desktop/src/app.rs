@@ -710,6 +710,7 @@ impl App {
                     }
                     self.data = *data;
                     self.sell.loading_more = false;
+                    self.adopt_bill();
                     if !self.ready {
                         self.ready = true;
                         #[cfg(debug_assertions)]
@@ -1255,6 +1256,9 @@ impl App {
                         a.pin.clear();
                     }
                 }
+                Event::BillChanged | Event::Failed(pos_core::Error::BillChanged) => {
+                    self.bill_changed();
+                }
                 Event::Failed(pos_core::Error::SignInRequired) if self.ready => {
                     // The member was switched off or the session ended: lock.
                     self.lock_session();
@@ -1291,6 +1295,35 @@ impl App {
     }
     fn write_marker(&mut self) {
         let _ = std::fs::write(self.data_dir.join(CURRENT_BILL), self.cart.id.to_string());
+    }
+    /// Another device saved the open bill since it was loaded here: drop the
+    /// local copy's unsaved edits and load the stored bill.
+    fn bill_changed(&mut self) {
+        self.payment_review = None;
+        if self.autosave.saved == Some(self.cart.id) {
+            self.autosave.snapshot = Some(self.cart.clone());
+            self.autosave.dirty_since = None;
+            self.send_background(Command::Resume(self.cart.id));
+        }
+        self.error = Some(self.lang.error(&pos_core::Error::BillChanged));
+    }
+    /// Shows another device's newer save of the open bill when nothing is
+    /// being edited here (unsaved edits would conflict and reload instead).
+    fn adopt_bill(&mut self) {
+        let me = self.hub.device.as_ref().map(|d| d.device);
+        if self.payment_review.is_some()
+            || self.autosave.dirty_since.is_some()
+            || self.autosave.snapshot.as_ref() != Some(&self.cart)
+        {
+            return;
+        }
+        if let Some(stored) = self.data.held.iter().find(|c| c.id == self.cart.id)
+            && stored.editor != me
+            && stored.revision > self.cart.revision
+        {
+            self.cart = stored.clone();
+            self.autosave.snapshot = Some(self.cart.clone());
+        }
     }
     fn clear_marker(&mut self) {
         let _ = std::fs::remove_file(self.data_dir.join(CURRENT_BILL));
