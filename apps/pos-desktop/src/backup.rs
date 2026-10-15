@@ -311,6 +311,8 @@ pub fn prepare(pos: &mut Pos, data: &Path, reviewed: &Review) -> pos_core::Resul
             "hub.json",
             "hub-cert.der",
             "hub-key.der",
+            "web-ca.der",
+            "web-ca-key.der",
             "device.json",
         ] {
             if data.join(name).exists() {

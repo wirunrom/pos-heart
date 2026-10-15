@@ -74,7 +74,7 @@ crates/pos-core/    Diesel catalog, checkout, held carts, voids, shifts and repo
   migrations/      versioned SQLite schema (001–023)
 assets/fonts/      IBM Plex Sans / Sans Thai / Mono, Noto Sans Thai fallback, OFL licenses
 design/            POS Design System v0.2 (tokens, docs, reference screens, pos-desktop-concept.html)
-docs/architecture.md, docs/multi-device.md (proposal, not built)
+docs/architecture.md, docs/multi-device.md (phase 1 built: shop-LAN registers, kitchen PCs and iPad ordering; cloud later)
 ```
 
 No web frontend, HTTP backend, Tokio runtime, Docker or database service is required. Database code is intentionally centralized rather than hidden behind speculative repository traits.
@@ -105,7 +105,7 @@ Integer satang and checked arithmetic; no floating-point currency. Diesel handle
 
 ## Known limitations
 
-Single shop/register. Cash, manual transfer (optionally with a PromptPay QR) and manual card records; one method per bill, or a split payment across them. The app never checks that a transfer arrived; the cashier confirms it. Refunds go through the original method only (whole bill or selected items); no exchanges or store credit. Manual discounts and automatic promotions/coupons are supported; member pricing and points are outside scope. Credit notes are issued for refunds/voids of full tax invoices; no VAT return filing, e-Tax or other taxes, purchase payments/payables, purchase VAT/freight/returns, online ordering, card terminal or other device integration (receipt printers aside) (the design system's tablet screens are marked Future and are not built; tables and the kitchen screen are built, see below). Barcodes are stored per product and looked up exactly on Enter; real scanner hardware has not been tested. Option groups: at most 10 per product, 20 choices each. Sell loads 500 products at a time, up to 10,000 per category or search; Products pages 100, history 50 receipts, held list latest 100. No cloud sync or multi-device use (proposal for later: [docs/multi-device.md](docs/multi-device.md)). Database is not encrypted. Thai line breaking follows egui (spaces first), not dictionary segmentation. Before real use, verify refund procedures, backup/restore and field tests appropriate to the shop.
+Single shop/register. Cash, manual transfer (optionally with a PromptPay QR) and manual card records; one method per bill, or a split payment across them. The app never checks that a transfer arrived; the cashier confirms it. Refunds go through the original method only (whole bill or selected items); no exchanges or store credit. Manual discounts and automatic promotions/coupons are supported; member pricing and points are outside scope. Credit notes are issued for refunds/voids of full tax invoices; no VAT return filing, e-Tax or other taxes, purchase payments/payables, purchase VAT/freight/returns, online ordering, card terminal or other device integration (receipt printers aside) (the design system's tablet screens are marked Future and are not built; tables and the kitchen screen are built, see below). Barcodes are stored per product and looked up exactly on Enter; real scanner hardware has not been tested. Option groups: at most 10 per product, 20 choices each. Sell loads 500 products at a time, up to 10,000 per category or search; Products pages 100, history 50 receipts, held list latest 100. No cloud sync. Several devices on the shop LAN (second register, kitchen PC, ordering iPads in Safari) share the main register's data through Settings → Shop devices; see [docs/multi-device.md](docs/multi-device.md) — not yet tried on real iPads or Windows. Database is not encrypted. Thai line breaking follows egui (spaces first), not dictionary segmentation. Before real use, verify refund procedures, backup/restore and field tests appropriate to the shop.
 
 ## Guidance
 
@@ -228,7 +228,7 @@ Schemas 13–14 added costs and activity; the current schema is 24, including ta
 - **Kitchen screen** (Open kitchen screen · N on Tables): a second window for a kitchen monitor, oldest tickets first, with table, guests and minutes waiting (orange from 10, red from 20 minutes). Tap a line to tick it cooked, Done to clear the ticket, Recently done → Recall to bring one back. It never blocks the counter.
 - **Kitchen tickets on paper:** Settings → Receipt printer → Kitchen tickets: Off, on the receipt printer, or on a separate kitchen printer (network or system queue, its own paper size). Tickets show a large table name, dishes, options, notes and `*** CANCEL ***` slips. Print jobs queue, so no ticket is lost while a receipt prints.
 
-Schema is now 15; older builds cannot open an upgraded database. Back up before upgrading. Not yet verified: a real second monitor, kitchen printer hardware and Windows. Using several devices (ordering tablets, a networked kitchen display) is not built; see [docs/multi-device.md](docs/multi-device.md).
+Schema is now 15; older builds cannot open an upgraded database. Back up before upgrading. Not yet verified: a real second monitor, kitchen printer hardware and Windows. Several devices (ordering iPads, a networked kitchen PC) connect through Settings → Shop devices; see [docs/multi-device.md](docs/multi-device.md).
 
 ## Promotions and coupons (2026-10-14)
 

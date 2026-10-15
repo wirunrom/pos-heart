@@ -10,6 +10,8 @@
 //! go through that one queue.
 pub mod discovery;
 pub mod tls;
+mod web;
+pub mod webtls;
 pub mod wire;
 
 use pos_core::{DeviceContext, DeviceKind, Pos};
@@ -142,6 +144,8 @@ struct Shared {
     peers: Mutex<HashMap<Uuid, (u64, mpsc::Sender<Versions>)>>,
     pairing: Mutex<Option<Pairing>>,
     next_conn: AtomicU64,
+    /// Verified web (iPad) tokens: device → (token hash, register).
+    web: Mutex<HashMap<Uuid, (String, Uuid)>>,
 }
 impl Shared {
     fn notify(&self, request: &Request) {
@@ -214,6 +218,9 @@ impl Notifier {
         if let Ok(mut peers) = self.0.peers.lock() {
             peers.remove(&device);
         }
+        if let Ok(mut web) = self.0.web.lock() {
+            web.remove(&device);
+        }
     }
 }
 /// A running hub. Dropping it stops accepting and closes connections.
@@ -222,6 +229,8 @@ pub struct Hub {
     address: SocketAddr,
     fingerprint: [u8; 32],
     accept: Option<thread::JoinHandle<()>>,
+    submit: Submit,
+    web: Vec<thread::JoinHandle<()>>,
 }
 impl Hub {
     /// Starts accepting devices on `listener` with the hub `identity`.
@@ -239,7 +248,9 @@ impl Hub {
             peers: Mutex::new(HashMap::new()),
             pairing: Mutex::new(None),
             next_conn: AtomicU64::new(1),
+            web: Mutex::new(HashMap::new()),
         });
+        let hub_submit = submit.clone();
         let accept_shared = shared.clone();
         let accept = thread::Builder::new()
             .name("pos-hub-accept".into())
@@ -266,6 +277,8 @@ impl Hub {
             address,
             fingerprint: identity.fingerprint(),
             accept: Some(accept),
+            submit: hub_submit,
+            web: Vec::new(),
         })
     }
     pub fn address(&self) -> SocketAddr {
@@ -303,9 +316,32 @@ impl Hub {
     }
     /// Disconnects a device (after revoking it).
     pub fn disconnect(&self, device: Uuid) {
-        if let Ok(mut peers) = self.shared.peers.lock() {
-            peers.remove(&device);
-        }
+        self.notifier().disconnect(device);
+    }
+    /// Serves the iPad web app: `https` for the app and its API, `http` for
+    /// the setup page and the certificate profile.
+    pub fn start_web(
+        &mut self,
+        https: TcpListener,
+        http: TcpListener,
+        identity: &webtls::WebIdentity,
+        ips: &[std::net::IpAddr],
+        shop: &str,
+    ) -> std::io::Result<()> {
+        let https_port = https.local_addr()?.port();
+        let config = identity.server_config(ips)?;
+        let site = Arc::new(web::Site {
+            shared: self.shared.clone(),
+            submit: self.submit.clone(),
+            profile: identity.mobileconfig(shop),
+            ca: identity.ca_der().to_vec(),
+            shop: shop.to_owned(),
+            https_port,
+        });
+        self.web
+            .push(web::listen(https, Some(config), site.clone())?);
+        self.web.push(web::listen(http, None, site)?);
+        Ok(())
     }
     pub fn connected(&self) -> Vec<Uuid> {
         self.shared
@@ -320,6 +356,9 @@ impl Drop for Hub {
         self.shared.stop.store(true, Ordering::SeqCst);
         if let Some(accept) = self.accept.take() {
             let _ = accept.join();
+        }
+        for web in self.web.drain(..) {
+            let _ = web.join();
         }
     }
 }

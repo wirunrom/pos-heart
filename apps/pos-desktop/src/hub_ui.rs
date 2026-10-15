@@ -2,6 +2,9 @@
 //! Off by default: nothing listens until an authorised member turns it on.
 //! `hub.json`, `hub-cert.der` and `hub-key.der` are device files beside the
 //! database (excluded from backups; recovery keeps this computer's own).
+//! The hub also serves the iPad ordering web app: HTTPS on `port + 1`
+//! (certificate from the shop CA in `web-ca.der` / `web-ca-key.der`) and
+//! the setup page with the CA profile on plain HTTP `port + 2`.
 use crate::{
     app::App,
     ui::{Icon, Theme, format, space, type_scale, w},
@@ -15,6 +18,10 @@ use std::{path::Path, time::Instant};
 const FILE: &str = "hub.json";
 /// Default LAN port for paired devices.
 pub const DEFAULT_PORT: u16 = 47_810;
+/// The iPad app (HTTPS) and its setup page (HTTP) follow the hub port.
+pub fn web_ports(port: u16) -> (u16, u16) {
+    (port.saturating_add(1), port.saturating_add(2))
+}
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Settings {
@@ -60,6 +67,8 @@ pub struct State {
     pub join: Join,
     /// Announces the hub on the LAN while it runs.
     pub advert: Option<pos_hub::discovery::Advertisement>,
+    /// Why the iPad web app is not available (the hub itself still runs).
+    pub web_error: Option<String>,
 }
 #[derive(Default)]
 pub struct Join {
@@ -98,7 +107,8 @@ pub fn start(app: &mut App) {
         pos_hub::Hub::start(listener, &identity, app.worker.hub_submit())
     })();
     match result {
-        Ok(hub) => {
+        Ok(mut hub) => {
+            app.hub.web_error = start_web(app, &mut hub).err().map(|e| e.to_string());
             app.worker.send(Command::SetHub(Some(hub.notifier())));
             // Devices find the hub by name; a failure only means typing the address.
             if !app.hub.settings.loopback {
@@ -114,6 +124,20 @@ pub fn start(app: &mut App) {
         }
         Err(e) => app.hub.error = Some(e.to_string()),
     }
+}
+/// The iPad web app on the next two ports; a failure leaves the hub running.
+fn start_web(app: &App, hub: &mut pos_hub::Hub) -> std::io::Result<()> {
+    let identity = pos_hub::webtls::WebIdentity::load_or_create(&app.data_dir)?;
+    let host = if app.hub.settings.loopback {
+        "127.0.0.1"
+    } else {
+        "0.0.0.0"
+    };
+    let (https, http) = web_ports(hub.address().port());
+    let https = std::net::TcpListener::bind((host, https))?;
+    let http = std::net::TcpListener::bind((host, http))?;
+    let ips: Vec<_> = lan_address().into_iter().collect();
+    hub.start_web(https, http, &identity, &ips, &app.shop.name)
 }
 fn stop(app: &mut App) {
     app.hub.advert = None;
@@ -546,6 +570,9 @@ fn hub_card(app: &mut App, ui: &mut egui::Ui) {
             }
         }
     }
+    if let Some(port) = app.hub.hub.as_ref().map(|h| h.address().port()) {
+        ipad_section(app, ui, port);
+    }
     ui.add_space(space::S3);
     ui.label(t.text(
         lang.text("เครื่องที่จับคู่แล้ว", "Paired devices"),
@@ -604,4 +631,59 @@ fn hub_card(app: &mut App, ui: &mut egui::Ui) {
         });
         w::divider(ui);
     }
+}
+
+/// How to add an ordering iPad: scan the setup page, install the shop
+/// certificate once, then pair the web app with a code like any device.
+fn ipad_section(app: &App, ui: &mut egui::Ui, port: u16) {
+    let t = Theme::of(ui);
+    let lang = app.lang;
+    ui.add_space(space::S3);
+    ui.label(t.text(
+        lang.text("iPad รับออเดอร์", "Ordering iPads"),
+        type_scale::BODY_STRONG,
+    ));
+    if let Some(e) = &app.hub.web_error {
+        w::inline_error(
+            ui,
+            &format!(
+                "{} {e}",
+                lang.text(
+                    "เปิดแอปรับออเดอร์ไม่สำเร็จ:",
+                    "Could not start the ordering app:"
+                )
+            ),
+        );
+        return;
+    }
+    let host = lan_address()
+        .map(|ip| ip.to_string())
+        .unwrap_or_else(|| "127.0.0.1".into());
+    let (https, http) = web_ports(port);
+    let setup = format!("http://{host}:{http}/setup");
+    ui.horizontal_top(|ui| {
+        crate::ui::qr::show(ui, &setup, 132.0);
+        ui.add_space(space::S3);
+        ui.vertical(|ui| {
+            w::help_text(
+                ui,
+                lang.text(
+                    "สแกนด้วยกล้อง iPad (ต่อ Wi-Fi ร้านเดียวกัน) แล้วทำตามขั้นตอน: ติดตั้งใบรับรองของร้านครั้งเดียว เปิดแอปรับออเดอร์ แล้วกด \"จับคู่เครื่องใหม่\" ที่นี่เพื่อรับรหัส",
+                    "Scan with the iPad camera (on the shop Wi-Fi) and follow the steps: install the shop certificate once, open the ordering app, then press \"Pair a device\" here for a code.",
+                ),
+            );
+            w::kv(
+                ui,
+                lang.text("หน้าตั้งค่า", "Setup page"),
+                &setup,
+                w::Value::Plain,
+            );
+            w::kv(
+                ui,
+                lang.text("แอปรับออเดอร์", "Ordering app"),
+                &format!("https://{host}:{https}/"),
+                w::Value::Plain,
+            );
+        });
+    });
 }
