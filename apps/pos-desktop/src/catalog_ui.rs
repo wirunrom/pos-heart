@@ -327,6 +327,8 @@ pub struct CatalogState {
     focus_search: bool,
     last_bulk: Option<(Vec<Uuid>, bool)>,
     save_requested: bool,
+    /// Inspector tab (Info / Price & cost / Stock / Options).
+    pub inspector_tab: InspectorTab,
     /// Ctrl N: open a new product.
     new_requested: bool,
     close_after_prompt: bool,
@@ -757,6 +759,14 @@ fn panel(ui: &mut egui::Ui, t: &Theme, rect: Rect, pad: f32, add: impl FnOnce(&m
             ui.set_max_size(inner);
             add(ui);
         });
+}
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum InspectorTab {
+    #[default]
+    Info,
+    Price,
+    Stock,
+    Options,
 }
 /// Products toolbar (design v0.2): add / import / export, and the bulk
 /// actions while rows are selected.
@@ -1721,12 +1731,16 @@ fn inspector(app: &mut App, ui: &mut egui::Ui) {
     if let (Some(path), Some(_)) = (dropped, saved) {
         picture_action = Some(Some(path));
     }
+    let stock_now = saved.and_then(|(id, _)| app.known.get(&id).and_then(|p| p.stock));
     let Some(editor) = app.catalog.editor.as_mut() else {
         return;
     };
     let dirty = editor.dirty();
     let new = editor.id.is_none();
     let errors = app.catalog.show_errors;
+    // Validation errors show every section so none hides behind a tab.
+    let tab = app.catalog.inspector_tab;
+    let show = |k: InspectorTab| errors || tab == k;
     let busy = app.busy;
     let mut close = false;
     let mut archive = false;
@@ -1758,6 +1772,67 @@ fn inspector(app: &mut App, ui: &mut egui::Ui) {
             }
         });
     });
+    // Price, margin and stock at a glance (design v0.2 inspector).
+    let price = format::parse_money(&editor.price).ok();
+    let cost = format::parse_money(&editor.cost).ok();
+    let margin = match (price, cost) {
+        (Some(p), Some(c)) if p.satang() > 0 => {
+            format!("{}%", (p.satang() - c.satang()) * 100 / p.satang())
+        }
+        _ => "—".into(),
+    };
+    let stock = match (editor.tracked, stock_now) {
+        (false, _) => lang.text("ไม่นับ", "Not tracked").to_owned(),
+        (true, Some(n)) => format::count(u64::from(n)),
+        (true, None) => editor.stock.clone(),
+    };
+    ui.horizontal(|ui| {
+        ui.spacing_mut().item_spacing.x = space::S2;
+        let w3 = ((ui.available_width() - space::S2 * 2.0) / 3.0).floor();
+        for (label, value) in [
+            (
+                lang.text("ราคา", "Price"),
+                price.map_or("—".into(), format::money),
+            ),
+            (lang.text("กำไร", "Margin"), margin),
+            (lang.text("คงเหลือ", "In stock"), stock),
+        ] {
+            egui::Frame::new()
+                .fill(t.p.bg_sunken)
+                .corner_radius(t.radius(crate::ui::tokens::radius::MD))
+                .inner_margin(egui::Margin::symmetric(10, 8))
+                .show(ui, |ui| {
+                    ui.with_layout(egui::Layout::top_down(Align::Min), |ui| {
+                        ui.set_width(w3 - 20.0);
+                        ui.spacing_mut().item_spacing.y = 0.0;
+                        ui.label(t.muted(label, type_scale::CAPTION));
+                        ui.add(
+                            egui::Label::new(
+                                RichText::new(value).font(t.strong_font(type_scale::MONEY)),
+                            )
+                            .truncate(),
+                        );
+                    });
+                });
+        }
+    });
+    ui.horizontal(|ui| {
+        ui.set_height(if t.touch() { 38.0 } else { 30.0 });
+        w::pane_tabs(
+            ui,
+            &mut app.catalog.inspector_tab,
+            &[
+                (InspectorTab::Info, lang.text("ข้อมูล", "Info"), None),
+                (
+                    InspectorTab::Price,
+                    lang.text("ราคาและต้นทุน", "Price & cost"),
+                    None,
+                ),
+                (InspectorTab::Stock, lang.text("สต็อก", "Stock"), None),
+                (InspectorTab::Options, lang.text("ตัวเลือก", "Options"), None),
+            ],
+        );
+    });
     w::divider(ui);
     let footer_h = t.m.control_md + space::S4 * 2.0;
     egui::ScrollArea::vertical()
@@ -1782,6 +1857,7 @@ fn inspector(app: &mut App, ui: &mut egui::Ui) {
                         None,
                     );
                 }
+                if show(InspectorTab::Info) {
                 picture_field(ui, &t, lang, editor, saved, picture, may_catalog && !busy, &mut picture_action);
                 w::field_label(ui, lang.text("ชื่อสินค้า", "Name"), None);
                 w::text_area(
@@ -1794,6 +1870,8 @@ fn inspector(app: &mut App, ui: &mut egui::Ui) {
                 if errors && editor.name.trim().is_empty() {
                     w::inline_error(ui, lang.text("ใส่ชื่อสินค้า", "Enter a product name"));
                 }
+                }
+                if show(InspectorTab::Price) {
                 ui.add_space(space::S1);
                 w::field_label(ui, lang.text("ราคา (บาท)", "Price (THB)"), None);
                 let price_bad = errors && format::parse_money(&editor.price).is_err();
@@ -1838,6 +1916,8 @@ fn inspector(app: &mut App, ui: &mut egui::Ui) {
                     "Blank = unknown; 0 = no cost. Include typical option costs; exclude recoverable VAT.",
                 ));
                 if cost_bad { w::inline_error(ui, lang.text("ต้นทุนต้องไม่ติดลบ และทศนิยมไม่เกิน 2 ตำแหน่ง", "Cost must be 0 or more with up to 2 decimals")); }
+                }
+                if show(InspectorTab::Info) {
                 // Full-width row so long bilingual category names are never clipped.
                 w::field_label(
                     ui,
@@ -1845,6 +1925,8 @@ fn inspector(app: &mut App, ui: &mut egui::Ui) {
                     Some(lang.text("(ไม่บังคับ)", "(optional)")),
                 );
                 category_input(ui, &mut editor.category, &app.data.counts.categories);
+                }
+                if show(InspectorTab::Stock) {
                 ui.add_space(space::S1);
                 ui.horizontal(|ui| {
                     w::field_label(ui, lang.text("นับสต็อก", "Track stock"), None);
@@ -1934,6 +2016,8 @@ fn inspector(app: &mut App, ui: &mut egui::Ui) {
                         ),
                     );
                 }
+                }
+                if show(InspectorTab::Info) {
                 ui.add_space(space::S1);
                 w::field_label(ui, lang.text("รหัสสินค้า (SKU)", "Product code (SKU)"), None);
                 let sku_bad = errors && editor.sku.trim().is_empty();
@@ -1964,11 +2048,15 @@ fn inspector(app: &mut App, ui: &mut egui::Ui) {
                         ..Default::default()
                     },
                 );
+                }
+                if show(InspectorTab::Options) {
                 ui.add_space(space::S2);
                 options_editor(ui, &t, lang, &mut editor.options, errors, false);
                 shared_sets(ui, &t, lang, editor, &sets);
                 ui.add_space(space::S2);
                 recipe_editor(ui, &t, lang, editor, &ingredients, &sets, errors);
+                }
+                if show(InspectorTab::Info) {
                 ui.add_space(space::S2);
                 ui.horizontal(|ui| {
                     ui.vertical(|ui| {
@@ -2045,6 +2133,7 @@ fn inspector(app: &mut App, ui: &mut egui::Ui) {
                     {
                         archive = true;
                     }
+                }
                 }
             });
         });

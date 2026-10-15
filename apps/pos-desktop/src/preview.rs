@@ -343,6 +343,7 @@ pub fn apply(app: &mut App, ctx: &egui::Context) {
             };
         }
         "product-cost" => {
+            app.catalog.inspector_tab = crate::catalog_ui::InspectorTab::Price;
             if let Some(p) = app.data.products.first().cloned() {
                 let mut editor = crate::catalog_ui::Editor::from(p);
                 editor.cost = "12.35".into();
@@ -442,6 +443,7 @@ pub fn apply(app: &mut App, ctx: &egui::Context) {
             }
         }
         "product-recipe" => {
+            app.catalog.inspector_tab = crate::catalog_ui::InspectorTab::Options;
             app.page = crate::app::Page::Products;
             if let Some(p) = app
                 .data
