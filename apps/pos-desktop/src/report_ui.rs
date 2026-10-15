@@ -165,7 +165,9 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
         );
         return;
     }
-    tiles(app, ui, &s, &c);
+    if tiles(app, ui, &s, &c) {
+        app.navigate(crate::app::Page::Products);
+    }
     let gap = t.pane_gap();
     ui.add_space(gap - ui.spacing().item_spacing.y);
     let full = ui.available_rect_before_wrap();
@@ -432,43 +434,50 @@ fn date_picker(app: &mut App, ui: &mut egui::Ui) {
             );
         });
 }
-fn tiles(app: &App, ui: &mut egui::Ui, s: &DailySummary, c: &DailySummary) {
+/// Returns true when "set costs" was clicked on the profit figure.
+fn tiles(app: &App, ui: &mut egui::Ui, s: &DailySummary, c: &DailySummary) -> bool {
+    let mut set_costs = false;
     let lang = app.lang;
     let gap = Theme::of(ui).pane_gap();
     let width = ((ui.available_width() - gap * 4.0) / 5.0).floor();
     let compare = compare_label(lang, app.report);
     ui.horizontal_top(|ui| {
         ui.spacing_mut().item_spacing.x = gap;
-        ui.allocate_ui_with_layout(vec2(width, 0.0), egui::Layout::top_down(Align::Min), |ui| {
-            let sub = match change_tenths(s.gross_sales, c.gross_sales) {
-                Some(tenths) => vec![
-                    (
-                        // Signed text instead of ▲▼: the bundled fonts lack those
-                        // glyphs, and the sign carries meaning without colour.
-                        format!(
-                            "{}{}.{}%",
-                            if tenths >= 0 { "+" } else { "\u{2212}" },
-                            tenths.unsigned_abs() / 10,
-                            tenths.unsigned_abs() % 10
+        let first = ui.allocate_ui_with_layout(
+            vec2(width, 0.0),
+            egui::Layout::top_down(Align::Min),
+            |ui| {
+                let sub = match change_tenths(s.gross_sales, c.gross_sales) {
+                    Some(tenths) => vec![
+                        (
+                            // Signed text instead of ▲▼: the bundled fonts lack those
+                            // glyphs, and the sign carries meaning without colour.
+                            format!(
+                                "{}{}.{}%",
+                                if tenths >= 0 { "+" } else { "\u{2212}" },
+                                tenths.unsigned_abs() / 10,
+                                tenths.unsigned_abs() % 10
+                            ),
+                            Some(if tenths >= 0 {
+                                w::Tone::Success
+                            } else {
+                                w::Tone::Danger
+                            }),
                         ),
-                        Some(if tenths >= 0 {
-                            w::Tone::Success
-                        } else {
-                            w::Tone::Danger
-                        }),
-                    ),
-                    (format!("{} {compare}", lang.text("เทียบ", "vs")), None),
-                ],
-                None => vec![(format!("{} {compare} —", lang.text("เทียบ", "vs")), None)],
-            };
-            w::stat_tile(
-                ui,
-                lang.text("ยอดขายก่อนคืน", "Gross sales"),
-                &format::money(s.gross_sales),
-                false,
-                &sub,
-            );
-        });
+                        (format!("{} {compare}", lang.text("เทียบ", "vs")), None),
+                    ],
+                    None => vec![(format!("{} {compare} —", lang.text("เทียบ", "vs")), None)],
+                };
+                w::stat_tile(
+                    ui,
+                    lang.text("ยอดขายก่อนคืน", "Gross sales"),
+                    &format::money(s.gross_sales),
+                    false,
+                    &sub,
+                );
+            },
+        );
+        let tile_h = first.response.rect.height();
         ui.allocate_ui_with_layout(vec2(width, 0.0), egui::Layout::top_down(Align::Min), |ui| {
             w::stat_tile(
                 ui,
@@ -532,29 +541,65 @@ fn tiles(app: &App, ui: &mut egui::Ui, s: &DailySummary, c: &DailySummary) {
         });
         ui.allocate_ui_with_layout(vec2(width, 0.0), egui::Layout::top_down(Align::Min), |ui| {
             let p = &s.profit;
-            let known = p.known_sold_units > 0;
-            w::stat_tile(
-                ui,
-                lang.text("กำไรขั้นต้น", "Gross profit"),
-                &if known {
-                    format::signed(p.gross_profit)
-                } else {
-                    lang.text("ยังคำนวณไม่ได้", "Not yet known").to_owned()
-                },
-                p.gross_profit.satang() < 0,
-                &[(
-                    format!(
-                        "{} {}/{} {}",
-                        lang.text("รู้ต้นทุน", "Cost known"),
-                        p.known_sold_units,
-                        p.known_sold_units + p.unknown_sold_units,
-                        lang.text("ชิ้น", "units")
-                    ),
-                    None,
-                )],
+            let sold = p.known_sold_units + p.unknown_sold_units;
+            let coverage = format!(
+                "{} {}/{} {}",
+                lang.text("รู้ต้นทุน", "Cost known"),
+                p.known_sold_units,
+                sold,
+                lang.text("ชิ้น", "units")
             );
+            if p.known_sold_units > 0 {
+                w::stat_tile(
+                    ui,
+                    lang.text("กำไรขั้นต้น", "Gross profit"),
+                    &format::signed(p.gross_profit),
+                    p.gross_profit.satang() < 0,
+                    &[(coverage, None)],
+                );
+            } else {
+                // Not a number yet: plain text and the way to fix it.
+                let t = Theme::of(ui);
+                let width = ui.available_width();
+                t.surface().show(ui, |ui| {
+                    ui.set_width(width - space::S4 * 2.0);
+                    // As tall as the figures beside it.
+                    ui.set_min_height((tile_h - space::S4 * 2.0).max(76.0));
+                    ui.spacing_mut().item_spacing.y = space::S1;
+                    ui.label(t.muted(lang.text("กำไรขั้นต้น", "Gross profit"), type_scale::LABEL));
+                    // Same height as the money figures beside it.
+                    ui.label(t.muted(
+                        lang.text("ยังคำนวณไม่ได้", "Not known yet"),
+                        type_scale::Style {
+                            family: type_scale::Family::Ui,
+                            ..type_scale::MONEY_LG
+                        },
+                    ));
+                    if ui
+                        .add(
+                            egui::Label::new(
+                                RichText::new(
+                                    lang.text(
+                                        "ตั้งต้นทุนสินค้าในหน้าสินค้า",
+                                        "Set product costs in Products",
+                                    ),
+                                )
+                                .font(t.font(type_scale::CAPTION))
+                                .color(t.p.info_fg)
+                                .underline(),
+                            )
+                            .sense(egui::Sense::click()),
+                        )
+                        .on_hover_text(coverage)
+                        .clicked()
+                    {
+                        set_costs = true;
+                    }
+                });
+            }
         });
     });
+    set_costs
 }
 fn axis_label(satang: i64) -> String {
     let baht = satang / 100;
@@ -1357,17 +1402,24 @@ fn top_products(app: &mut App, ui: &mut egui::Ui, s: &DailySummary) {
         .max(1);
     for (i, p) in list.iter().enumerate() {
         let name_w = qty_x - head.left() - 40.0 - 48.0;
-        let (g, _) = crate::ui::text::wrapped(
+        // Two lines at most so long names do not stretch the list;
+        // the full name is in the tooltip.
+        let (g, cut) = crate::ui::text::wrapped(
             ui.painter(),
             &p.name,
             t.font(type_scale::BODY),
             t.p.fg_default,
             name_w,
-            0,
+            2,
         );
         let h = g.size().y + 22.0;
         let (rect, response) =
             ui.allocate_exact_size(vec2(width, h.max(t.m.row_height)), Sense::hover());
+        let response = if cut {
+            response.on_hover_text(&p.name)
+        } else {
+            response
+        };
         let cy = rect.top() + 10.0 + g.size().y / 2.0;
         ui.painter().text(
             pos2(rect.left() + 16.0, cy),

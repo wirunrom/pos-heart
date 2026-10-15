@@ -254,16 +254,34 @@ pub(crate) fn command_field(app: &mut App, ui: &mut egui::Ui, t: Theme, width: f
         16.0,
         t.p.fg_chrome_muted,
     );
+    // The hint and Ctrl K shorten or hide instead of being cut off.
+    let long = lang.text("ค้นหาหรือสั่งงาน", "Search or run a command");
+    let long_w = ui
+        .painter()
+        .layout_no_wrap(
+            long.to_owned(),
+            t.font(type_scale::BODY),
+            t.p.fg_chrome_muted,
+        )
+        .size()
+        .x;
+    let kbd_room = if t.m.show_shortcut_hints { 70.0 } else { 0.0 };
+    let fits_long = 38.0 + long_w + kbd_room + space::S2 <= width;
+    let show_kbd = t.m.show_shortcut_hints && 38.0 + 60.0 + kbd_room <= width;
     if !compact {
         ui.painter().with_clip_rect(rect.shrink(2.0)).text(
             egui::pos2(rect.left() + 38.0, rect.center().y),
             egui::Align2::LEFT_CENTER,
-            lang.text("ค้นหาหรือสั่งงาน", "Search or run a command"),
+            if fits_long {
+                long
+            } else {
+                lang.text("ค้นหา", "Search")
+            },
             t.font(type_scale::BODY),
             t.p.fg_chrome_muted,
         );
     }
-    if t.m.show_shortcut_hints && !compact {
+    if show_kbd && !compact {
         let g = ui.painter().layout_no_wrap(
             "Ctrl K".into(),
             t.font(type_scale::MONEY_SM),

@@ -696,7 +696,11 @@ fn overview(app: &mut App, ui: &mut egui::Ui, s: &Shift) {
                     .ok()
                     .filter(|m| *m != Money::ZERO);
                 let valid = amount.is_some() && !app.drawer.reason.trim().is_empty();
-                let label = if app.drawer.kind == CashKind::CashIn {
+                let label = if amount.is_none() {
+                    lang.text("ใส่จำนวนเงิน", "Enter an amount")
+                } else if app.drawer.reason.trim().is_empty() {
+                    lang.text("ใส่เหตุผล", "Enter a reason")
+                } else if app.drawer.kind == CashKind::CashIn {
                     lang.text("บันทึกเงินเข้า", "Record cash in")
                 } else {
                     lang.text("บันทึกเงินออก", "Record cash out")
@@ -1217,9 +1221,51 @@ fn reconcile(app: &mut App, ui: &mut egui::Ui, s: &Shift, counted: Option<Money>
             .auto_shrink([false, false])
             .show(ui, |ui| {
                 ui.spacing_mut().item_spacing.y = space::S2;
-                shift_sales(ui, lang, s);
-                ui.add_space(space::S2);
-                drawer_statement(ui, lang, s, counted.filter(|_| app.drawer.touched()));
+                // Expected vs counted first; the breakdown folds away on
+                // short windows (design v0.2 "ที่มาของยอดที่ควรมี").
+                let t = Theme::of(ui);
+                let counted_now = counted.filter(|_| app.drawer.touched());
+                ui.horizontal(|ui| {
+                    ui.spacing_mut().item_spacing.x = space::S2;
+                    let half = ((ui.available_width() - space::S2) / 2.0).floor();
+                    for (label, value) in [
+                        (
+                            lang.text("ควรมี", "Expected"),
+                            s.expected().ok().map_or("—".into(), format::signed),
+                        ),
+                        (
+                            lang.text("นับได้", "Counted"),
+                            counted_now.map_or("—".into(), format::money),
+                        ),
+                    ] {
+                        egui::Frame::new()
+                            .fill(t.p.bg_sunken)
+                            .corner_radius(t.radius(crate::ui::tokens::radius::MD))
+                            .inner_margin(egui::Margin::symmetric(10, 8))
+                            .show(ui, |ui| {
+                                ui.with_layout(egui::Layout::top_down(Align::Min), |ui| {
+                                    ui.set_width(half - 20.0);
+                                    ui.spacing_mut().item_spacing.y = 0.0;
+                                    ui.label(t.muted(label, type_scale::CAPTION));
+                                    ui.label(
+                                        RichText::new(value)
+                                            .font(t.strong_font(type_scale::MONEY_LG)),
+                                    );
+                                });
+                            });
+                    }
+                });
+                let tall = ui.ctx().content_rect().height() >= 820.0;
+                egui::CollapsingHeader::new(
+                    lang.text("ที่มาของยอดที่ควรมี", "Where the expected amount comes from"),
+                )
+                .id_salt(("reconcile-breakdown", tall))
+                .default_open(tall)
+                .show(ui, |ui| {
+                    drawer_statement(ui, lang, s, counted_now);
+                    ui.add_space(space::S2);
+                    shift_sales(ui, lang, s);
+                });
             });
     });
 }
@@ -1314,51 +1360,52 @@ fn reconcile_footer(app: &mut App, ui: &mut egui::Ui, s: &Shift, counted: Option
     let diff = count.as_ref().and_then(|c| s.difference(c.counted).ok());
     let needs_reason =
         diff.is_some_and(|d| d.satang() != 0) && app.drawer.close_reason.trim().is_empty();
-    if app.drawer.reviewing && needs_reason {
-        w::help_text(
-            ui,
-            lang.text(
-                "ใส่เหตุผลของส่วนต่างก่อนปิดกะ",
-                "Enter a reason for the difference to close the shift.",
-            ),
-        );
+    // Back link on its own row; the commit button takes the full width
+    // so a "what is missing" label never overlaps it.
+    if app.drawer.reviewing
+        && w::button(lang.text("กลับไปนับ", "Back to count"))
+            .icon(Icon::ChevronLeft)
+            .ghost()
+            .size(w::Size::Sm)
+            .show(ui)
+            .clicked()
+    {
+        app.drawer.reviewing = false;
     }
-    ui.horizontal(|ui| {
-        if app.drawer.reviewing
-            && w::button(lang.text("กลับไปนับ", "Back to count"))
-                .icon(Icon::ChevronLeft)
-                .ghost()
-                .show(ui)
-                .clicked()
+    let ready = count.is_some() && app.drawer.touched() && app.cart.lines.is_empty() && !app.busy;
+    // A disabled commit button says what is missing (design/docs/02).
+    let missing = if !app.cart.lines.is_empty() {
+        Some(lang.text("พักบิลในหน้าขายก่อน", "Hold the open bill first"))
+    } else if count.is_none() || !app.drawer.touched() {
+        Some(lang.text("นับเงินก่อน", "Count the drawer first"))
+    } else if app.drawer.reviewing && needs_reason {
+        Some(lang.text("ใส่เหตุผลก่อนปิดกะ", "Enter a reason first"))
+    } else {
+        None
+    };
+    if !app.drawer.reviewing {
+        if w::button(missing.unwrap_or(lang.text("ตรวจยอด", "Reconcile")))
+            .primary()
+            .size(w::Size::Lg)
+            .icon(Icon::ChevronRight)
+            .fill()
+            .enabled(ready)
+            .show(ui)
+            .clicked()
         {
-            app.drawer.reviewing = false;
+            app.drawer.reviewing = true;
         }
-        ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
-            let ready =
-                count.is_some() && app.drawer.touched() && app.cart.lines.is_empty() && !app.busy;
-            if !app.drawer.reviewing {
-                if w::button(lang.text("ตรวจยอด", "Reconcile"))
-                    .primary()
-                    .size(w::Size::Lg)
-                    .icon(Icon::ChevronRight)
-                    .enabled(ready)
-                    .show(ui)
-                    .clicked()
-                {
-                    app.drawer.reviewing = true;
-                }
-            } else if w::button(lang.text("ปิดกะ", "Close shift"))
-                .primary()
-                .size(w::Size::Lg)
-                .enabled(ready && !needs_reason)
-                .show(ui)
-                .clicked()
-                && let Some(count) = count
-            {
-                app.drawer.pending = Some(Pending::Close(Box::new(s.clone()), count));
-            }
-        });
-    });
+    } else if w::button(missing.unwrap_or(lang.text("ปิดกะ", "Close shift")))
+        .primary()
+        .size(w::Size::Lg)
+        .fill()
+        .enabled(ready && !needs_reason)
+        .show(ui)
+        .clicked()
+        && let Some(count) = count
+    {
+        app.drawer.pending = Some(Pending::Close(Box::new(s.clone()), count));
+    }
 }
 
 fn history(app: &mut App, ui: &mut egui::Ui) {
