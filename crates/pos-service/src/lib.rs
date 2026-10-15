@@ -106,6 +106,9 @@ pub struct Data {
     /// connection's register's open shift.
     #[serde(default)]
     pub registers: Vec<pos_core::Register>,
+    /// Devices paired with this hub (Settings → Devices).
+    #[serde(default)]
+    pub devices: Vec<pos_core::Device>,
 }
 
 /// A business request. Writes carry their own retry identity (cart ID,
@@ -167,6 +170,8 @@ pub enum Request {
     IssueInvoice(Uuid, pos_domain::Buyer),
     /// Adds a register (retry-safe by ID).
     AddRegister(Uuid, String),
+    /// Stops a paired device from connecting (Settings permission).
+    RevokeDevice(Uuid),
     /// Runs `inner` once with an approver's PIN for a restricted action.
     Approved {
         approver: Uuid,
@@ -231,6 +236,7 @@ pub enum Reply {
     Kitchen(Vec<pos_domain::KitchenTicket>),
     InvoiceIssued(Box<pos_domain::TaxInvoice>),
     RegisterAdded(pos_core::Register),
+    DeviceRevoked(Uuid),
 }
 
 /// Runs one request at `now` (Unix seconds). Approval covers only the
@@ -430,6 +436,10 @@ pub fn handle(pos: &mut Pos, request: Request, now: i64) -> Result<Reply> {
             Reply::InvoiceIssued(Box::new(pos.issue_tax_invoice(sale, &buyer, now)?))
         }
         Request::AddRegister(id, name) => Reply::RegisterAdded(pos.add_register(id, &name, now)?),
+        Request::RevokeDevice(id) => {
+            pos.revoke_device(id, now)?;
+            Reply::DeviceRevoked(id)
+        }
         Request::Approved {
             approver,
             pin,
@@ -487,6 +497,7 @@ pub fn load(pos: &mut Pos, q: &Query, now: i64) -> Result<Data> {
         option_sets: pos.option_sets()?,
         kitchen: pos.kitchen_tickets()?,
         registers: pos.registers()?,
+        devices: pos.devices()?,
         stock_history,
         shift,
         shifts,

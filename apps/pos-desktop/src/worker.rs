@@ -90,6 +90,10 @@ pub enum Command {
     BumpTicket(Uuid, Option<i64>),
     TicketLine(Uuid, usize, bool),
     IssueInvoice(Uuid, pos_domain::Buyer),
+    /// Stops a paired device from connecting (Settings → Devices).
+    RevokeDevice(Uuid),
+    /// Starts or stops telling paired devices about local changes.
+    SetHub(Option<pos_hub::Notifier>),
     /// Runs `inner` once with an approver's PIN for a restricted action.
     Approved {
         approver: Uuid,
@@ -173,6 +177,9 @@ pub enum Event {
     KitchenSent(Cart, Option<Box<pos_domain::KitchenTicket>>),
     Kitchen(Vec<pos_domain::KitchenTicket>),
     InvoiceIssued(pos_domain::TaxInvoice),
+    /// A paired device changed shop data: refresh in the background.
+    DevicesChanged,
+    DeviceRevoked(Uuid),
     /// Background command finished (successfully or not); never changes `busy`.
     Quiet,
     Failed(Error),
@@ -190,6 +197,8 @@ pub struct Worker {
     tx: SyncSender<CommandEnvelope>,
     pub rx: Receiver<EventEnvelope>,
     epoch: Arc<AtomicU64>,
+    /// Device jobs from the hub (multi-device), run between commands.
+    jobs: mpsc::Sender<pos_hub::Job>,
 }
 /// Revocation is observed before every command, independently of queue capacity.
 /// A command already executing may finish; its result keeps the old generation.
@@ -198,6 +207,7 @@ fn execute(
     envelope: CommandEnvelope,
     epoch: &AtomicU64,
     observed: &mut u64,
+    notifier: Option<&pos_hub::Notifier>,
 ) -> EventEnvelope {
     let current = epoch.load(Ordering::SeqCst);
     if *observed != current {
@@ -216,7 +226,7 @@ fn execute(
             Event::Failed(Error::SignInRequired)
         }
     } else {
-        match run(pos, envelope.command) {
+        match run(pos, envelope.command, notifier) {
             Err(_) if background => Event::Quiet,
             other => other.unwrap_or_else(Event::Failed),
         }
@@ -254,6 +264,11 @@ impl Worker {
             })
             .is_ok()
     }
+    /// Queues device jobs for the hub (see `pos_hub::Submit`).
+    pub fn hub_submit(&self) -> pos_hub::Submit {
+        let jobs = std::sync::Mutex::new(self.jobs.clone());
+        Arc::new(move |job| jobs.lock().is_ok_and(|tx| tx.send(job).is_ok()))
+    }
     /// Always revokes immediately, even if the queue is full or a write is busy.
     pub fn revoke(&self) {
         self.epoch.fetch_add(1, Ordering::SeqCst);
@@ -262,6 +277,7 @@ impl Worker {
     pub fn start(path: PathBuf, context: egui::Context) -> std::io::Result<Self> {
         let (tx, commands) = mpsc::sync_channel::<CommandEnvelope>(16);
         let (events, rx) = mpsc::channel();
+        let (jobs, job_rx) = mpsc::channel::<pos_hub::Job>();
         let epoch = Arc::new(AtomicU64::new(0));
         let worker_epoch = Arc::clone(&epoch);
         thread::Builder::new()
@@ -301,6 +317,8 @@ impl Worker {
                     },
                 });
                 let mut observed = 0;
+                let mut notifier: Option<pos_hub::Notifier> = None;
+                let mut executor = pos_hub::Executor::default();
                 let mut next_backup = std::time::Instant::now();
                 let mut last_backup_error = None;
                 loop {
@@ -316,13 +334,47 @@ impl Worker {
                         next_backup =
                             std::time::Instant::now() + std::time::Duration::from_secs(60);
                     }
-                    let wait = next_backup.saturating_duration_since(std::time::Instant::now());
+                    // Paired devices' requests run between the counter's own.
+                    let mut changed = false;
+                    while let Ok(job) = job_rx.try_recv() {
+                        changed |= executor.run(&mut pos, job, now());
+                    }
+                    if changed {
+                        send(EventEnvelope {
+                            generation: worker_epoch.load(Ordering::SeqCst),
+                            background: true,
+                            event: Event::DevicesChanged,
+                        });
+                    }
+                    let wait = next_backup
+                        .saturating_duration_since(std::time::Instant::now())
+                        .min(std::time::Duration::from_millis(if notifier.is_some() {
+                            50
+                        } else {
+                            1_000
+                        }));
                     let envelope = match commands.recv_timeout(wait) {
                         Ok(envelope) => envelope,
                         Err(mpsc::RecvTimeoutError::Timeout) => continue,
                         Err(mpsc::RecvTimeoutError::Disconnected) => break,
                     };
-                    let result = execute(&mut pos, envelope, &worker_epoch, &mut observed);
+                    if let Command::SetHub(n) = envelope.command {
+                        notifier = n;
+                        continue;
+                    }
+                    let result = execute(
+                        &mut pos,
+                        envelope,
+                        &worker_epoch,
+                        &mut observed,
+                        notifier.as_ref(),
+                    );
+                    if let Event::DeviceRevoked(id) = &result.event {
+                        executor.forget(*id);
+                        if let Some(n) = &notifier {
+                            n.disconnect(*id);
+                        }
+                    }
                     let stopping = matches!(&result.event, Event::RecoveryPending(_));
                     let closed = match &result.event {
                         Event::ShiftClosed(shift) => Some(shift.id),
@@ -344,7 +396,12 @@ impl Worker {
                     }
                 }
             })?;
-        Ok(Self { tx, rx, epoch })
+        Ok(Self {
+            tx,
+            rx,
+            epoch,
+            jobs,
+        })
     }
 }
 
@@ -443,6 +500,7 @@ fn request(command: Command) -> Result<(pos_service::Request, Shape), Box<Comman
         Command::BumpTicket(id, at) => normal(R::BumpTicket(id, at)),
         Command::TicketLine(id, line, done) => normal(R::TicketLine(id, line, done)),
         Command::IssueInvoice(id, buyer) => normal(R::IssueInvoice(id, buyer)),
+        Command::RevokeDevice(id) => normal(R::RevokeDevice(id)),
         Command::Autosave(cart) => Ok((R::Hold(Box::new(cart)), Shape::Quiet)),
         Command::Discard(id) => Ok((R::RemoveHeld(id), Shape::Quiet)),
         Command::Restore(id) => Ok((R::Resume(id), Shape::Restored)),
@@ -543,13 +601,28 @@ fn event(reply: pos_service::Reply, shape: Shape) -> Event {
         (_, R::InvoiceIssued(i)) => Event::InvoiceIssued(*i),
         // Registers are managed from Settings → Devices (multi-device phase 1).
         (_, R::RegisterAdded(_)) => Event::Quiet,
+        (_, R::DeviceRevoked(id)) => Event::DeviceRevoked(id),
     }
 }
-fn run(pos: &mut Pos, command: Command) -> pos_core::Result<Event> {
+fn run(
+    pos: &mut Pos,
+    command: Command,
+    notifier: Option<&pos_hub::Notifier>,
+) -> pos_core::Result<Event> {
     // Business commands run through the shared protocol (pos-service), the
     // same path a paired device will use; the rest is device-local.
     let command = match request(command) {
-        Ok((request, shape)) => return Ok(event(pos_service::handle(pos, request, now())?, shape)),
+        Ok((request, shape)) => {
+            // Paired devices hear about writes made on the counter.
+            let notice = notifier
+                .filter(|_| !pos_service::changes(&request).is_empty())
+                .map(|n| (n, request.clone()));
+            let reply = pos_service::handle(pos, request, now())?;
+            if let Some((notifier, request)) = notice {
+                notifier.notify(&request);
+            }
+            return Ok(event(reply, shape));
+        }
         Err(local) => *local,
     };
     Ok(match command {
@@ -625,7 +698,7 @@ fn run(pos: &mut Pos, command: Command) -> pos_core::Result<Event> {
             inner,
         } => {
             pos.approve(approver, &pin, permission)?;
-            let result = run(pos, *inner);
+            let result = run(pos, *inner, notifier);
             // Approval covers this one command only.
             pos.clear_approval();
             result?
@@ -968,6 +1041,7 @@ mod tests {
                 Cart::new(),
                 Some(old.id),
             ),
+            None,
         )?;
         assert_eq!(
             crate::backup::inspect(&path)?.manifest.info.held as usize,
@@ -979,6 +1053,7 @@ mod tests {
         run(
             &mut pos,
             Command::RecoveryBackup(dir.path().to_path_buf(), path.clone(), old.clone(), None),
+            None,
         )?;
         let mut restored = Pos::open(path.join("pos-heart.sqlite3"))?;
         assert_eq!(restored.resume(old.id)?.0.lines[0].quantity, 3);
@@ -1022,7 +1097,8 @@ mod tests {
                     path.clone(),
                     Cart::new(),
                     Some(cart.id)
-                )
+                ),
+                None
             ),
             Err(Error::SignInRequired)
         ));
@@ -1050,6 +1126,9 @@ mod tests {
     }
 }
 
+#[cfg(test)]
+#[path = "hub_tests.rs"]
+mod hub_tests;
 #[cfg(test)]
 #[path = "revocation_tests.rs"]
 mod revocation_tests;

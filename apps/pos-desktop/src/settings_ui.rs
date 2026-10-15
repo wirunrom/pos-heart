@@ -153,10 +153,11 @@ pub enum Section {
     Printing,
     Staff,
     Display,
+    Devices,
     Data,
 }
 impl Section {
-    pub const ALL: [Self; 8] = [
+    pub const ALL: [Self; 9] = [
         Self::Shop,
         Self::Pricing,
         Self::Promotions,
@@ -164,6 +165,7 @@ impl Section {
         Self::Printing,
         Self::Staff,
         Self::Display,
+        Self::Devices,
         Self::Data,
     ];
     pub fn label(self, lang: Language) -> &'static str {
@@ -175,6 +177,7 @@ impl Section {
             Self::Printing => lang.text("การพิมพ์", "Printing"),
             Self::Staff => lang.text("พนักงานและสิทธิ์", "Staff & permissions"),
             Self::Display => lang.text("ภาษาและหน้าจอ", "Language & display"),
+            Self::Devices => lang.text("อุปกรณ์ในร้าน", "Shop devices"),
             Self::Data => lang.text("ข้อมูลและการสำรอง", "Data & backup"),
         }
     }
@@ -188,6 +191,7 @@ impl Section {
             "printing" => Self::Printing,
             "staff" => Self::Staff,
             "display" => Self::Display,
+            "devices" => Self::Devices,
             "data" => Self::Data,
             _ => return None,
         })
@@ -207,7 +211,11 @@ fn unsaved(app: &App, section: Section) -> bool {
                     .as_ref()
                     .is_some_and(|d| *d != app.shop.templates)
         }
-        Section::Promotions | Section::Tables | Section::Staff | Section::Display => false,
+        Section::Promotions
+        | Section::Tables
+        | Section::Staff
+        | Section::Display
+        | Section::Devices => false,
         Section::Data => app.auto_backup.dirty(),
     }
 }
@@ -347,6 +355,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
                                     card(ui, &t, |ui| crate::staff_ui::settings_card(app, ui));
                                 }
                                 Section::Display => card(ui, &t, |ui| display_card(app, ui)),
+                                Section::Devices => card(ui, &t, |ui| crate::hub_ui::card(app, ui)),
                                 Section::Data => card(ui, &t, |ui| data_card(app, ui)),
                             }
                             #[cfg(debug_assertions)]

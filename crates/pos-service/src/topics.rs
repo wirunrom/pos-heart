@@ -81,7 +81,8 @@ pub fn changes(request: &Request) -> &'static [Topic] {
         | Request::SaveTable(_)
         | Request::SavePromotion(_)
         | Request::DeletePromotion(_)
-        | Request::AddRegister(..) => &[Settings],
+        | Request::AddRegister(..)
+        | Request::RevokeDevice(_) => &[Settings],
         Request::SaveIngredient(_)
         | Request::AdjustIngredient(_)
         | Request::SaveSupplier(_)

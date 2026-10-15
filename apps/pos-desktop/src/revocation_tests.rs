@@ -56,6 +56,7 @@ fn queued_mutation_signin_and_approval_from_revoked_epoch_refuse_but_cart_saves_
             },
             &epoch,
             &mut observed,
+            None,
         );
         assert!(matches!(result.event, Event::Failed(Error::SignInRequired)));
         assert_eq!(result.generation, 0);
@@ -75,6 +76,7 @@ fn queued_mutation_signin_and_approval_from_revoked_epoch_refuse_but_cart_saves_
         },
         &epoch,
         &mut observed,
+        None,
     );
     assert!(matches!(result.event, Event::Quiet));
     assert_eq!(pos.held()?.first().map(|c| c.id), Some(cart.id));
@@ -86,6 +88,7 @@ fn queued_mutation_signin_and_approval_from_revoked_epoch_refuse_but_cart_saves_
         },
         &epoch,
         &mut observed,
+        None,
     );
     assert!(matches!(result.event, Event::Restored(..)));
     let result = execute(
@@ -96,6 +99,7 @@ fn queued_mutation_signin_and_approval_from_revoked_epoch_refuse_but_cart_saves_
         },
         &epoch,
         &mut observed,
+        None,
     );
     assert!(matches!(result.event, Event::Quiet));
     let result = execute(
@@ -106,6 +110,7 @@ fn queued_mutation_signin_and_approval_from_revoked_epoch_refuse_but_cart_saves_
         },
         &epoch,
         &mut observed,
+        None,
     );
     assert!(matches!(result.event, Event::SignedIn(_)));
     assert_eq!(result.generation, 1);
@@ -115,10 +120,12 @@ fn queued_mutation_signin_and_approval_from_revoked_epoch_refuse_but_cart_saves_
 fn revoke_is_nonblocking_even_with_a_full_busy_queue() -> Result {
     let (tx, _commands) = mpsc::sync_channel(1);
     let (_events, rx) = mpsc::channel();
+    let (jobs, _job_rx) = mpsc::channel();
     let worker = Worker {
         tx,
         rx,
         epoch: Arc::new(AtomicU64::new(0)),
+        jobs,
     };
     assert!(worker.send(Command::SignIn(Uuid::new_v4(), "1234".into())));
     worker.revoke(); // The wake command cannot fit; the atomic revocation still happens.
@@ -143,6 +150,7 @@ fn a_completed_signin_reply_stays_stale_and_refresh_cannot_restore_its_identity(
         },
         &epoch,
         &mut observed,
+        None,
     );
     assert!(matches!(reply.event, Event::SignedIn(_)));
     epoch.fetch_add(1, Ordering::SeqCst); // Lock after completion, before the UI receives it.
@@ -164,6 +172,7 @@ fn a_completed_signin_reply_stays_stale_and_refresh_cannot_restore_its_identity(
         },
         &epoch,
         &mut observed,
+        None,
     );
     let Event::Ready(data) = refresh.event else {
         return Err("expected refresh".into());

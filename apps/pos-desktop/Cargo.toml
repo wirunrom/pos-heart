@@ -11,6 +11,7 @@ path = "src/main.rs"
 pos-domain.workspace = true
 pos-core.workspace = true
 pos-service.workspace = true
+pos-hub.workspace = true
 eframe.workspace = true
 directories.workspace = true
 uuid.workspace = true

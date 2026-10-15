@@ -82,7 +82,14 @@ pub struct Executor {
     devices: HashMap<Uuid, DeviceContext>,
 }
 impl Executor {
-    pub fn run(&mut self, pos: &mut Pos, job: Job, now: i64) {
+    /// Runs one job; true when it changed shop data (a successful write or
+    /// a pairing), so the counter's own screens can refresh.
+    pub fn run(&mut self, pos: &mut Pos, job: Job, now: i64) -> bool {
+        let writes = match &job.work {
+            Work::Call { request, .. } => !pos_service::changes(request).is_empty(),
+            Work::Pair { .. } => true,
+            Work::Login { .. } => false,
+        };
         let result = match job.work {
             Work::Call { register, request } => {
                 let device = self
@@ -111,8 +118,10 @@ impl Executor {
                     })
             }
         };
+        let changed = writes && result.is_ok();
         // The device may have disconnected; nothing else to do.
         let _ = job.reply.send(result.map_err(|e| WireError::from(&e)));
+        changed
     }
     /// Forgets a revoked device's sign-in.
     pub fn forget(&mut self, device: Uuid) {
@@ -192,6 +201,23 @@ fn ask(submit: &Submit, device: Uuid, work: Work) -> Result<Done, WireError> {
     rx.recv().unwrap_or_else(|_| Err(stopped()))
 }
 
+/// Sends change notices and disconnects devices from the database owner's
+/// thread (cheap to clone).
+#[derive(Clone)]
+pub struct Notifier(Arc<Shared>);
+impl Notifier {
+    /// Tells connected devices that `request` (run on the counter itself)
+    /// changed data.
+    pub fn notify(&self, request: &Request) {
+        self.0.notify(request);
+    }
+    /// Closes a device's connection (after revoking it).
+    pub fn disconnect(&self, device: Uuid) {
+        if let Ok(mut peers) = self.0.peers.lock() {
+            peers.remove(&device);
+        }
+    }
+}
 /// A running hub. Dropping it stops accepting and closes connections.
 pub struct Hub {
     shared: Arc<Shared>,
@@ -246,6 +272,9 @@ impl Hub {
     }
     pub fn address(&self) -> SocketAddr {
         self.address
+    }
+    pub fn notifier(&self) -> Notifier {
+        Notifier(self.shared.clone())
     }
     pub fn fingerprint(&self) -> [u8; 32] {
         self.fingerprint

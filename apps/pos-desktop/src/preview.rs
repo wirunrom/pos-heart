@@ -102,6 +102,21 @@ pub fn apply(app: &mut App, ctx: &egui::Context) {
         "palette-empty" => app.palette.open(),
         "display" => app.display_open = true,
         "sell-pay" => app.sell.paying = Some(app.cart.id),
+        // Settings → Devices with the hub running on a free port and a
+        // pairing code on screen (nothing is saved to hub.json).
+        "settings-devices-pairing" => {
+            app.page = crate::app::Page::Settings;
+            app.settings_section = crate::settings_ui::Section::Devices;
+            app.hub.settings = crate::hub_ui::Settings {
+                enabled: true,
+                port: 0,
+                loopback: true,
+            };
+            crate::hub_ui::start(app);
+            if let Some(hub) = &app.hub.hub {
+                app.hub.pairing = Some((hub.open_pairing(), std::time::Instant::now()));
+            }
+        }
         "sell-cash" => {
             app.sell.paying = Some(app.cart.id);
             if let Some(total) = total {

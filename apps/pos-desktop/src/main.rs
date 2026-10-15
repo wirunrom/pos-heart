@@ -13,6 +13,7 @@ mod chrome;
 mod discount_ui;
 mod history_ui;
 mod home_ui;
+mod hub_ui;
 mod i18n;
 mod images;
 mod import_ui;

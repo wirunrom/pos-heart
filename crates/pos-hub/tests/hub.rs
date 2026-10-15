@@ -34,7 +34,9 @@ fn owner(
         while let Ok(item) = rx.recv() {
             now += 1;
             match item {
-                Owner::Job(job) => executor.run(&mut pos, job, now),
+                Owner::Job(job) => {
+                    executor.run(&mut pos, job, now);
+                }
                 Owner::Do(f) => f(&mut pos, &mut executor),
             }
         }
