@@ -119,7 +119,11 @@ fn a_client_mode_worker_runs_commands_on_the_main_register() -> Result {
     file.save(client_dir.path())?;
     let loaded = DeviceFile::load(client_dir.path()).ok_or("device.json")?;
     assert_eq!(loaded.pin(), Some(paired.fingerprint));
-    let remote = Worker::start_remote(loaded, eframe::egui::Context::default())?;
+    let remote = Worker::start_remote(
+        loaded,
+        client_dir.path().to_path_buf(),
+        eframe::egui::Context::default(),
+    )?;
     wait_for(&remote, |e| matches!(e, Event::Connection(true)))?;
     // A product saved on the device lands in the main register's database.
     assert!(remote.send(Command::Save(pos_domain::ProductInput {

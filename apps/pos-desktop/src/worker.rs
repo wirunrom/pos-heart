@@ -448,7 +448,11 @@ impl Worker {
     /// Client mode: the same commands and events as the local worker, run
     /// on the main register through `pos_hub::Client`. Device-local work
     /// (backups, recovery, files) is refused; it belongs to the main register.
-    pub fn start_remote(device: DeviceFile, context: egui::Context) -> std::io::Result<Self> {
+    pub fn start_remote(
+        device: DeviceFile,
+        dir: PathBuf,
+        context: egui::Context,
+    ) -> std::io::Result<Self> {
         let (tx, commands) = mpsc::sync_channel::<CommandEnvelope>(16);
         let (events, rx) = mpsc::channel();
         let (jobs, _unused) = mpsc::channel::<pos_hub::Job>();
@@ -473,21 +477,39 @@ impl Worker {
                     );
                     return;
                 };
-                let connect = || {
+                let mut device = device;
+                let connect = |device: &DeviceFile| {
                     pos_hub::Client::connect(device.hub, device.device, &device.token, pin)
                         .map(|(c, _)| c)
                 };
                 let mut client: Option<pos_hub::Client> = None;
                 let mut next_try = std::time::Instant::now();
+                let mut misses = 0u32;
                 let mut observed = 0;
                 loop {
                     if client.is_none() && std::time::Instant::now() >= next_try {
-                        match connect() {
+                        match connect(&device) {
                             Ok(c) => {
                                 client = Some(c);
+                                misses = 0;
                                 send(Event::Connection(true), true, 0);
                             }
                             Err(_) => {
+                                misses += 1;
+                                // The main register may have a new address:
+                                // look for the same certificate on the LAN.
+                                if misses.is_multiple_of(3)
+                                    && let Ok(found) = pos_hub::discovery::browse(
+                                        std::time::Duration::from_secs(2),
+                                    )
+                                    && let Some(hub) =
+                                        found.iter().find(|f| f.fingerprint == device.fingerprint)
+                                    && hub.address != device.hub
+                                {
+                                    device.hub = hub.address;
+                                    let _ = device.save(&dir);
+                                    continue;
+                                }
                                 next_try =
                                     std::time::Instant::now() + std::time::Duration::from_secs(2);
                             }
@@ -529,7 +551,7 @@ impl Worker {
                             // One retry with the same id after reconnecting.
                             for _ in 0..2 {
                                 if client.is_none() {
-                                    client = connect().ok();
+                                    client = connect(&device).ok();
                                     if client.is_some() {
                                         send(Event::Connection(true), true, 0);
                                     }

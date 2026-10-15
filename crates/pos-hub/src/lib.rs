@@ -8,6 +8,7 @@
 //! function that queues [`Job`]s to its worker, and the worker calls
 //! [`Executor::run`] for each job. Pairing, token checks and requests all
 //! go through that one queue.
+pub mod discovery;
 pub mod tls;
 pub mod wire;
 

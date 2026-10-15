@@ -234,7 +234,7 @@ impl App {
         // A paired device (device.json) works on the main register's data.
         let device = crate::worker::DeviceFile::load(&data_dir);
         let worker = match device.clone() {
-            Some(device) => Worker::start_remote(device, cc.egui_ctx.clone())?,
+            Some(device) => Worker::start_remote(device, data_dir.clone(), cc.egui_ctx.clone())?,
             None => Worker::start(data_dir.join("pos-heart.sqlite3"), cc.egui_ctx.clone())?,
         };
         let hub = crate::hub_ui::State {

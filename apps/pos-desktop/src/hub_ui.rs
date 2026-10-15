@@ -58,6 +58,8 @@ pub struct State {
     pub connected: bool,
     /// "Use this computer as a device" form.
     pub join: Join,
+    /// Announces the hub on the LAN while it runs.
+    pub advert: Option<pos_hub::discovery::Advertisement>,
 }
 #[derive(Default)]
 pub struct Join {
@@ -67,6 +69,9 @@ pub struct Join {
     pub kitchen: bool,
     pub running: Option<std::sync::mpsc::Receiver<Result<crate::worker::DeviceFile, String>>>,
     pub done: Option<Result<(), String>>,
+    /// Main registers found on the LAN (mDNS), or a search in progress.
+    pub found: Vec<pos_hub::discovery::Found>,
+    pub searching: Option<std::sync::mpsc::Receiver<Vec<pos_hub::discovery::Found>>>,
 }
 
 /// This computer's address on the shop LAN, as devices type it. Finds the
@@ -95,6 +100,15 @@ pub fn start(app: &mut App) {
     match result {
         Ok(hub) => {
             app.worker.send(Command::SetHub(Some(hub.notifier())));
+            // Devices find the hub by name; a failure only means typing the address.
+            if !app.hub.settings.loopback {
+                app.hub.advert = pos_hub::discovery::Advertisement::start(
+                    &app.shop.name,
+                    hub.address().port(),
+                    &hub.fingerprint(),
+                )
+                .ok();
+            }
             app.hub.hub = Some(hub);
             app.hub.error = None;
         }
@@ -102,6 +116,7 @@ pub fn start(app: &mut App) {
     }
 }
 fn stop(app: &mut App) {
+    app.hub.advert = None;
     app.worker.send(Command::SetHub(None));
     app.hub.hub = None;
     app.hub.pairing = None;
@@ -218,6 +233,54 @@ fn join_card(app: &mut App, ui: &mut egui::Ui) {
         app.hub.join.done = Some(result.map(|_| ()));
     }
     let busy = app.hub.join.running.is_some();
+    if let Some(rx) = &app.hub.join.searching
+        && let Ok(found) = rx.try_recv()
+    {
+        app.hub.join.searching = None;
+        app.hub.join.found = found;
+    }
+    let searching = app.hub.join.searching.is_some();
+    if w::button(if searching {
+        lang.text("กำลังค้นหาเครื่องหลัก…", "Looking for main registers…")
+    } else {
+        lang.text("ค้นหาเครื่องหลักในร้าน", "Find main registers")
+    })
+    .icon(Icon::Search)
+    .enabled(!searching && !busy)
+    .loading(searching)
+    .show(ui)
+    .clicked()
+    {
+        let (tx, rx) = std::sync::mpsc::channel();
+        app.hub.join.searching = Some(rx);
+        std::thread::spawn(move || {
+            let found =
+                pos_hub::discovery::browse(std::time::Duration::from_secs(3)).unwrap_or_default();
+            let _ = tx.send(found);
+        });
+    }
+    if searching {
+        ui.ctx()
+            .request_repaint_after(std::time::Duration::from_millis(200));
+    }
+    for found in app.hub.join.found.clone() {
+        let pin = found
+            .fingerprint
+            .get(..8)
+            .map(|h| h.to_uppercase())
+            .unwrap_or_default();
+        let label = format!("{} · {} · {pin}", found.name, found.address);
+        if w::chip(
+            ui,
+            &label,
+            app.hub.join.address == found.address.to_string(),
+            false,
+        )
+        .clicked()
+        {
+            app.hub.join.address = found.address.to_string();
+        }
+    }
     w::field_label(ui, lang.text("ที่อยู่เครื่องหลัก", "Main register address"), None);
     w::text_input(
         ui,
