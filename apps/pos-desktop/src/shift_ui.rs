@@ -339,6 +339,24 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
     }
     let tab = app.drawer.tab;
     let _ = (&t, lang, now);
+    if let (Tab::Close, Some(s)) = (tab, &shift) {
+        close_view(app, ui, s);
+        return;
+    }
+    // The other tabs read as statements: centred at a readable width.
+    let full = ui.available_rect_before_wrap();
+    ui.allocate_rect(full, Sense::hover());
+    let width = full.width().min(crate::app::READING_WIDTH);
+    let rect = egui::Rect::from_min_size(
+        egui::pos2(full.center().x - width / 2.0, full.top()),
+        vec2(width, full.height()),
+    );
+    let mut ui = ui.new_child(
+        egui::UiBuilder::new()
+            .max_rect(rect)
+            .layout(egui::Layout::top_down(Align::Min)),
+    );
+    let ui = &mut ui;
     match (tab, shift) {
         (Tab::History, _) => history(app, ui),
         (_, None) => open_view(app, ui),
@@ -804,180 +822,377 @@ fn ledger(app: &mut App, ui: &mut egui::Ui, shift_id: Uuid) {
     });
 }
 
+/// Count & close (design v0.2): steps | denomination grid | reconcile.
 fn close_view(app: &mut App, ui: &mut egui::Ui, s: &Shift) {
     let t = Theme::of(ui);
     let lang = app.lang;
     load_draft(app, s.id);
-    let height = ui.available_height();
     let counted = app.drawer.counted();
-    w::columns(ui, 2, |cols| {
-        t.surface().show(&mut cols[0], |ui| {
-            ui.set_width(ui.available_width());
-            ui.set_min_height(height - 34.0);
-            ui.horizontal(|ui| {
-                w::title(ui, lang.text("นับเงินในลิ้นชัก", "Count the drawer"));
-                ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
-                    if let Some(at) = app.drawer.draft_saved {
-                        ui.label(t.muted(
-                            format!(
-                                "{} {}",
-                                lang.text("บันทึกร่างอัตโนมัติ", "Draft autosaved"),
-                                format::clock(at)
-                            ),
-                            type_scale::CAPTION,
-                        ));
-                    }
-                });
-            });
-            count_table(app, ui, counted);
-        });
-        t.surface().show(&mut cols[1], |ui| {
-            ui.set_width(ui.available_width());
-            ui.set_min_height(height - 34.0);
-            ui.set_max_height(height - 34.0);
+    let full = ui.available_rect_before_wrap();
+    ui.allocate_rect(full, Sense::hover());
+    let gap = t.pane_gap();
+    let narrow = full.width() < 1180.0;
+    let steps_w = if narrow { 0.0 } else { 230.0 };
+    let right_w = if narrow { 340.0 } else { 360.0 };
+    let steps = egui::Rect::from_min_size(full.min, vec2(steps_w, full.height()));
+    let mid = egui::Rect::from_min_max(
+        egui::pos2(
+            if narrow {
+                full.left()
+            } else {
+                steps.right() + gap
+            },
+            full.top(),
+        ),
+        egui::pos2(full.right() - right_w - gap, full.bottom()),
+    );
+    let right = egui::Rect::from_min_max(egui::pos2(mid.right() + gap, full.top()), full.max);
+    if !narrow {
+        let (mut head, mut body) = w::pane_uis(ui, steps);
+        w::pane_title(
+            &mut head,
+            &format!("{} {}", lang.text("ปิดกะ", "Close shift"), number(app, s)),
+        );
+        egui::Frame::new()
+            .inner_margin(egui::Margin::same(6))
+            .show(&mut body, |ui| close_steps(app, ui, s));
+    }
+    let (mut head, mut body) = w::pane_uis(ui, mid);
+    w::pane_title(&mut head, lang.text("นับเงินในลิ้นชัก", "Count the drawer"));
+    if let Some(at) = app.drawer.draft_saved {
+        w::pane_count(
+            &mut head,
+            &format!(
+                "{} {}",
+                lang.text("บันทึกร่างอัตโนมัติ", "Draft autosaved"),
+                format::clock(at)
+            ),
+        );
+    }
+    count_table(app, &mut body, counted);
+    let (mut head, mut body) = w::pane_uis(ui, right);
+    w::pane_title(&mut head, lang.text("ตรวจยอด", "Reconcile"));
+    egui::Frame::new()
+        .inner_margin(egui::Margin::same(space::S3 as i8))
+        .show(&mut body, |ui| {
+            ui.set_min_size(ui.available_size());
             reconcile(app, ui, s, counted);
         });
-    });
     if app.drawer.draft_dirty {
         save_draft(app, s.id);
     }
 }
-fn count_table(app: &mut App, ui: &mut egui::Ui, counted: Option<Money>) {
+/// The close steps: opened, count, reconcile, close + summary.
+fn close_steps(app: &App, ui: &mut egui::Ui, s: &Shift) {
     let t = Theme::of(ui);
     let lang = app.lang;
-    let width = ui.available_width();
-    let head = |ui: &mut egui::Ui| {
-        ui.horizontal(|ui| {
-            ui.set_width(width);
-            ui.label(
-                t.muted(lang.text("ชนิด", "Denomination"), type_scale::CAPTION)
-                    .strong(),
-            );
-            ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
-                ui.add_sized(
-                    [110.0, 20.0],
-                    egui::Label::new(
-                        t.muted(lang.text("รวม", "Amount"), type_scale::CAPTION)
-                            .strong(),
-                    ),
-                );
-                ui.add_sized(
-                    [90.0, 20.0],
-                    egui::Label::new(
-                        t.muted(lang.text("จำนวน", "Count"), type_scale::CAPTION)
-                            .strong(),
-                    ),
-                );
-            });
-        });
+    let step = if app.drawer.pending.is_some() {
+        3
+    } else if app.drawer.reviewing {
+        2
+    } else {
+        1
     };
-    head(ui);
-    w::divider(ui);
-    let busy = app.busy;
-    egui::ScrollArea::vertical()
-        .id_salt("drawer-count")
-        .max_height((ui.available_height() - 60.0).max(120.0))
-        .auto_shrink([false, true])
-        .show(ui, |ui| {
-            ui.add_enabled_ui(!busy, |ui| {
-                for (i, (value, note)) in DENOMINATIONS.iter().enumerate() {
-                    let face = Money::from_satang(*value).unwrap_or_default();
-                    ui.horizontal(|ui| {
-                        ui.set_min_height(t.m.row_height);
-                        icons::show(
-                            ui,
-                            if *note { Icon::Banknote } else { Icon::Coins },
-                            16.0,
-                            t.p.fg_muted,
-                        );
-                        let label = if *value >= 100 {
-                            format::count(u64::try_from(*value / 100).unwrap_or_default())
-                        } else {
-                            format::money(face)
-                        };
-                        ui.label(RichText::new(label).font(t.font(type_scale::MONEY)));
-                        ui.label(t.muted(
-                            if *note {
-                                lang.text("ธนบัตร", "note")
+    let items = [
+        (
+            lang.text("เปิดกะ", "Shift opened"),
+            format!(
+                "{} · {} {}",
+                format::clock(s.opened_at),
+                lang.text("ตั้งต้น", "float"),
+                format::money(s.opening)
+            ),
+        ),
+        (
+            lang.text("นับเงินในลิ้นชัก", "Count the drawer"),
+            lang.text(
+                "นับทีละชนิด ยอดรวมคำนวณให้",
+                "Count each note; totals are added up",
+            )
+            .to_owned(),
+        ),
+        (
+            lang.text("ตรวจส่วนต่าง", "Check the difference"),
+            lang.text("ใส่เหตุผลถ้าไม่ตรง", "Give a reason if it is off")
+                .to_owned(),
+        ),
+        (
+            lang.text("ปิดกะและพิมพ์สรุป", "Close and print summary"),
+            String::new(),
+        ),
+    ];
+    ui.spacing_mut().item_spacing.y = 4.0;
+    for (i, (title, detail)) in items.iter().enumerate() {
+        let done = i < step;
+        let current = i == step;
+        let frame = egui::Frame::new()
+            .fill(if current {
+                t.p.bg_selected
+            } else if done {
+                t.p.bg_raised
+            } else {
+                egui::Color32::TRANSPARENT
+            })
+            .corner_radius(t.radius(crate::ui::tokens::radius::MD))
+            .inner_margin(egui::Margin::symmetric(10, 8));
+        frame.show(ui, |ui| {
+            ui.set_width(ui.available_width());
+            ui.horizontal_top(|ui| {
+                let (r, _) = ui.allocate_exact_size(vec2(22.0, 22.0), Sense::hover());
+                if done {
+                    ui.painter().circle_filled(r.center(), 11.0, t.p.bg_inverse);
+                    crate::ui::icons::paint_sized(
+                        ui.painter(),
+                        Icon::Check,
+                        r.center(),
+                        14.0,
+                        t.p.fg_inverse,
+                    );
+                } else {
+                    ui.painter().circle_stroke(
+                        r.center(),
+                        10.0,
+                        Stroke::new(
+                            1.5,
+                            if current {
+                                t.p.border_selected
                             } else {
-                                lang.text("เหรียญ", "coin")
+                                t.p.border_control
                             },
-                            type_scale::LABEL,
-                        ));
-                        ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
-                            let n = app.drawer.counts[i]
-                                .trim()
-                                .replace(',', "")
-                                .parse::<u32>()
-                                .unwrap_or(0);
-                            let amount = face.checked_mul(n).map_or("—".into(), format::money);
-                            ui.add_sized(
-                                [110.0, t.m.control_md],
-                                egui::Label::new(
-                                    RichText::new(amount).font(t.font(type_scale::MONEY)),
-                                ),
-                            );
-                            let r = ui.add(
-                                egui::TextEdit::singleline(&mut app.drawer.counts[i])
-                                    .id(Id::new(("denomination", i)))
-                                    .font(t.strong_font(type_scale::MONEY))
-                                    .horizontal_align(Align::Max)
-                                    .vertical_align(Align::Center)
-                                    .margin(egui::Margin::symmetric(10, 0))
-                                    .min_size(vec2(84.0, t.m.control_md))
-                                    .desired_width(64.0)
-                                    .char_limit(6),
-                            );
-                            if r.changed() {
-                                app.drawer.counts[i].retain(|c| c.is_ascii_digit());
-                                app.drawer.draft_dirty = true;
-                                app.drawer.reviewing = false;
-                            }
-                        });
-                    });
-                    w::divider(ui);
+                        ),
+                    );
+                    ui.painter().text(
+                        r.center(),
+                        egui::Align2::CENTER_CENTER,
+                        (i + 1).to_string(),
+                        t.strong_font(type_scale::CAPTION),
+                        if current {
+                            t.p.border_selected
+                        } else {
+                            t.p.fg_muted
+                        },
+                    );
                 }
-                ui.horizontal(|ui| {
-                    ui.set_min_height(t.m.row_height);
-                    icons::show(ui, Icon::Coins, 16.0, t.p.fg_muted);
-                    ui.label(t.muted(
-                        lang.text("เศษสตางค์ / อื่น ๆ (บาท)", "Satang / other (THB)"),
-                        type_scale::LABEL,
-                    ));
-                    ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
-                        let invalid = !app.drawer.other.trim().is_empty()
-                            && format::parse_money(&app.drawer.other).is_err();
-                        let r = w::money_input(
-                            ui,
-                            &mut app.drawer.other,
-                            w::MoneyOpts {
-                                id: Id::new("count-other"),
-                                primary: false,
-                                width: Some(110.0),
-                                large: false,
-                                invalid,
-                                enabled: true,
-                            },
-                        );
-                        if r.changed() {
-                            app.drawer.draft_dirty = true;
-                            app.drawer.reviewing = false;
-                        }
+                ui.vertical(|ui| {
+                    ui.spacing_mut().item_spacing.y = 0.0;
+                    ui.label(if current || done {
+                        t.text(*title, type_scale::BODY_STRONG)
+                    } else {
+                        t.muted(*title, type_scale::BODY)
                     });
+                    if !detail.is_empty() {
+                        ui.add(egui::Label::new(t.muted(detail, type_scale::CAPTION)).wrap());
+                    }
                 });
             });
         });
-    w::divider(ui);
-    ui.horizontal(|ui| {
-        ui.set_min_height(t.m.control_md);
-        ui.label(t.text(lang.text("นับได้", "Counted"), type_scale::BODY_STRONG));
-        ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
-            ui.label(
-                RichText::new(counted.map_or("—".into(), format::money))
-                    .font(t.strong_font(type_scale::MONEY_LG)),
+    }
+    let held = app.held_bills().len();
+    if held > 0 {
+        ui.add_space(space::S3);
+        w::banner(
+            ui,
+            w::Tone::Warning,
+            &format!(
+                "{} {held} {}",
+                lang.text("มีบิลพักไว้", "Held bills:"),
+                lang.text("บิล ชำระหรือเก็บไว้ก่อนปิดกะ", "pay or keep them before closing")
+            ),
+            None,
+        );
+    }
+}
+/// Denomination cards (−/+ and typing), then the counted total pinned below.
+fn count_table(app: &mut App, ui: &mut egui::Ui, counted: Option<Money>) {
+    let t = Theme::of(ui);
+    let lang = app.lang;
+    let busy = app.busy;
+    egui::Panel::bottom("count-total")
+        .resizable(false)
+        .show_separator_line(false)
+        .frame(egui::Frame::NONE.inner_margin(egui::Margin::symmetric(14, 10)))
+        .show(ui, |ui| {
+            let top = ui.max_rect().top() - 10.0;
+            ui.painter().hline(
+                ui.max_rect().x_range().expand(14.0),
+                top + 0.5,
+                Stroke::new(1.0, t.p.border_subtle),
             );
+            ui.horizontal(|ui| {
+                ui.label(t.text(lang.text("นับได้", "Counted"), type_scale::BODY_STRONG));
+                ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
+                    ui.label(
+                        RichText::new(counted.map_or("—".into(), format::baht))
+                            .font(t.strong_font(type_scale::MONEY_XL)),
+                    );
+                });
+            });
         });
+    egui::CentralPanel::no_frame().show(ui, |ui| {
+        egui::ScrollArea::vertical()
+            .id_salt("drawer-count")
+            .auto_shrink([false, false])
+            .show(ui, |ui| {
+                egui::Frame::new()
+                    .inner_margin(egui::Margin::same(space::S3 as i8))
+                    .show(ui, |ui| {
+                        ui.add_enabled_ui(!busy, |ui| denomination_grid(app, ui));
+                    });
+            });
     });
+}
+fn denomination_grid(app: &mut App, ui: &mut egui::Ui) {
+    let t = Theme::of(ui);
+    let lang = app.lang;
+    let gap = space::S2;
+    let width = ui.available_width();
+    let min_w = if t.touch() { 210.0 } else { 180.0 };
+    let cols = (((width + gap) / (min_w + gap)).floor() as usize).clamp(1, 3);
+    let card_w = ((width - gap * (cols as f32 - 1.0)) / cols as f32).floor();
+    let card_h = if t.touch() { 134.0 } else { 112.0 };
+    let n = DENOMINATIONS.len();
+    for row in 0..n.div_ceil(cols) {
+        ui.horizontal_top(|ui| {
+            ui.spacing_mut().item_spacing.x = gap;
+            for i in (row * cols)..((row + 1) * cols).min(n) {
+                ui.allocate_ui_with_layout(
+                    vec2(card_w, card_h),
+                    egui::Layout::top_down(Align::Min),
+                    |ui| denomination_card(app, ui, i, card_w, card_h),
+                );
+            }
+        });
+        ui.add_space(gap - ui.spacing().item_spacing.y);
+    }
+    // Loose satang and anything else, typed as an amount.
+    egui::Frame::new()
+        .fill(t.p.bg_raised)
+        .stroke(Stroke::new(1.0, t.p.border_subtle))
+        .corner_radius(t.radius(crate::ui::tokens::radius::LG))
+        .inner_margin(egui::Margin::symmetric(12, 8))
+        .show(ui, |ui| {
+            ui.set_width(ui.available_width());
+            ui.horizontal(|ui| {
+                ui.label(t.text(
+                    lang.text("เศษสตางค์ / อื่น ๆ (บาท)", "Satang / other (THB)"),
+                    type_scale::BODY,
+                ));
+                ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
+                    let invalid = !app.drawer.other.trim().is_empty()
+                        && format::parse_money(&app.drawer.other).is_err();
+                    let r = w::money_input(
+                        ui,
+                        &mut app.drawer.other,
+                        w::MoneyOpts {
+                            id: Id::new("count-other"),
+                            primary: false,
+                            width: Some(130.0),
+                            large: false,
+                            invalid,
+                            enabled: true,
+                        },
+                    );
+                    if r.changed() {
+                        app.drawer.draft_dirty = true;
+                        app.drawer.reviewing = false;
+                    }
+                });
+            });
+        });
+}
+fn denomination_card(app: &mut App, ui: &mut egui::Ui, i: usize, width: f32, height: f32) {
+    let t = Theme::of(ui);
+    let lang = app.lang;
+    let (value, note) = DENOMINATIONS[i];
+    let face = Money::from_satang(value).unwrap_or_default();
+    let n = app.drawer.counts[i]
+        .trim()
+        .replace(',', "")
+        .parse::<u32>()
+        .unwrap_or(0);
+    egui::Frame::new()
+        .fill(t.p.bg_raised)
+        .stroke(Stroke::new(
+            1.0,
+            if n > 0 {
+                t.p.border_default
+            } else {
+                t.p.border_subtle
+            },
+        ))
+        .corner_radius(t.radius(crate::ui::tokens::radius::LG))
+        .inner_margin(egui::Margin::same(10))
+        .show(ui, |ui| {
+            ui.set_width(width - 20.0);
+            ui.set_min_height(height - 20.0);
+            ui.spacing_mut().item_spacing.y = space::S2;
+            ui.horizontal(|ui| {
+                let label = if value >= 100 {
+                    format::count(u64::try_from(value / 100).unwrap_or_default())
+                } else {
+                    format::money(face)
+                };
+                ui.label(RichText::new(label).font(t.strong_font(type_scale::MONEY_LG)));
+                ui.label(t.muted(
+                    if note {
+                        lang.text("ธนบัตร", "note")
+                    } else {
+                        lang.text("เหรียญ", "coin")
+                    },
+                    type_scale::CAPTION,
+                ));
+            });
+            let step_h = if t.touch() {
+                44.0
+            } else {
+                t.m.control_md + 4.0
+            };
+            let side = step_h;
+            let mut changed = false;
+            ui.horizontal(|ui| {
+                ui.spacing_mut().item_spacing.x = 0.0;
+                if w::icon_button_sized(ui, Icon::Minus, lang.text("ลด", "Fewer"), Some(side), true)
+                    .clicked()
+                    && n > 0
+                {
+                    app.drawer.counts[i] = (n - 1).to_string();
+                    changed = true;
+                }
+                let field_w = (ui.available_width() - side).max(40.0);
+                let resp = ui.add(
+                    egui::TextEdit::singleline(&mut app.drawer.counts[i])
+                        .id(Id::new(("denomination", i)))
+                        .font(t.strong_font(type_scale::MONEY))
+                        .horizontal_align(Align::Center)
+                        .vertical_align(Align::Center)
+                        .hint_text("0")
+                        .min_size(vec2(field_w, step_h))
+                        .desired_width(field_w)
+                        .char_limit(6),
+                );
+                if resp.changed() {
+                    app.drawer.counts[i].retain(|c| c.is_ascii_digit());
+                    changed = true;
+                }
+                if w::icon_button_sized(ui, Icon::Plus, lang.text("เพิ่ม", "More"), Some(side), true)
+                    .clicked()
+                {
+                    app.drawer.counts[i] = n.saturating_add(1).min(999_999).to_string();
+                    changed = true;
+                }
+            });
+            if changed {
+                app.drawer.draft_dirty = true;
+                app.drawer.reviewing = false;
+            }
+            ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
+                ui.label(
+                    RichText::new(face.checked_mul(n).map_or("—".into(), format::money))
+                        .font(t.font(type_scale::MONEY))
+                        .color(if n > 0 { t.p.fg_default } else { t.p.fg_subtle }),
+                );
+            });
+        });
 }
 fn reconcile(app: &mut App, ui: &mut egui::Ui, s: &Shift, counted: Option<Money>) {
     let lang = app.lang;

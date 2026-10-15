@@ -31,7 +31,6 @@ pub enum Icon {
     Unlock,
     Sliders,
     Banknote,
-    Coins,
     Calendar,
     Alert,
     Info,
@@ -254,10 +253,6 @@ pub fn paint(painter: &egui::Painter, icon: Icon, rect: Rect, color: Color32) {
             pen.circle(12., 12., 2.5);
             pen.dot(6., 12., 0.9);
             pen.dot(18., 12., 0.9);
-        }
-        Icon::Coins => {
-            pen.circle(9., 9., 6.);
-            pen.arc(15., 15., 6., -0.35 * PI, 1.15 * PI);
         }
         Icon::Calendar => {
             pen.rect(3., 5., 18., 16., 2.);

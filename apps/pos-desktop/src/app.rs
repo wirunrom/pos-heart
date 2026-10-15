@@ -146,7 +146,7 @@ pub struct App {
 }
 const CURRENT_BILL: &str = "current-bill.txt";
 /// Widest layout for Home, Shift, Reports and Settings (points).
-const READING_WIDTH: f32 = 1440.0;
+pub const READING_WIDTH: f32 = 1440.0;
 impl App {
     pub fn new(
         cc: &eframe::CreationContext<'_>,
@@ -1767,6 +1767,7 @@ impl eframe::App for App {
                         Page::Home => crate::home_ui::show(self, ui),
                         Page::Reports => crate::report_ui::show(self, ui),
                         Page::Settings => crate::settings_ui::show(self, ui),
+                        Page::Shift => crate::shift_ui::show(self, ui),
                         // Statement pages read label → amount across a row; on wide
                         // screens they stay centred at a readable width.
                         page => {
