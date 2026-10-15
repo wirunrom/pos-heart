@@ -306,6 +306,7 @@ fn today_body(app: &mut App, ui: &mut egui::Ui) {
             );
         });
     });
+    sparkline(ui, &t, &s.hourly);
     ui.add_space(space::S2);
     ui.spacing_mut().item_spacing.y = space::S1;
     w::kv(
@@ -349,6 +350,40 @@ fn today_body(app: &mut App, ui: &mut egui::Ui) {
             "Net sales are not drawer cash (they include transfers and cards).",
         ),
     );
+}
+/// Today's sales by hour as a small line, from the first hour with sales
+/// to now.
+fn sparkline(ui: &mut egui::Ui, t: &Theme, hourly: &[pos_domain::Money; 24]) {
+    let now = format::local(time::OffsetDateTime::now_utc().unix_timestamp())
+        .map_or(23, |d| usize::from(d.hour()));
+    let first = hourly
+        .iter()
+        .position(|m| m.satang() > 0)
+        .unwrap_or(now)
+        .min(now);
+    let last = now.max(hourly.iter().rposition(|m| m.satang() > 0).unwrap_or(now));
+    let (rect, _) = ui.allocate_exact_size(vec2(ui.available_width(), 64.0), egui::Sense::hover());
+    let max = hourly.iter().map(|m| m.satang()).max().unwrap_or(0).max(1) as f32;
+    let span = (last - first).max(1) as f32;
+    let points: Vec<egui::Pos2> = (first..=last)
+        .map(|h| {
+            egui::pos2(
+                rect.left() + (h - first) as f32 / span * rect.width(),
+                rect.bottom() - 4.0 - hourly[h].satang() as f32 / max * (rect.height() - 8.0),
+            )
+        })
+        .collect();
+    ui.painter().hline(
+        rect.x_range(),
+        rect.bottom() - 0.5,
+        egui::Stroke::new(1.0, t.p.chart_grid),
+    );
+    if points.len() > 1 {
+        ui.painter().add(egui::Shape::line(
+            points,
+            egui::Stroke::new(2.0, t.p.chart_1),
+        ));
+    }
 }
 #[derive(Clone, Copy)]
 enum TaskAction {

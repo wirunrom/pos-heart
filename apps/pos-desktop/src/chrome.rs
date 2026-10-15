@@ -215,6 +215,7 @@ pub fn toolbar(app: &mut App, ui: &mut egui::Ui) {
             }
             Page::Products => crate::catalog_ui::toolbar(app, ui),
             Page::Shift => crate::shift_ui::toolbar(app, ui),
+            Page::History => crate::history_ui::toolbar(app, ui),
             Page::Reports => crate::report_ui::toolbar(app, ui),
             Page::Activity => {
                 let clicked = tool(
@@ -242,7 +243,6 @@ pub fn toolbar(app: &mut App, ui: &mut egui::Ui) {
                     app.backup();
                 }
             }
-            _ => {}
         }
     });
 }

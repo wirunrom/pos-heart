@@ -760,7 +760,8 @@ fn detail(app: &mut App, ui: &mut egui::Ui, record: &SaleRecord) {
     egui::ScrollArea::vertical()
         .id_salt("receipt-detail")
         .auto_shrink([false, false])
-        .max_height(ui.available_height() - 60.0)
+        // Room for two rows of actions below (they wrap on narrow panes).
+        .max_height(ui.available_height() - t.m.control_md * 2.0 - space::S3 * 3.0)
         .show(ui, |ui| {
             // The receipt as a paper slip, then what happened to it.
             let width = ui.available_width().min(320.0);
@@ -930,6 +931,78 @@ fn timeline(ui: &mut egui::Ui, t: &Theme, lang: Language, record: &SaleRecord) {
         ui.add_space(space::S2);
     }
 }
+/// History toolbar (design v0.2): actions on the selected receipt.
+pub fn toolbar(app: &mut App, ui: &mut egui::Ui) {
+    use crate::chrome::{separator, tool};
+    let lang = app.lang;
+    let selected = app.history.selected.clone();
+    let open = selected.as_ref().filter(|r| !r.fully_refunded());
+    if tool(
+        ui,
+        Icon::Printer,
+        lang.text("ดูใบพิมพ์", "Print preview"),
+        None,
+        selected.is_some(),
+    )
+    .clicked()
+        && let Some(r) = &selected
+    {
+        app.preview_receipt(r);
+    }
+    separator(ui, &Theme::of(ui));
+    let may = |p| crate::staff_ui::access(app, p) != pos_domain::Access::Deny;
+    let can_refund = open.is_some() && !app.busy && may(pos_domain::Permission::Refund);
+    let can_void = open.is_some_and(|r| r.refunds.is_empty())
+        && !app.busy
+        && may(pos_domain::Permission::Void);
+    if tool(
+        ui,
+        Icon::Minus,
+        lang.text("คืนสินค้า", "Refund items"),
+        None,
+        can_refund,
+    )
+    .clicked()
+        && let Some(r) = open
+    {
+        let r = r.clone();
+        start_refund(app, &r, false);
+    }
+    if tool(
+        ui,
+        Icon::Undo,
+        lang.text("ยกเลิกทั้งบิล", "Void sale"),
+        None,
+        can_void,
+    )
+    .clicked()
+        && let Some(r) = open
+    {
+        let r = r.clone();
+        start_refund(app, &r, true);
+    }
+    ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
+        let t = Theme::of(ui);
+        ui.label(
+            t.chrome_muted(
+                match &selected {
+                    Some(r) => format!(
+                        "{} {}",
+                        lang.text("เลือก", "Selected"),
+                        format::receipt_number(r.sale.number)
+                    ),
+                    None => lang
+                        .text(
+                            "เลือกบิลเพื่อพิมพ์ คืนสินค้า หรือยกเลิก",
+                            "Select a receipt to print, refund or void",
+                        )
+                        .into(),
+                },
+                type_scale::CAPTION,
+            ),
+        );
+    });
+}
 /// Refund some items; a whole-sale void only while nothing was refunded yet.
 fn refund_actions(app: &mut App, ui: &mut egui::Ui, record: &SaleRecord) {
     let lang = app.lang;
@@ -973,6 +1046,11 @@ fn refund_actions(app: &mut App, ui: &mut egui::Ui, record: &SaleRecord) {
     let Some(whole) = open else {
         return;
     };
+    start_refund(app, record, whole);
+}
+/// Opens the void (whole) or refund editor; needs an open shift.
+fn start_refund(app: &mut App, record: &SaleRecord, whole: bool) {
+    let lang = app.lang;
     {
         if app.data.shift.is_some() {
             app.receipt = None;
