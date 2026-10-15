@@ -1,63 +1,67 @@
-# Multi-device proposal (not built)
+# Multi-device and cloud plan
 
-**สรุป:** ตอนนี้ POS Heart ใช้ได้เครื่องเดียว (ไฟล์ SQLite เดียว และ worker thread เดียวเป็นเจ้าของ) เจ้าของร้านเลือกเลื่อนเรื่องหลายเครื่องออกไปก่อน เอกสารนี้เป็นข้อเสนอไว้ตัดสินใจภายหลัง ยังไม่มีอะไรสร้างจริง ทางเลือก A: เครื่องหลักเก็บฐานข้อมูลและเปิดบริการในวง LAN ให้แท็บเล็ตสั่งอาหาร เครื่องขายที่สอง และจอครัวส่งคำสั่งมา กฎธุรกรรมเดิมใช้ได้ทั้งหมด งานขนาดกลางถึงใหญ่ เหมาะกับร้านเดียว ทางเลือก B: แต่ละเครื่องมีฐานข้อมูลของตัวเองแล้วซิงก์ผ่านเซิร์ฟเวอร์ งานใหญ่ เหมาะเมื่อมีหลายสาขาเท่านั้น **แนะนำ A ก่อน** เมื่อมีร้านจริงต้องการมากกว่าหนึ่งเครื่อง
+**สรุป (ตัดสินใจแล้ว 2026-10-16):** ใช้แบบ **เครื่องหลักในร้าน + เครื่องลูกในวง LAN + ซิงก์ขึ้นคลาวด์** การขายไม่พึ่งอินเทอร์เน็ต: เครื่องหลัก (hub) ของแต่ละร้านเป็นผู้เขียนข้อมูลคนเดียว เครื่องขายที่สอง จอครัว และแท็บเล็ตรับออเดอร์ส่งคำสั่งผ่าน LAN ให้ hub ทำ กฎเงิน สต็อก เลขใบเสร็จ/ใบกำกับภาษี และ transaction เดิมจึงใช้ได้ทั้งหมด เมื่อมีเน็ต hub ส่งข้อมูลที่แก้ไม่ได้ (ใบเสร็จ คืนเงิน กะ การเคลื่อนไหวสต็อก) ขึ้นคลาวด์ และรับสินค้า/ราคา/โปรที่เจ้าของแก้จากที่อื่นลงมา เน็ตหลุดก็ขายต่อได้ แค่คิวรอส่ง ไม่ทำแบบทุกเครื่องมีข้อมูลเองแล้วซิงก์กันเต็มรูปแบบ เพราะต้องแก้ข้อมูลชนกันเรื่องเงินและสต็อก
 
-Status: proposal for a future decision. Nothing here is implemented; the app stays single-register and offline.
+ลำดับ: **เฟส 0** เตรียมภายใน (ไม่มีเครือข่าย ผู้ใช้ไม่เห็นความต่าง) → **เฟส 1** เครื่องลูกใน LAN → **เฟส 2** คลาวด์ (สำรองนอกร้าน + รายงานบนเว็บ + แก้สินค้าจากส่วนกลาง) → **เฟส 3** หลายสาขา
 
-## 1. Why this is hard here
+Status: decided direction; phase 0 in progress. Nothing listens on the network yet; the app is still single-register and offline.
 
-- **One file, one writer.** A single worker thread owns the only SQLite connection (`apps/pos-desktop/src/worker.rs`). Every write is one IMMEDIATE transaction on that connection. SQLite over a network share is not safe, so "open the same file from two machines" is not an option.
-- **Invariants assume one writer:**
-  - receipt numbers, tax-invoice numbers and kitchen-ticket numbers are local AUTOINCREMENT sequences;
-  - stock is checked and deducted inside the checkout transaction (no reservations, no negative stock);
-  - one active shift (partial unique index) and one drawer;
-  - one open bill per table (`hold()` checks inside its transaction);
-  - retry identity (cart ID / request UUID) is looked up before the shift gate, assuming the same database saw the first attempt;
-  - receipts, voids, refunds, closed shifts and kitchen tickets are immutable snapshots written once.
-- **"No network by default."** AGENTS.md allows only a user-configured LAN printer. Any multi-device design adds a listening service, so it must be an explicit opt-in with its own security story.
+## 1. Constraints that shape the design
 
-## 2. Option A — main register + LAN clients
+- **One writer per shop.** A single worker thread owns the only SQLite connection (`apps/pos-desktop/src/worker.rs`); every write is one IMMEDIATE transaction. SQLite over a network share is unsafe, so devices never open the hub's file.
+- **Invariants that assume one writer** and therefore stay on the hub: receipt, tax-invoice, credit-note and kitchen-ticket sequences; stock checked and deducted inside checkout; one open bill per table; retry identity (cart ID / request UUID) looked up before the shift gate; immutable receipts, voids, refunds, closed shifts and tickets.
+- **Selling must not depend on the internet.** The LAN keeps working when the uplink drops; the cloud is never in the payment path.
+- **Nothing listens by default.** Network services are explicit opt-in device settings with their own security (AGENTS.md "no network" rule, extended deliberately).
+- **No async runtime** (AGENTS.md). Services use plain threads and blocking I/O, like the worker and the printer queue.
 
-One machine (the main register) owns the database and runs a small local service that exposes the **same typed commands the worker already handles**. Clients (ordering tablets, a second register, a kitchen screen on another machine) send commands and render the results. All transactions still run on the main machine, so every invariant above holds unchanged.
+## 2. Target architecture
 
-Needs:
-- **Pairing:** a one-time code shown on the main register; each device then gets its own token (revocable in Settings). Commands are still attributed to the signed-in staff member.
-- **LAN-only binding:** listen on the local network only; TLS with pairing-based trust (pin the main register's key at pairing) rather than a public CA.
-- **Discovery:** mDNS, with a typed IP address as fallback.
-- **Offline behaviour:** clients cannot sell when the main machine is down; they show a clear "main register unreachable" state. No local queueing of payments.
-- **Protocol versioning:** a version handshake; mismatched clients are refused with an update message.
-- **Per-register drawers:** shifts gain `register_id`; one active shift per register instead of per shop; reports and drawer statements by register as well as shop totals.
+```
+          ┌──────────── shop LAN ────────────┐                 ┌──── cloud (phase 2+) ────┐
+ tablet ──┤                                  │                 │                          │
+ register2┤──TLS──▶ hub service ─▶ pos-service ─▶ SQLite (hub)  │  ingest  ◀── outbox ─────┤ hub uploader
+ kitchen ─┤          (threads)      (dispatch)                   │  catalog ──▶ inbox ──────┤ hub downloader
+          └──────────────────────────────────┘                 │  web dashboard / backup  │
+                                                               └──────────────────────────┘
+```
 
-Effort: medium–large. Good fit for one shop with a few devices.
+- **`pos-service` crate (new):** the serializable `Request` / `Response` protocol and one dispatcher `handle(&mut Pos, &Session, Request) -> Result<Response>`. The desktop worker calls it in-process; the hub service calls it for remote devices. One code path, one set of tests.
+- **Hub service:** opt-in on one machine. Accepts paired devices over TLS, runs each request on the worker (same queue, same single connection), returns the response, and pushes change notices.
+- **Clients:** the same desktop binary in *client mode* (second register, kitchen screen on another PC) uses a network transport instead of the local worker. Tablets: see §6 (platform decision).
+- **Cloud (phase 2):** a separate server project. The hub writes an outbox in the same transactions as the business writes, uploads it idempotently, and applies downstream catalog documents through ordinary `pos-service` requests attributed to "HQ".
 
-## 3. Option B — offline-first sync between devices or branches
+## 3. Phase 0 — groundwork (no network, no visible change)
 
-Each device keeps its own database and syncs through a server.
+Each step lands with tests and keeps the app working exactly as today.
 
-Needs:
-- globally unique receipt numbers (device/branch prefix + local sequence), and the same for tax invoices (which have legal numbering rules);
-- stock conflict rules: allow negative stock then reconcile, or reserve stock per device;
-- a central authority for catalog, prices, roles and settings;
-- per-device shifts and drawers;
-- idempotent, ordered event replication with conflict handling for every record type;
-- a server (cloud or on-premises), accounts, authentication, backups and monitoring.
+**0a. Serializable protocol.** Add `Serialize`/`Deserialize` to every request and result type (`ProductInput`, `PaymentRequest`, `SplitPayment`, `VoidRequest`, `RefundRequest`, `ShiftCount`, `StockRequest`, `StaffInput`, query types, …). Round-trip tests for each. Stored JSON formats must not change (serde attributes keep the existing field names/defaults).
 
-Effort: large. Only worth it for multiple branches.
+**0b. `pos-service` crate.** Move the business half of `worker::run` (sales, shifts, catalog, stock, staff, settings, tables/kitchen, purchasing, reports, activity) behind `Request`/`Response`; device-local work stays in the desktop worker (backups and recovery, file import/export paths, product-picture files, auto-backup policy, demo seeding). `Command::Approved` becomes a request wrapper carrying the approver. A protocol version constant. Tests drive the service directly.
 
-## 4. Recommendation
+**0c. Registers.** Migration 024: `registers (id, name, created_at, retired_at)` seeded with one "main" register; `register_id` on shifts, sales, voids/refunds and cash movements (existing rows → main). "One active shift" becomes one active shift **per register**; drawer expected, close and statements per register; daily reports keep shop totals and add a per-register breakdown. Each device stores its register in a device file (`device.json`: device ID, register ID). With one register nothing changes for the user.
 
-Do **A first**, and only when a real shop needs more than one device. Consider **B** only for multiple branches; A's protocol work carries over.
+**0d. Change notices.** A monotonically increasing `data_version` per topic (catalog, held bills/tables, kitchen, shift, settings) bumped inside write transactions, so clients (and the local UI) can refresh only what changed. Locally this replaces some full refreshes.
 
-Concrete first steps for A:
-1. Migration adding `register_id` to shifts (and to sales/ledger rows), with the existing register as the default.
-2. Move the worker's command enum and results into a serializable protocol crate shared by the desktop and the service.
-3. A local service on the main register behind an explicit opt-in setting (off by default; nothing listens otherwise).
-4. Pairing UI: one-time code, device list, revoke.
-5. A client mode in the app that talks to the service instead of opening SQLite.
+## 4. Phase 1 — devices on the shop LAN
 
-## 5. Open questions for the owner
+- **Hub setting:** Settings → Devices → "Allow other devices" (off by default; requires the Settings permission). Shows hub name, address and paired devices.
+- **Pairing:** the hub shows a 6-digit code valid for 5 minutes. The device sends the code and its public key; the hub issues a per-device token and the device pins the hub's certificate fingerprint. Pairing and revocation are Activity events. Wrong codes are rate-limited.
+- **Transport:** TLS (rustls, blocking) on a LAN-bound port; length-prefixed JSON frames carrying `{version, device, request_id, request}`. `request_id` doubles as retry identity, so a resent payment after a dropped connection returns the stored result, as today.
+- **Discovery:** mDNS service advertisement; manual IP as fallback.
+- **Staff:** each connection has its own signed-in session; PIN sign-in, approvals and permissions run on the hub exactly as now. The device ID is recorded in Activity.
+- **Change push:** the hub streams `data_version` changes; clients refresh the affected data (kitchen screens and the table floor update live across devices).
+- **Offline behaviour:** a client that loses the hub shows "ไม่ได้เชื่อมต่อเครื่องหลัก" and blocks writes; the bill being edited stays in memory and is held on the hub when the connection returns. Payments are never queued on a client.
+- **Device roles:** second register (own register and drawer), kitchen display, ordering device (no payment permission by default).
+- **Tests:** in-process client↔hub over loopback; dropped-connection retries for checkout, refund and close shift; two registers with separate drawers selling the last unit of stock; table bill opened from two devices (second refused); revoke during a session.
 
-- How many devices, and which roles (second register, ordering tablets, kitchen display on another machine)?
-- How reliable is the shop's Wi-Fi/LAN, and is a wired main register possible?
-- Are ordering tablets at the tables actually needed, or is a second monitor for the kitchen (already built) enough?
-- Are there plans for more branches, and on what timeline?
+## 5. Phase 2 — cloud, phase 3 — branches
+
+**Phase 2.** An `outbox (seq, kind, id, json, created_at, sent_at)` written in the same transaction as receipts, voids/refunds, closed shifts, stock and ingredient movements, purchasing and Activity. An uploader thread sends batches with the hub's credentials; the server stores them idempotently by `(hub, seq)`. Downstream: versioned catalog/price/promotion/staff documents, applied on the hub through `pos-service` with HQ attribution (local edits stay possible; last applied version wins per record, shown in Activity). Encrypted daily database snapshot upload replaces "backup only on this machine". Owner web dashboard reads the uploaded records. Server: separate repository (Rust + PostgreSQL), accounts and 2FA for owners, PDPA notice before customer data (members, credit customers) is uploaded.
+
+**Phase 3.** One hub per branch, each with its own sequences prefixed by a branch code (tax invoices per branch as Thai rules allow); HQ owns the catalog and prices (with optional branch price overrides); stock and drawers stay per branch; consolidated reports in the cloud.
+
+## 6. Decisions still open
+
+- **Tablet platform.** Options: (a) the hub serves a small web app over HTTPS on the LAN — works on Android and iPad without app stores, needs a web front end that follows the design system; (b) the egui desktop app built for Android/iPad — one code base but immature mobile support and store distribution. Recommendation: (a) for ordering tablets, the desktop client mode for second registers and kitchen PCs. Needs the owner's tablet choice (Android or iPad).
+- **Cloud hosting and budget** (phase 2): managed hosting in Thailand/Singapore region, cost per shop.
+- **Real-shop trial:** Wi-Fi quality, wired hub, number of devices — phase 1 must be tried in a real shop before phase 2 starts. Windows runtime and real printers/drawers are still unverified (docs/validation.md).
