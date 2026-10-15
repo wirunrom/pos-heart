@@ -12,6 +12,9 @@ use pos_domain::{
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+
+mod topics;
+pub use topics::{Topic, Versions, changes};
 use uuid::Uuid;
 
 /// Bumped whenever a request or reply changes shape; peers with another

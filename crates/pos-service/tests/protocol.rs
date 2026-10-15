@@ -126,3 +126,33 @@ fn approval_covers_only_the_wrapped_request() -> Result {
 }
 
 const _: () = assert!(pos_service::PROTOCOL_VERSION >= 1);
+
+#[test]
+fn writes_bump_their_topics_and_reads_do_not() -> Result {
+    use pos_service::{Topic, Versions};
+    let mut v = Versions::default();
+    let before = v.clone();
+    v.record(&Request::Refresh(Box::new(query(0))));
+    v.record(&Request::SignIn(uuid::Uuid::new_v4(), "1".into()));
+    assert!(v.since(&before).is_empty());
+    let cart = Cart::new();
+    let changed = v.record(&Request::Pay(
+        Box::new(cart.clone()),
+        PaymentRequest {
+            method: PaymentMethod::Cash,
+            amount: Money::ZERO,
+        },
+        uuid::Uuid::new_v4(),
+    ));
+    assert!(changed.contains(&Topic::Sales) && changed.contains(&Topic::Shift));
+    let after_pay = v.clone();
+    v.record(&Request::Approved {
+        approver: uuid::Uuid::new_v4(),
+        pin: String::new(),
+        permission: pos_domain::Permission::Void,
+        inner: Box::new(Request::BumpTicket(uuid::Uuid::new_v4(), None)),
+    });
+    assert_eq!(v.since(&after_pay), vec![Topic::Kitchen]);
+    assert_eq!(v.get(Topic::Kitchen), 1);
+    Ok(())
+}
