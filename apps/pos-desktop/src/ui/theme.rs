@@ -94,8 +94,18 @@ fn prefs_id() -> egui::Id {
     egui::Id::new("pos-display")
 }
 /// One palette per accent preset, built once.
-static PALETTES: LazyLock<[Palette; 5]> =
-    LazyLock::new(|| ACCENTS.map(|a| Palette::DEFAULT.with_accent(a)));
+static PALETTES: LazyLock<[Palette; 5]> = LazyLock::new(|| {
+    ACCENTS.map(|a| {
+        let mut p = Palette::DEFAULT.with_accent(a);
+        // The generated tokens keep saffron-brown accent text for every
+        // preset; other presets use their pressed shade (≥ 4.5:1 on paper)
+        // so options and notes follow the brand colour.
+        if a != AccentPreset::Saffron {
+            p.fg_accent = a.colors().2;
+        }
+        p
+    })
+});
 fn palette(accent: AccentPreset) -> &'static Palette {
     let i = ACCENTS.iter().position(|a| *a == accent).unwrap_or(0);
     &PALETTES[i]

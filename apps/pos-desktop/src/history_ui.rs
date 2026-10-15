@@ -14,11 +14,31 @@ use uuid::Uuid;
 #[derive(Default)]
 pub struct HistoryState {
     pub offset: u32,
+    /// Quick filter chips above the list.
+    pub kind: Kind,
     pub selected: Option<SaleRecord>,
     pub filter: String,
     pub refund_editor: Option<RefundEditor>,
 }
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum Kind {
+    #[default]
+    All,
+    Refunded,
+    Voided,
+    NonCash,
+}
+impl Kind {
+    fn matches(self, r: &SaleRecord) -> bool {
+        match self {
+            Kind::All => true,
+            Kind::Refunded => r.cancellation.is_none() && !r.refunds.is_empty(),
+            Kind::Voided => r.cancellation.is_some(),
+            Kind::NonCash => r.sale.is_split() || r.sale.payment_method != PaymentMethod::Cash,
+        }
+    }
+}
 fn status(lang: Language, record: &SaleRecord) -> (&'static str, w::Tone) {
     if record.fully_refunded() {
         (lang.text("คืนเงินแล้ว", "Refunded"), w::Tone::Danger)
@@ -26,13 +46,6 @@ fn status(lang: Language, record: &SaleRecord) -> (&'static str, w::Tone) {
         (lang.text("คืนบางส่วน", "Part refunded"), w::Tone::Warning)
     } else {
         (lang.text("ชำระแล้ว", "Paid"), w::Tone::Success)
-    }
-}
-fn method_icon(method: PaymentMethod) -> Icon {
-    match method {
-        PaymentMethod::Cash => Icon::Banknote,
-        PaymentMethod::Transfer => Icon::Transfer,
-        PaymentMethod::Card => Icon::Card,
     }
 }
 
@@ -128,10 +141,27 @@ fn list(app: &mut App, ui: &mut egui::Ui, dialog_detail: bool) {
         egui::Id::new("history-filter"),
     );
     let q = app.history.filter.trim().to_lowercase();
+    // Chips count this page (the list is paged by 50).
+    ui.horizontal_wrapped(|ui| {
+        ui.spacing_mut().item_spacing.x = space::S2;
+        for (kind, label) in [
+            (Kind::All, lang.text("ทั้งหมด", "All")),
+            (Kind::Refunded, lang.text("คืนเงิน", "Refunded")),
+            (Kind::Voided, lang.text("ยกเลิก", "Voided")),
+            (Kind::NonCash, lang.text("ไม่ใช่เงินสด", "Non-cash")),
+        ] {
+            let n = app.data.sales.iter().filter(|r| kind.matches(r)).count();
+            if w::chip_dot(ui, &format!("{label} {n}"), app.history.kind == kind, None).clicked() {
+                app.history.kind = kind;
+            }
+        }
+    });
+    let kind = app.history.kind;
     let records: Vec<SaleRecord> = app
         .data
         .sales
         .iter()
+        .filter(|r| kind.matches(r))
         .filter(|r| {
             q.is_empty()
                 || format::receipt_number(r.sale.number).contains(&q)
@@ -142,46 +172,6 @@ fn list(app: &mut App, ui: &mut egui::Ui, dialog_detail: bool) {
         .cloned()
         .collect();
     let width = ui.available_width();
-    let cols = [
-        96.0,
-        170.0,
-        (width - 96.0 - 170.0 - 120.0 - 116.0 - 120.0).max(80.0),
-        120.0,
-        116.0,
-        120.0,
-    ];
-    let (head, _) = ui.allocate_exact_size(vec2(width, 32.0), Sense::hover());
-    ui.painter().line_segment(
-        [head.left_bottom(), head.right_bottom()],
-        Stroke::new(1.0, t.p.border_default),
-    );
-    let labels = [
-        lang.text("เลขที่", "Receipt"),
-        lang.text("เวลา", "Time"),
-        lang.text("ชื่อบิล", "Bill name"),
-        lang.text("วิธีชำระ", "Method"),
-        lang.text("สถานะ", "Status"),
-        lang.text("ยอด", "Total"),
-    ];
-    let mut x = head.left();
-    for (i, (label, w_)) in labels.iter().zip(cols).enumerate() {
-        let (pos, align) = if i == 5 {
-            (
-                pos2(x + w_ - space::S3, head.center().y),
-                Align2::RIGHT_CENTER,
-            )
-        } else {
-            (pos2(x + space::S3, head.center().y), Align2::LEFT_CENTER)
-        };
-        ui.painter().text(
-            pos,
-            align,
-            *label,
-            t.strong_font(type_scale::CAPTION),
-            t.p.fg_muted,
-        );
-        x += w_;
-    }
     egui::ScrollArea::vertical()
         .id_salt("history")
         .auto_shrink([false, false])
@@ -203,133 +193,45 @@ fn list(app: &mut App, ui: &mut egui::Ui, dialog_detail: bool) {
                     w::state_view(
                         ui,
                         Icon::Search,
-                        &format!(
-                            "{} “{}”",
-                            lang.text("ไม่พบ", "No match for"),
-                            app.history.filter.trim()
+                        lang.text("ไม่มีบิลตามตัวกรอง", "No receipts match"),
+                        lang.text(
+                            "ตัวกรองค้นเฉพาะหน้านี้ ลองหน้าเก่ากว่าหรือเลือก \"ทั้งหมด\"",
+                            "Filters search this page only; try older pages or All.",
                         ),
-                        lang.text("ตัวกรองค้นเฉพาะหน้านี้", "The filter searches this page only."),
                     );
                 }
             }
-            for record in records {
-                let selected = app
-                    .history
-                    .selected
-                    .as_ref()
-                    .is_some_and(|s| s.sale.id == record.sale.id);
-                let (rect, response) =
-                    ui.allocate_exact_size(vec2(width, t.m.row_height), Sense::click());
-                response.widget_info(|| {
-                    egui::WidgetInfo::selected(
-                        egui::WidgetType::Button,
-                        true,
-                        selected,
-                        format!(
-                            "{} {}",
-                            format::receipt_number(record.sale.number),
-                            format::baht(record.sale.total)
-                        ),
-                    )
-                });
-                let bg = if selected {
-                    t.p.bg_selected
-                } else if response.hovered() {
-                    t.p.bg_hover
-                } else {
-                    Color32::TRANSPARENT
-                };
-                ui.painter().rect_filled(rect, t.radius(0), bg);
-                ui.painter().line_segment(
-                    [rect.left_bottom(), rect.right_bottom()],
-                    Stroke::new(1.0, t.p.border_subtle),
-                );
-                let cy = rect.center().y;
-                let mut x = rect.left();
-                let voided = record.cancellation.is_some();
-                let text_color = if voided { t.p.fg_muted } else { t.p.fg_default };
-                ui.painter().text(
-                    pos2(x + space::S3, cy),
-                    Align2::LEFT_CENTER,
-                    format::receipt_number(record.sale.number),
-                    t.font(type_scale::MONEY),
-                    text_color,
-                );
-                x += cols[0];
-                ui.painter().text(
-                    pos2(x + space::S3, cy),
-                    Align2::LEFT_CENTER,
-                    format::date_time(lang, record.sale.created_at),
-                    t.font(type_scale::LABEL),
-                    t.p.fg_muted,
-                );
-                x += cols[1];
-                let mut job = egui::text::LayoutJob::simple_singleline(
-                    if record.sale.label.is_empty() {
-                        "—".to_owned()
-                    } else {
-                        record.sale.label.clone()
-                    },
-                    t.font(type_scale::BODY),
-                    text_color,
-                );
-                job.wrap.max_width = cols[2] - space::S3 * 2.0;
-                job.wrap.max_rows = 1;
-                let g = ui.painter().layout_job(job);
-                ui.painter()
-                    .galley(pos2(x + space::S3, cy - g.size().y / 2.0), g, text_color);
-                x += cols[2];
-                crate::ui::icons::paint_sized(
-                    ui.painter(),
-                    if record.sale.is_split() {
-                        Icon::Coins
-                    } else {
-                        method_icon(record.sale.payment_method)
-                    },
-                    pos2(x + space::S3 + 8.0, cy),
-                    16.0,
-                    t.p.fg_muted,
-                );
-                ui.painter().text(
-                    pos2(x + space::S3 + 22.0, cy),
-                    Align2::LEFT_CENTER,
-                    if record.sale.is_split() {
-                        lang.text("แบ่งจ่าย", "Split")
-                    } else {
-                        lang.payment_method(record.sale.payment_method)
-                    },
-                    t.font(type_scale::LABEL),
-                    t.p.fg_default,
-                );
-                x += cols[3];
-                let (label, tone) = status(lang, &record);
-                let (bg, fg) = tone.colors(&t);
-                let g = ui.painter().layout_no_wrap(
-                    label.to_owned(),
-                    t.strong_font(type_scale::CAPTION),
-                    fg,
-                );
-                let r = Rect::from_min_size(
-                    pos2(x + space::S3, cy - 11.0),
-                    vec2(g.size().x + 12.0, 22.0),
-                );
-                ui.painter().rect_filled(r, t.radius(4), bg);
-                ui.painter().galley(r.center() - g.size() / 2.0, g, fg);
-                x += cols[4];
-                // The receipt total never changes; the status badge shows the refund.
-                let total = format::money(record.sale.total);
-                ui.painter().text(
-                    pos2(x + cols[5] - space::S3, cy),
-                    Align2::RIGHT_CENTER,
+            // Bills grouped by the hour they were paid (Bangkok time).
+            let hour_of = |ts: i64| ts.div_euclid(3600);
+            let mut i = 0;
+            while i < records.len() {
+                let key = hour_of(records[i].sale.created_at);
+                let group: Vec<&SaleRecord> = records[i..]
+                    .iter()
+                    .take_while(|r| hour_of(r.sale.created_at) == key)
+                    .collect();
+                i += group.len();
+                let total: i64 = group
+                    .iter()
+                    .filter(|r| r.cancellation.is_none())
+                    .map(|r| r.sale.total.satang())
+                    .sum();
+                group_header(
+                    ui,
+                    &t,
+                    lang,
+                    group[0].sale.created_at,
+                    group.len(),
                     total,
-                    t.font(type_scale::MONEY),
-                    text_color,
+                    width,
                 );
-                if response.clicked() {
-                    if dialog_detail {
-                        app.receipt = Some(record.clone());
+                for record in group {
+                    if history_row(app, ui, &t, record, width) {
+                        if dialog_detail {
+                            app.receipt = Some(record.clone());
+                        }
+                        app.history.selected = Some(record.clone());
                     }
-                    app.history.selected = Some(record.clone());
                 }
             }
         });
@@ -368,6 +270,176 @@ fn list(app: &mut App, ui: &mut egui::Ui, dialog_detail: bool) {
 }
 
 /// Receipt body shared by the inspector and the receipt dialog.
+/// "15 ต.ค. 2569 · 19:00–20:00 ........ 2 บิล · 1,123.00"
+fn group_header(
+    ui: &mut egui::Ui,
+    t: &Theme,
+    lang: Language,
+    at: i64,
+    n: usize,
+    total: i64,
+    width: f32,
+) {
+    let (rect, _) = ui.allocate_exact_size(
+        vec2(width, if t.touch() { 34.0 } else { 26.0 }),
+        Sense::hover(),
+    );
+    ui.painter().rect_filled(rect, 0, t.p.bg_sunken);
+    let label = format::local(at).map_or_else(String::new, |d| {
+        format!(
+            "{} · {:02}:00–{:02}:00",
+            format::date(lang, d.date()),
+            d.hour(),
+            (d.hour() + 1) % 24
+        )
+    });
+    ui.painter().text(
+        pos2(rect.left() + space::S3, rect.center().y),
+        Align2::LEFT_CENTER,
+        label,
+        t.strong_font(type_scale::CAPTION),
+        t.p.fg_muted,
+    );
+    let n = n as u64;
+    let right = format!(
+        "{} {} · {}",
+        n,
+        lang.noun(n, "บิล", "bill", "bills"),
+        pos_domain::Money::from_satang(total).map_or("—".into(), format::money)
+    );
+    ui.painter().text(
+        pos2(rect.right() - space::S3, rect.center().y),
+        Align2::RIGHT_CENTER,
+        right,
+        t.strong_font(type_scale::MONEY_SM),
+        t.p.fg_default,
+    );
+}
+/// One receipt: number, time, name over method, status, total. True = picked.
+fn history_row(app: &App, ui: &mut egui::Ui, t: &Theme, record: &SaleRecord, width: f32) -> bool {
+    let lang = app.lang;
+    let selected = app
+        .history
+        .selected
+        .as_ref()
+        .is_some_and(|s| s.sale.id == record.sale.id);
+    let h = if t.touch() { 60.0 } else { 46.0 };
+    let (rect, response) = ui.allocate_exact_size(vec2(width, h), Sense::click());
+    response.widget_info(|| {
+        egui::WidgetInfo::selected(
+            egui::WidgetType::Button,
+            true,
+            selected,
+            format!(
+                "{} {}",
+                format::receipt_number(record.sale.number),
+                format::baht(record.sale.total)
+            ),
+        )
+    });
+    let inner = rect.shrink2(vec2(if t.soft() { 4.0 } else { 0.0 }, 2.0));
+    let bg = if selected {
+        t.p.bg_selected
+    } else if response.hovered() {
+        t.p.bg_hover
+    } else {
+        Color32::TRANSPARENT
+    };
+    ui.painter().rect_filled(inner, t.radius(8), bg);
+    if selected && !t.soft() {
+        ui.painter().rect_filled(
+            Rect::from_min_size(inner.min, vec2(2.0, inner.height())),
+            0,
+            t.p.border_selected,
+        );
+    }
+    let cy = rect.center().y;
+    let voided = record.cancellation.is_some();
+    let ink = if voided { t.p.fg_muted } else { t.p.fg_default };
+    let mut x = rect.left() + space::S3;
+    ui.painter().text(
+        pos2(x, cy),
+        Align2::LEFT_CENTER,
+        format::receipt_number(record.sale.number),
+        t.strong_font(type_scale::MONEY),
+        ink,
+    );
+    x += 90.0;
+    ui.painter().text(
+        pos2(x, cy),
+        Align2::LEFT_CENTER,
+        format::clock(record.sale.created_at),
+        t.font(type_scale::MONEY_SM),
+        t.p.fg_muted,
+    );
+    x += 56.0;
+    let total_w = 110.0;
+    let status_w = 120.0;
+    let name_w = (rect.right() - x - total_w - status_w - space::S3).max(60.0);
+    let (name, name_color) = if record.sale.label.is_empty() {
+        (
+            lang.text("ไม่มีชื่อบิล", "No bill name").to_owned(),
+            t.p.fg_subtle,
+        )
+    } else {
+        (record.sale.label.clone(), ink)
+    };
+    let mut job =
+        egui::text::LayoutJob::simple_singleline(name, t.font(type_scale::BODY), name_color);
+    job.wrap.max_width = name_w;
+    job.wrap.max_rows = 1;
+    let g = ui.painter().layout_job(job);
+    let gh = g.size().y;
+    ui.painter().galley(pos2(x, cy - gh + 1.0), g, name_color);
+    let method = if record.sale.is_split() {
+        lang.text("แบ่งจ่าย", "Split")
+    } else {
+        lang.payment_method(record.sale.payment_method)
+    };
+    let staff = record
+        .sale
+        .staff
+        .by
+        .as_ref()
+        .map(|s| format!(" · {}", s.name))
+        .unwrap_or_default();
+    ui.painter().text(
+        pos2(x, cy + 2.0),
+        Align2::LEFT_TOP,
+        format!("{method}{staff}"),
+        t.font(type_scale::CAPTION),
+        t.p.fg_muted,
+    );
+    let (label, tone) = if voided {
+        (lang.text("ยกเลิก", "Voided"), w::Tone::Danger)
+    } else {
+        status(lang, record)
+    };
+    let (bg, fg) = tone.colors(t);
+    let g = ui
+        .painter()
+        .layout_no_wrap(label.to_owned(), t.strong_font(type_scale::CAPTION), fg);
+    let status_x = rect.right() - space::S3 - total_w - g.size().x - 12.0;
+    let r = Rect::from_min_size(pos2(status_x, cy - 11.0), vec2(g.size().x + 12.0, 22.0));
+    ui.painter().rect_filled(r, t.radius(4), bg);
+    ui.painter().galley(r.center() - g.size() / 2.0, g, fg);
+    // The receipt total never changes; voided bills read as struck out.
+    let amount = ui.painter().text(
+        pos2(rect.right() - space::S3, cy),
+        Align2::RIGHT_CENTER,
+        format::money(record.sale.total),
+        t.strong_font(type_scale::MONEY),
+        ink,
+    );
+    if voided {
+        ui.painter().hline(
+            amount.x_range(),
+            amount.center().y,
+            Stroke::new(1.0, t.p.fg_muted),
+        );
+    }
+    response.clicked()
+}
 pub fn receipt(ui: &mut egui::Ui, record: &SaleRecord, lang: Language) {
     let t = Theme::of(ui);
     let sale = &record.sale;
@@ -684,11 +756,34 @@ pub fn receipt(ui: &mut egui::Ui, record: &SaleRecord, lang: Language) {
 }
 fn detail(app: &mut App, ui: &mut egui::Ui, record: &SaleRecord) {
     let lang = app.lang;
+    let t = Theme::of(ui);
     egui::ScrollArea::vertical()
         .id_salt("receipt-detail")
         .auto_shrink([false, false])
         .max_height(ui.available_height() - 60.0)
-        .show(ui, |ui| receipt(ui, record, lang));
+        .show(ui, |ui| {
+            // The receipt as a paper slip, then what happened to it.
+            let width = ui.available_width().min(320.0);
+            ui.horizontal(|ui| {
+                ui.add_space(((ui.available_width() - width) / 2.0).max(0.0));
+                egui::Frame::new()
+                    .fill(t.p.bg_raised)
+                    .stroke(Stroke::new(1.0, t.p.border_subtle))
+                    .shadow(t.shadow(1))
+                    .corner_radius(t.radius(crate::ui::tokens::radius::SM))
+                    .inner_margin(egui::Margin::same(space::S4 as i8))
+                    .show(ui, |ui| {
+                        ui.with_layout(egui::Layout::top_down(Align::Min), |ui| {
+                            ui.set_width(width - space::S4 * 2.0);
+                            receipt(ui, record, lang);
+                        });
+                    });
+            });
+            ui.add_space(space::S4);
+            ui.label(t.text(lang.text("ลำดับเหตุการณ์", "Timeline"), type_scale::LABEL));
+            ui.add_space(space::S1);
+            timeline(ui, &t, lang, record);
+        });
     w::divider(ui);
     ui.add_space(space::S2);
     ui.horizontal_wrapped(|ui| {
@@ -712,6 +807,128 @@ fn detail(app: &mut App, ui: &mut egui::Ui, record: &SaleRecord) {
             refund_actions(app, ui, record);
         }
     });
+}
+/// Payment, invoice, refunds and void of a receipt, oldest first.
+fn timeline(ui: &mut egui::Ui, t: &Theme, lang: Language, record: &SaleRecord) {
+    let by = |a: &pos_domain::Attribution| {
+        a.by.as_ref()
+            .map(|s| format!(" · {}", s.name))
+            .unwrap_or_default()
+    };
+    let sale = &record.sale;
+    let mut events: Vec<(i64, String, String, Color32)> = Vec::new();
+    let paid = if sale.is_split() {
+        sale.tenders
+            .iter()
+            .map(|p| {
+                format!(
+                    "{} {}",
+                    lang.payment_method(p.method),
+                    format::money(p.amount)
+                )
+            })
+            .collect::<Vec<_>>()
+            .join(" + ")
+    } else if sale.payment_method == PaymentMethod::Cash {
+        format!(
+            "{} {} {} {}",
+            lang.text("รับ", "received"),
+            format::money(sale.cash),
+            lang.text("ทอน", "change"),
+            format::money(sale.change)
+        )
+    } else {
+        format::money(sale.total)
+    };
+    events.push((
+        sale.created_at,
+        format!(
+            "{} {}",
+            lang.text("ชำระเงิน", "Paid"),
+            if sale.is_split() {
+                lang.text("แบ่งจ่าย", "split")
+            } else {
+                lang.payment_method(sale.payment_method)
+            }
+        ),
+        format!(
+            "{} · {paid}{}",
+            format::date_time(lang, sale.created_at),
+            by(&sale.staff)
+        ),
+        t.p.success_solid,
+    ));
+    if let Some(inv) = &record.tax_invoice {
+        events.push((
+            inv.created_at,
+            format!(
+                "{} {}",
+                lang.text("ออกใบกำกับภาษี", "Tax invoice"),
+                inv.number
+            ),
+            format::date_time(lang, inv.created_at),
+            t.p.info_solid,
+        ));
+    }
+    for r in &record.refunds {
+        events.push((
+            r.created_at,
+            format!(
+                "{} {}",
+                lang.text("คืนเงิน", "Refund"),
+                format::money(r.refund)
+            ),
+            format!(
+                "{} · {}{}",
+                format::date_time(lang, r.created_at),
+                if r.reason.is_empty() {
+                    lang.payment_method(r.refund_method).to_owned()
+                } else {
+                    r.reason.clone()
+                },
+                by(&r.staff)
+            ),
+            t.p.warning_solid,
+        ));
+    }
+    if let Some(v) = &record.cancellation {
+        events.push((
+            v.created_at,
+            format!(
+                "{} · {} {}",
+                lang.text("ยกเลิกทั้งบิล", "Voided"),
+                lang.text("คืน", "refund"),
+                format::money(v.refund)
+            ),
+            format!("{} · {}", format::date_time(lang, v.created_at), v.reason),
+            t.p.danger_solid,
+        ));
+    }
+    events.sort_by_key(|e| e.0);
+    let n = events.len();
+    for (i, (_, title, detail, color)) in events.into_iter().enumerate() {
+        let r = ui
+            .horizontal_top(|ui| {
+                ui.add_space(22.0);
+                ui.vertical(|ui| {
+                    ui.spacing_mut().item_spacing.y = 0.0;
+                    ui.label(t.text(title, type_scale::BODY_STRONG));
+                    ui.add(egui::Label::new(t.muted(detail, type_scale::CAPTION)).wrap());
+                });
+            })
+            .response
+            .rect;
+        let c = pos2(r.left() + 8.0, r.top() + 9.0);
+        if i + 1 < n {
+            ui.painter().vline(
+                c.x,
+                egui::Rangef::new(c.y, r.bottom() + space::S2 + 9.0),
+                Stroke::new(1.5, t.p.border_default),
+            );
+        }
+        ui.painter().circle_filled(c, 5.0, color);
+        ui.add_space(space::S2);
+    }
 }
 /// Refund some items; a whole-sale void only while nothing was refunded yet.
 fn refund_actions(app: &mut App, ui: &mut egui::Ui, record: &SaleRecord) {

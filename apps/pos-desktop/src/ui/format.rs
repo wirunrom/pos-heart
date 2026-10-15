@@ -143,7 +143,7 @@ pub fn signed_count(value: i64) -> String {
 }
 
 const BANGKOK: time::UtcOffset = time::macros::offset!(+7);
-fn local(unix: i64) -> Option<time::OffsetDateTime> {
+pub fn local(unix: i64) -> Option<time::OffsetDateTime> {
     time::OffsetDateTime::from_unix_timestamp(unix)
         .ok()
         .map(|t| t.to_offset(BANGKOK))
