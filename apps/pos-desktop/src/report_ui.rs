@@ -156,66 +156,96 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
     let c = app.data.compare.clone();
     let loading =
         s.date != app.report.start.to_string() || s.end_date != app.report.end.to_string();
+    if loading {
+        w::state_view(
+            ui,
+            Icon::Reports,
+            lang.text("กำลังโหลดรายงาน…", "Loading report…"),
+            "",
+        );
+        return;
+    }
+    tiles(app, ui, &s, &c);
+    let gap = t.pane_gap();
+    ui.add_space(gap - ui.spacing().item_spacing.y);
+    let full = ui.available_rect_before_wrap();
+    ui.allocate_rect(full, egui::Sense::hover());
+    let left_w = (full.width() * 0.62).floor();
+    let left = egui::Rect::from_min_size(full.min, vec2(left_w, full.height()));
+    let right_x = left.right() + gap;
+    let pay_h = (full.height() * 0.38).clamp(200.0, 300.0);
+    let pay = egui::Rect::from_min_max(
+        egui::pos2(right_x, full.top()),
+        egui::pos2(full.right(), full.top() + pay_h),
+    );
+    let groups_rect = egui::Rect::from_min_max(egui::pos2(right_x, pay.bottom() + gap), full.max);
+    // Sales chart and profit.
+    let (mut head, mut body) = w::pane_uis(ui, left);
+    w::pane_title(
+        &mut head,
+        if app.report.single() {
+            lang.text("ยอดขายรายชั่วโมง", "Sales by hour")
+        } else {
+            lang.text("ยอดขายรายวัน", "Sales by day")
+        },
+    );
     egui::ScrollArea::vertical()
-        .id_salt("report")
+        .id_salt("report-chart")
         .auto_shrink([false, false])
-        .show(ui, |ui| {
-            if loading {
-                w::state_view(
-                    ui,
-                    Icon::Reports,
-                    lang.text("กำลังโหลดรายงาน…", "Loading report…"),
-                    "",
-                );
-                return;
-            }
-            tiles(app, ui, &s, &c);
-            profit_section(ui, lang, &s.profit);
-            ui.add_space(10.0);
-            let height = (ui.available_height() - 4.0).max(420.0);
-            w::columns(ui, 2, |cols| {
-                t.surface().show(&mut cols[0], |ui| {
+        .show(&mut body, |ui| {
+            egui::Frame::new()
+                .inner_margin(egui::Margin::same(space::S3 as i8))
+                .show(ui, |ui| {
                     ui.set_width(ui.available_width());
-                    ui.set_min_height(height);
                     if app.report.single() {
                         hourly(app, ui, &s, &c);
                     } else {
                         daily(app, ui, &s, &c);
                     }
-                    ui.add_space(space::S3);
-                    w::divider(ui);
-                    ui.add_space(space::S2);
+                    profit_body(ui, lang, &s.profit);
+                });
+        });
+    // Receipts by method.
+    let (mut head, mut body) = w::pane_uis(ui, pay);
+    w::pane_title(&mut head, lang.text("รายรับตามวิธีชำระ", "Receipts by method"));
+    egui::ScrollArea::vertical()
+        .id_salt("report-pay")
+        .auto_shrink([false, false])
+        .show(&mut body, |ui| {
+            egui::Frame::new()
+                .inner_margin(egui::Margin::same(space::S3 as i8))
+                .show(ui, |ui| {
+                    ui.set_width(ui.available_width());
                     tenders(app, ui, &s);
                 });
-                t.surface().show(&mut cols[1], |ui| {
-                    ui.set_width(ui.available_width());
-                    ui.set_min_height(height);
-                    ui.horizontal(|ui| {
-                        let mut groups = vec![
-                            (Group::Products, lang.text("สินค้า", "Products")),
-                            (Group::Categories, lang.text("หมวด", "Categories")),
-                        ];
-                        if app.data.staff_enabled || !s.staff.is_empty() {
-                            groups.push((Group::Staff, lang.text("พนักงาน", "Staff")));
-                        }
-                        if !app.data.promotions.is_empty() || !s.promotions.is_empty() {
-                            groups.push((Group::Promotions, lang.text("โปร", "Promos")));
-                        }
-                        if !app.data.ingredients.is_empty() || !s.ingredients.is_empty() {
-                            groups.push((Group::Ingredients, lang.text("วัตถุดิบ", "Ingredients")));
-                        }
-                        w::segmented(ui, &mut app.report_group, &groups);
-                    });
-                    ui.add_space(space::S2);
-                    match app.report_group {
-                        Group::Products => top_products(app, ui, &s),
-                        Group::Categories => categories(app, ui, &s),
-                        Group::Staff => staff(app, ui, &s),
-                        Group::Promotions => promotions(app, ui, &s),
-                        Group::Ingredients => ingredients(app, ui, &s),
-                    }
-                });
-            });
+        });
+    // Best sellers and the other groupings.
+    let (mut head, mut body) = w::pane_uis(ui, groups_rect);
+    let mut groups = vec![
+        (Group::Products, lang.text("สินค้าขายดี", "Best sellers"), None),
+        (Group::Categories, lang.text("หมวด", "Categories"), None),
+    ];
+    if app.data.staff_enabled || !s.staff.is_empty() {
+        groups.push((Group::Staff, lang.text("พนักงาน", "Staff"), None));
+    }
+    if !app.data.promotions.is_empty() || !s.promotions.is_empty() {
+        groups.push((Group::Promotions, lang.text("โปร", "Promos"), None));
+    }
+    if !app.data.ingredients.is_empty() || !s.ingredients.is_empty() {
+        groups.push((Group::Ingredients, lang.text("วัตถุดิบ", "Ingredients"), None));
+    }
+    w::pane_tabs(&mut head, &mut app.report_group, &groups);
+    egui::Frame::new()
+        .inner_margin(egui::Margin::same(space::S3 as i8))
+        .show(&mut body, |ui| {
+            ui.set_min_size(ui.available_size());
+            match app.report_group {
+                Group::Products => top_products(app, ui, &s),
+                Group::Categories => categories(app, ui, &s),
+                Group::Staff => staff(app, ui, &s),
+                Group::Promotions => promotions(app, ui, &s),
+                Group::Ingredients => ingredients(app, ui, &s),
+            }
         });
 }
 /// Reports toolbar (design v0.2): period, Export CSV, Activity log, and
@@ -403,8 +433,8 @@ fn date_picker(app: &mut App, ui: &mut egui::Ui) {
 }
 fn tiles(app: &App, ui: &mut egui::Ui, s: &DailySummary, c: &DailySummary) {
     let lang = app.lang;
-    let gap = 10.0;
-    let width = ((ui.available_width() - gap * 3.0) / 4.0).floor();
+    let gap = Theme::of(ui).pane_gap();
+    let width = ((ui.available_width() - gap * 4.0) / 5.0).floor();
     let compare = compare_label(lang, app.report);
     ui.horizontal_top(|ui| {
         ui.spacing_mut().item_spacing.x = gap;
@@ -499,6 +529,30 @@ fn tiles(app: &App, ui: &mut egui::Ui, s: &DailySummary, c: &DailySummary) {
                 )],
             );
         });
+        ui.allocate_ui_with_layout(vec2(width, 0.0), egui::Layout::top_down(Align::Min), |ui| {
+            let p = &s.profit;
+            let known = p.known_sold_units > 0;
+            w::stat_tile(
+                ui,
+                lang.text("กำไรขั้นต้น", "Gross profit"),
+                &if known {
+                    format::signed(p.gross_profit)
+                } else {
+                    lang.text("ยังคำนวณไม่ได้", "Not yet known").to_owned()
+                },
+                p.gross_profit.satang() < 0,
+                &[(
+                    format!(
+                        "{} {}/{} {}",
+                        lang.text("รู้ต้นทุน", "Cost known"),
+                        p.known_sold_units,
+                        p.known_sold_units + p.unknown_sold_units,
+                        lang.text("ชิ้น", "units")
+                    ),
+                    None,
+                )],
+            );
+        });
     });
 }
 fn axis_label(satang: i64) -> String {
@@ -535,10 +589,7 @@ fn hourly(app: &App, ui: &mut egui::Ui, s: &DailySummary, c: &DailySummary) {
         app.report.label(lang)
     };
     ui.horizontal(|ui| {
-        ui.label(t.text(
-            lang.text("ยอดขายรายชั่วโมง", "Sales by hour"),
-            type_scale::TITLE,
-        ));
+        // The pane header names the chart; this row keeps the legend.
         ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
             for (label, color) in [
                 (compare.as_str(), t.p.chart_2),
@@ -674,7 +725,7 @@ fn daily(app: &App, ui: &mut egui::Ui, s: &DailySummary, c: &DailySummary) {
     let lang = app.lang;
     let compare = compare_label(lang, app.report);
     ui.horizontal(|ui| {
-        ui.label(t.text(lang.text("ยอดขายรายวัน", "Sales by day"), type_scale::TITLE));
+        // The pane header names the chart; this row keeps the legend.
         ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
             for (label, color) in [
                 (compare.as_str(), t.p.chart_2),
@@ -1095,10 +1146,41 @@ fn categories(app: &App, ui: &mut egui::Ui, s: &DailySummary) {
 fn tenders(app: &App, ui: &mut egui::Ui, s: &DailySummary) {
     let t = Theme::of(ui);
     let lang = app.lang;
-    ui.label(t.text(
-        lang.text("รายรับตามวิธีชำระ", "Receipts by method"),
-        type_scale::BODY_STRONG,
-    ));
+    // Share of each method as one stacked bar (positive net only).
+    let parts: Vec<(i64, egui::Color32)> = [
+        (PaymentMethod::Cash, t.p.chart_1),
+        (PaymentMethod::Transfer, t.p.chart_3),
+        (PaymentMethod::Card, t.p.chart_2),
+    ]
+    .iter()
+    .map(|(m, c)| (s.payments.method(*m).net().satang().max(0), *c))
+    .collect();
+    let sum: i64 = parts.iter().map(|(v, _)| v).sum();
+    let (bar, _) = ui.allocate_exact_size(vec2(ui.available_width(), 12.0), egui::Sense::hover());
+    ui.painter().rect_filled(bar, t.radius(4), t.p.bg_sunken);
+    if sum > 0 {
+        let mut x = bar.left();
+        for (v, c) in &parts {
+            let w_ = bar.width() * *v as f32 / sum as f32;
+            if w_ > 0.5 {
+                ui.painter().rect_filled(
+                    egui::Rect::from_min_size(
+                        egui::pos2(x, bar.top()),
+                        vec2(w_ - 2.0, bar.height()),
+                    ),
+                    t.radius(3),
+                    *c,
+                );
+            }
+            x += w_;
+        }
+    }
+    ui.add_space(space::S1);
+    let color_of = |m: PaymentMethod| match m {
+        PaymentMethod::Cash => t.p.chart_1,
+        PaymentMethod::Transfer => t.p.chart_3,
+        PaymentMethod::Card => t.p.chart_2,
+    };
     let mut total = SignedMoney::default();
     for (method, icon) in [
         (PaymentMethod::Cash, Icon::Banknote),
@@ -1108,7 +1190,9 @@ fn tenders(app: &App, ui: &mut egui::Ui, s: &DailySummary) {
         let m = s.payments.method(method);
         total = total.checked_add(m.net()).unwrap_or(total);
         ui.horizontal(|ui| {
-            crate::ui::icons::show(ui, icon, 16.0, t.p.fg_muted);
+            let (dot, _) = ui.allocate_exact_size(vec2(10.0, 10.0), egui::Sense::hover());
+            ui.painter().rect_filled(dot, 2, color_of(method));
+            let _ = icon;
             ui.label(t.text(lang.payment_method(method), type_scale::BODY));
             ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
                 ui.label(
@@ -1204,7 +1288,7 @@ fn top_products(app: &mut App, ui: &mut egui::Ui, s: &DailySummary) {
     let t = Theme::of(ui);
     let lang = app.lang;
     ui.horizontal(|ui| {
-        ui.label(t.text(lang.text("สินค้าขายดี", "Top products"), type_scale::TITLE));
+        // The pane tab names the list; this row keeps the sort switch.
         ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
             w::segmented(
                 ui,
@@ -1347,14 +1431,6 @@ fn top_products(app: &mut App, ui: &mut egui::Ui, s: &DailySummary) {
     }
 }
 
-fn profit_section(ui: &mut egui::Ui, lang: Language, p: &pos_domain::ProfitSummary) {
-    let t = Theme::of(ui);
-    ui.add_space(space::S3);
-    t.surface().show(ui, |ui| {
-        ui.set_width(ui.available_width());
-        profit_body(ui, lang, p);
-    });
-}
 fn profit_body(ui: &mut egui::Ui, lang: Language, p: &pos_domain::ProfitSummary) {
     let t = Theme::of(ui);
     egui::CollapsingHeader::new(lang.text("กำไรขั้นต้นโดยประมาณ", "Estimated gross profit"))
