@@ -15,7 +15,7 @@ pub mod webtls;
 pub mod wire;
 
 use pos_core::{DeviceContext, DeviceKind, Pos};
-use pos_service::{Reply, Request, Versions};
+use pos_service::{Reply, Request, Topic, Versions};
 use rustls::{ClientConnection, ServerConnection, StreamOwned};
 use sha2::{Digest, Sha256};
 use std::{
@@ -158,6 +158,19 @@ impl Shared {
             }
             v.clone()
         };
+        self.broadcast(versions);
+    }
+    fn touch(&self, topic: Topic) {
+        let versions = {
+            let Ok(mut v) = self.versions.lock() else {
+                return;
+            };
+            v.bump(topic);
+            v.clone()
+        };
+        self.broadcast(versions);
+    }
+    fn broadcast(&self, versions: Versions) {
         if let Ok(peers) = self.peers.lock() {
             for (_, tx) in peers.values() {
                 let _ = tx.send(versions.clone());
@@ -212,6 +225,11 @@ impl Notifier {
     /// changed data.
     pub fn notify(&self, request: &Request) {
         self.0.notify(request);
+    }
+    /// Tells connected devices that `topic` changed outside the protocol
+    /// (the main register published its shop profile).
+    pub fn touch(&self, topic: Topic) {
+        self.0.touch(topic);
     }
     /// Closes a device's connection (after revoking it).
     pub fn disconnect(&self, device: Uuid) {

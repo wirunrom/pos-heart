@@ -398,6 +398,17 @@ fn shop_card(app: &mut App, ui: &mut egui::Ui) {
                 None,
             );
     }
+    if app.shop_managed() {
+        w::banner(
+            ui,
+            w::Tone::Info,
+            lang.text(
+                "เครื่องนี้ใช้ข้อมูลร้านจากเครื่องหลัก (ชื่อร้าน PromptPay รูปแบบใบพิมพ์) แก้ไขได้ที่เครื่องหลัก",
+                "This computer uses the main register's shop details (name, PromptPay, document layout). Change them there.",
+            ),
+            None,
+        );
+    }
     let dirty = app.shop_draft != app.shop;
     if dirty {
         w::banner(
@@ -414,7 +425,7 @@ fn shop_card(app: &mut App, ui: &mut egui::Ui) {
             lang.text("บทบาทของคุณแก้ไขส่วนนี้ไม่ได้", "Your role cannot change this."),
         );
     }
-    ui.add_enabled_ui(!app.shop_readonly && manager, |ui| {
+    ui.add_enabled_ui(!app.shop_readonly && !app.shop_managed() && manager, |ui| {
             profile(app, ui);
             ui.add_space(space::S2);
             promptpay(app, ui);

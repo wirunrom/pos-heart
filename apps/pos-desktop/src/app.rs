@@ -81,6 +81,8 @@ pub struct App {
     pub print: crate::print_ui::PrintState,
     /// Receipt logo (1-bit), loaded from receipt-logo.png beside the database.
     pub logo: Option<crate::print::render::Bitmap>,
+    /// The main register's profile last applied here (paired registers).
+    applied_profile: Option<pos_core::SharedProfile>,
     pub staff: crate::staff_ui::StaffState,
     pub tax: crate::tax_ui::TaxState,
     pub tables: crate::tables_ui::TablesState,
@@ -269,6 +271,7 @@ impl App {
             shop_readonly: shop_failed,
             print,
             logo: crate::print::template::load_logo(&data_dir),
+            applied_profile: None,
             staff: crate::staff_ui::StaffState::default(),
             tax: crate::tax_ui::TaxState::default(),
             tables: crate::tables_ui::TablesState::default(),
@@ -711,7 +714,9 @@ impl App {
                     self.data = *data;
                     self.sell.loading_more = false;
                     self.adopt_bill();
+                    self.apply_shared_shop();
                     if !self.ready {
+                        self.publish_shop();
                         self.ready = true;
                         #[cfg(debug_assertions)]
                         crate::preview::arm(self);
@@ -1296,6 +1301,57 @@ impl App {
     fn write_marker(&mut self) {
         let _ = std::fs::write(self.data_dir.join(CURRENT_BILL), self.cart.id.to_string());
     }
+    /// A paired register shows and prints the main register's shop profile.
+    pub fn shop_managed(&self) -> bool {
+        self.hub.device.is_some()
+    }
+    /// The main register mirrors `shop.json` and the receipt logo into the
+    /// database (background) so paired registers use the same shop.
+    pub fn publish_shop(&mut self) {
+        if self.shop_managed() {
+            return;
+        }
+        let Ok(shop) = std::fs::read_to_string(self.data_dir.join("shop.json")) else {
+            return;
+        };
+        let logo = std::fs::read(self.data_dir.join(crate::print::template::LOGO_FILE)).ok();
+        self.send_background(Command::PublishShop(Box::new(pos_core::SharedProfile {
+            shop,
+            logo,
+        })));
+    }
+    /// On a paired register: takes the main register's newer profile,
+    /// keeping this computer's own startup preference, and caches it locally.
+    fn apply_shared_shop(&mut self) {
+        if !self.shop_managed() {
+            return;
+        }
+        let Some(profile) = self.data.shop_profile.clone() else {
+            return;
+        };
+        if self.applied_profile.as_ref() == Some(&profile) {
+            return;
+        }
+        let Ok(mut shop) = serde_json::from_str::<crate::shop::ShopSettings>(&profile.shop) else {
+            return;
+        };
+        shop.start_in_sell = self.shop.start_in_sell;
+        shop.setup_complete = true;
+        if let Err(e) = shop.save(&self.data_dir) {
+            eprintln!("POS Heart: shared shop profile: {e}");
+            return;
+        }
+        let logo = self.data_dir.join(crate::print::template::LOGO_FILE);
+        let _ = match &profile.logo {
+            Some(png) => std::fs::write(&logo, png),
+            None => std::fs::remove_file(&logo),
+        };
+        self.logo = crate::print::template::load_logo(&self.data_dir);
+        self.shop = shop.clone();
+        self.shop_draft = shop;
+        self.shop_readonly = false;
+        self.applied_profile = Some(profile);
+    }
     /// Another device saved the open bill since it was loaded here: drop the
     /// local copy's unsaved edits and load the stored bill.
     fn bill_changed(&mut self) {
@@ -1457,7 +1513,7 @@ impl App {
         }
     }
     pub fn save_shop(&mut self, next: Option<Page>) {
-        if self.shop_readonly {
+        if self.shop_readonly || self.shop_managed() {
             return;
         }
         let mut settings = self.shop_draft.clone();
@@ -1469,6 +1525,7 @@ impl App {
         settings.setup_complete = true;
         match settings.save(&self.data_dir) {
             Ok(()) => {
+                self.publish_shop();
                 self.shop = settings.clone();
                 self.shop_draft = settings;
                 self.onboarding = false;

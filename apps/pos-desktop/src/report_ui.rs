@@ -28,6 +28,7 @@ pub enum Group {
     Products,
     Categories,
     Staff,
+    Registers,
     Promotions,
     Ingredients,
 }
@@ -209,6 +210,9 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
     if app.data.staff_enabled || !s.staff.is_empty() {
         groups.push((Group::Staff, lang.text("พนักงาน", "Staff"), None));
     }
+    if app.data.registers.len() > 1 || s.registers.len() > 1 {
+        groups.push((Group::Registers, lang.text("เครื่องขาย", "Registers"), None));
+    }
     if !app.data.promotions.is_empty() || !s.promotions.is_empty() {
         groups.push((Group::Promotions, lang.text("โปร", "Promos"), None));
     }
@@ -224,6 +228,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
                 Group::Products => top_products(app, ui, &s),
                 Group::Categories => categories(app, ui, &s),
                 Group::Staff => staff(app, ui, &s),
+                Group::Registers => registers(app, ui, &s),
                 Group::Promotions => promotions(app, ui, &s),
                 Group::Ingredients => ingredients(app, ui, &s),
             }
@@ -905,6 +910,60 @@ fn daily(app: &App, ui: &mut egui::Ui, s: &DailySummary, c: &DailySummary) {
             lang.text("ยังไม่มียอดขายในช่วงนี้", "No sales in this period yet."),
         ),
     }
+}
+/// Sales and refunds per register (drawer), main register first.
+fn registers(app: &App, ui: &mut egui::Ui, s: &DailySummary) {
+    let t = Theme::of(ui);
+    let lang = app.lang;
+    if s.registers.is_empty() {
+        w::state_view(
+            ui,
+            Icon::Reports,
+            lang.text("ยังไม่มียอดขายในช่วงนี้", "No sales in this period yet."),
+            "",
+        );
+        return;
+    }
+    for r in &s.registers {
+        let name = if r.name.is_empty() {
+            lang.text("เครื่องหลัก", "Main register")
+        } else {
+            r.name.as_str()
+        };
+        ui.horizontal(|ui| {
+            ui.vertical(|ui| {
+                ui.set_width((ui.available_width() - 160.0).max(80.0));
+                ui.spacing_mut().item_spacing.y = 0.0;
+                w::name_label(ui, name, type_scale::BODY_STRONG, t.p.fg_default);
+                let mut sub = format!(
+                    "{} {}",
+                    format::count(r.sale_count),
+                    lang.noun(r.sale_count, "บิล", "sale", "sales")
+                );
+                if r.refunds.satang() > 0 {
+                    sub = format!(
+                        "{sub} · {} {}",
+                        lang.text("คืนเงิน", "refunds"),
+                        format::money(r.refunds)
+                    );
+                }
+                ui.label(t.muted(sub, type_scale::CAPTION));
+            });
+            ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
+                ui.label(
+                    egui::RichText::new(format::money(r.sales)).font(t.font(type_scale::MONEY)),
+                );
+            });
+        });
+        w::divider(ui);
+    }
+    w::help_text(
+        ui,
+        lang.text(
+            "ยอดขายนับตามเครื่องที่รับเงิน การคืนเงินนับตามเครื่องที่ทำรายการคืน เงินในลิ้นชักของแต่ละเครื่องดูได้ที่หน้ากะ",
+            "Sales count for the register that took payment; refunds for the register that gave them. Each drawer's cash is on the Shift page.",
+        ),
+    );
 }
 /// Net sales per product category (the product's current category).
 fn staff(app: &App, ui: &mut egui::Ui, s: &DailySummary) {

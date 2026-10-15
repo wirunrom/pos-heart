@@ -109,6 +109,9 @@ pub struct Data {
     /// Devices paired with this hub (Settings → Devices).
     #[serde(default)]
     pub devices: Vec<pos_core::Device>,
+    /// The main register's shop profile, for paired registers.
+    #[serde(default)]
+    pub shop_profile: Option<pos_core::SharedProfile>,
 }
 
 /// A business request. Writes carry their own retry identity (cart ID,
@@ -498,6 +501,7 @@ pub fn load(pos: &mut Pos, q: &Query, now: i64) -> Result<Data> {
         kitchen: pos.kitchen_tickets()?,
         registers: pos.registers()?,
         devices: pos.devices()?,
+        shop_profile: pos.shared_profile()?,
         stock_history,
         shift,
         shifts,

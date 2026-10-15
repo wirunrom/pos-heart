@@ -171,7 +171,16 @@ pub fn settings_card(app: &mut App, ui: &mut egui::Ui) {
             "Adjust the header and footer, logo, text size, language and details. The preview on the right is exactly what prints. Tax invoices always keep the legally required lines.",
         ),
     );
-    let may = crate::staff_ui::may(app, pos_domain::Permission::Settings);
+    let may = crate::staff_ui::may(app, pos_domain::Permission::Settings) && !app.shop_managed();
+    if app.shop_managed() {
+        w::help_text(
+            ui,
+            lang.text(
+                "เครื่องนี้ใช้รูปแบบใบพิมพ์ของเครื่องหลัก แก้ไขได้ที่เครื่องหลัก",
+                "This computer uses the main register's document layout. Change it there.",
+            ),
+        );
+    }
     let saved = app.shop.templates.clone();
     let mut draft = app.templates.draft.take().unwrap_or_else(|| saved.clone());
     let mut tab = app.templates.tab;
@@ -333,6 +342,7 @@ pub fn settings_card(app: &mut App, ui: &mut egui::Ui) {
                                 Ok(()) => {
                                     app.shop_draft.templates = draft.clone();
                                     app.shop = shop;
+                                    app.publish_shop();
                                     app.toast(lang.text("บันทึกรูปแบบใบพิมพ์แล้ว", "Document layout saved."));
                                 }
                                 Err(e) => app.error = Some(e.to_string()),
@@ -383,10 +393,11 @@ pub fn settings_card(app: &mut App, ui: &mut egui::Ui) {
     {
         import = Some(path.display().to_string());
     }
-    if let Some(path) = import {
+    if let Some(path) = import.filter(|_| may) {
         match template::import_logo(std::path::Path::new(&path), &app.data_dir) {
             Ok(logo) => {
                 app.logo = Some(logo);
+                app.publish_shop();
                 draft.receipt.logo = true;
                 app.templates.logo_path.clear();
                 app.toast(lang.text("ใช้โลโก้ใหม่แล้ว", "Logo updated."));
@@ -399,9 +410,10 @@ pub fn settings_card(app: &mut App, ui: &mut egui::Ui) {
             }
         }
     }
-    if remove_logo {
+    if remove_logo && may {
         let _ = std::fs::remove_file(app.data_dir.join(template::LOGO_FILE));
         app.logo = None;
+        app.publish_shop();
         draft.receipt.logo = false;
     }
     if draft != saved {

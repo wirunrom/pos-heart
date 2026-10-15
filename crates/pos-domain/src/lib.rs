@@ -39,7 +39,7 @@ pub use promptpay::{PromptPayId, PromptPayKind};
 pub use purchasing::*;
 pub use reporting::{
     CategorySales, DailySummary, DaySales, IngredientUsage, ProductMovement, ProfitSummary,
-    PromoSales, StaffSales,
+    PromoSales, RegisterSales, StaffSales,
 };
 pub use sale::{Cart, CartLine, LOW_STOCK, Product, ProductInput, Sale, SaleLine, split_cart};
 pub use shift::{

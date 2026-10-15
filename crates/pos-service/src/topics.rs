@@ -112,6 +112,12 @@ impl Versions {
         }
         topics
     }
+    /// Marks `topic` changed by something outside the protocol (the main
+    /// register's own shop profile).
+    pub fn bump(&mut self, topic: Topic) {
+        let v = &mut self.0[Self::index(topic)];
+        *v = v.saturating_add(1);
+    }
     /// Topics whose version differs from an older snapshot.
     pub fn since(&self, seen: &Versions) -> Vec<Topic> {
         Topic::ALL

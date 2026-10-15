@@ -1,4 +1,7 @@
-use crate::{Error, Pos, Result, schema::products};
+use crate::{
+    Error, Pos, Result,
+    schema::{cash_movements, products, registers, shifts},
+};
 use diesel::{
     prelude::*,
     sql_types::{BigInt, Nullable, Text},
@@ -74,6 +77,51 @@ impl Pos {
                 .collect();
             let mut products = HashMap::new();
             let mut by_category: HashMap<String, (i64, SignedMoney)> = HashMap::new();
+            // Which register each sale, void and refund went through: its
+            // ledger row's shift. Refunds count where they were given.
+            let register_names: Vec<(String, String)> = registers::table
+                .order(registers::created_at)
+                .select((registers::id, registers::name))
+                .load(conn)?;
+            let shift_registers: HashMap<String, String> = shifts::table
+                .select((shifts::id, shifts::register_id))
+                .load::<(String, String)>(conn)?
+                .into_iter()
+                .collect();
+            let ledger: HashMap<String, String> = cash_movements::table
+                .filter(cash_movements::created_at.ge(start))
+                .filter(cash_movements::created_at.lt(end))
+                .select((cash_movements::id, cash_movements::shift_id))
+                .load::<(String, String)>(conn)?
+                .into_iter()
+                .filter_map(|(id, shift)| Some((id, shift_registers.get(&shift)?.clone())))
+                .collect();
+            let mut by_register: HashMap<String, pos_domain::RegisterSales> = HashMap::new();
+            let mut till = |entry: Uuid, sale: Option<Money>, refund: Option<Money>| -> Result<()> {
+                let register = ledger
+                    .get(&entry.to_string())
+                    .cloned()
+                    .unwrap_or_else(|| crate::MAIN_REGISTER.to_string());
+                let e = by_register.entry(register.clone()).or_insert_with(|| pos_domain::RegisterSales {
+                    register_id: Uuid::parse_str(&register).unwrap_or(crate::MAIN_REGISTER),
+                    name: register_names
+                        .iter()
+                        .find(|(id, _)| *id == register)
+                        .map(|(_, n)| n.clone())
+                        .unwrap_or_default(),
+                    sale_count: 0,
+                    sales: Money::ZERO,
+                    refunds: Money::ZERO,
+                });
+                if let Some(m) = sale {
+                    e.sale_count += 1;
+                    e.sales = e.sales.checked_add(m)?;
+                }
+                if let Some(m) = refund {
+                    e.refunds = e.refunds.checked_add(m)?;
+                }
+                Ok(())
+            };
             let mut by_staff: HashMap<Uuid, pos_domain::StaffSales> = HashMap::new();
             let mut by_promo: HashMap<Uuid, pos_domain::PromoSales> = HashMap::new();
             let mut credit = |who: &Option<pos_domain::StaffRef>, sale: Option<Money>, refund: Option<Money>| -> Result<()> {
@@ -138,6 +186,7 @@ impl Pos {
                     }
                     add(&mut summary.refund_count, 1)?;
                     credit(&refund.staff.by, None, Some(refund.refund))?;
+                    till(refund.id, None, Some(refund.refund))?;
                     if let Some(tax) = &sale.tax {
                         let vat = if refund.lines.iter().all(|line| line.revenue_ex_vat.is_some()) {
                             refund.lines.iter().try_fold(Money::ZERO, |total, line| {
@@ -210,6 +259,7 @@ impl Pos {
                         e.amount = e.amount.checked_add(signed(used.amount, -1))?;
                     }
                     credit(&cancellation.staff.by, None, Some(cancellation.refund))?;
+                    till(cancellation.id, None, Some(cancellation.refund))?;
                     if let Some(tax) = &sale.tax {
                         summary.vat_refunds = summary.vat_refunds.checked_add(tax.vat)?;
                     }
@@ -236,6 +286,7 @@ impl Pos {
                         e.amount = e.amount.checked_add(signed(used.amount, 1))?;
                     }
                     credit(&sale.staff.by, Some(sale.total), None)?;
+                    till(sale.id, Some(sale.total), None)?;
                     if let Some(tax) = &sale.tax {
                         summary.vat_sales = summary.vat_sales.checked_add(tax.vat)?;
                     }
@@ -296,6 +347,14 @@ impl Pos {
             let mut staff: Vec<_> = by_staff.into_values().collect();
             staff.sort_by(|a, b| b.sales.cmp(&a.sales).then_with(|| a.name.cmp(&b.name)));
             summary.staff = staff;
+            let mut tills: Vec<_> = by_register.into_values().collect();
+            tills.sort_by_key(|r| {
+                (
+                    r.register_id != crate::MAIN_REGISTER,
+                    register_names.iter().position(|(id, _)| *id == r.register_id.to_string()),
+                )
+            });
+            summary.registers = tills;
             let mut categories: Vec<CategorySales> = by_category
                 .into_iter()
                 .map(|(category, (net_quantity, net_sales))| CategorySales {

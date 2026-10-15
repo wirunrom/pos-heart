@@ -407,6 +407,62 @@ fn each_register_has_its_own_shift_and_drawer()
     assert_eq!(s1.expected()?.to_string(), "100.00");
     // Stock is shared by the shop.
     assert_eq!(pos.products("", 0)?[0].stock, Some(3));
+    // A main-register sale refunded at the second register: the report
+    // credits the sale to the main register and the refund to the second.
+    let mut one = Cart::new();
+    one.lines.push(CartLine {
+        product_id: product.id,
+        quantity: 1,
+        ..Default::default()
+    });
+    let main_sale = pos.checkout_with_payment(
+        &one,
+        PaymentRequest {
+            method: PaymentMethod::Cash,
+            amount: "10".parse()?,
+        },
+        Some(main_shift),
+        25,
+    )?;
+    pos.use_register(second)?;
+    pos.refund_items(
+        &pos_domain::RefundRequest {
+            id: uuid::Uuid::new_v4(),
+            sale_id: main_sale.id,
+            refund_method: PaymentMethod::Cash,
+            reason: "ผิดรายการ".into(),
+            lines: vec![pos_domain::RefundLine {
+                line: 0,
+                quantity: 1,
+            }],
+            legacy_restock: None,
+        },
+        Some(second_shift),
+        26,
+    )?;
+    pos.use_register(MAIN_REGISTER)?;
+    let day = time::macros::date!(1970 - 01 - 01);
+    let report = pos.summary(day, day)?;
+    let tills: Vec<_> = report
+        .registers
+        .iter()
+        .map(|r| {
+            (
+                r.register_id,
+                r.sale_count,
+                r.sales.to_string(),
+                r.refunds.to_string(),
+            )
+        })
+        .collect();
+    assert_eq!(
+        tills,
+        vec![
+            (MAIN_REGISTER, 1, "10.00".into(), "0.00".into()),
+            (second, 1, "20.00".into(), "10.00".into()),
+        ]
+    );
+    assert_eq!(report.registers[1].name, "เคาน์เตอร์ 2");
     // A reopened connection sells for the main register again.
     drop(pos);
     let mut reopened = Pos::open(&path)?;

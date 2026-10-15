@@ -94,6 +94,8 @@ pub enum Command {
     RevokeDevice(Uuid),
     /// Starts or stops telling paired devices about local changes.
     SetHub(Option<pos_hub::Notifier>),
+    /// The main register mirrors its shop profile for paired registers.
+    PublishShop(Box<pos_core::SharedProfile>),
     /// Runs `inner` once with an approver's PIN for a restricted action.
     Approved {
         approver: Uuid,
@@ -113,6 +115,7 @@ impl Command {
                 | Self::BumpTicket(..)
                 | Self::TicketLine(..)
                 | Self::RevokeSession
+                | Self::PublishShop(_)
         )
     }
 }
@@ -832,6 +835,15 @@ fn run(
         Err(local) => *local,
     };
     Ok(match command {
+        Command::PublishShop(profile) => {
+            if pos.shared_profile()?.as_ref() != Some(&*profile) {
+                pos.publish_profile(&profile)?;
+                if let Some(notifier) = notifier {
+                    notifier.touch(pos_service::Topic::Settings);
+                }
+            }
+            Event::Quiet
+        }
         Command::Demo => {
             pos.seed_demo()?;
             Event::Demo
@@ -1119,6 +1131,27 @@ fn export_report(
             staff.sale_count.to_string(),
             staff.sales.to_string(),
             staff.refunds.to_string(),
+        ]);
+    }
+    rows.push(Vec::new());
+    rows.push(
+        [
+            "register_id",
+            "register_name",
+            "sale_count",
+            "sales",
+            "refunds",
+        ]
+        .map(String::from)
+        .to_vec(),
+    );
+    for till in &s.registers {
+        rows.push(vec![
+            till.register_id.to_string(),
+            till.name.clone(),
+            till.sale_count.to_string(),
+            till.sales.to_string(),
+            till.refunds.to_string(),
         ]);
     }
     rows.push(Vec::new());

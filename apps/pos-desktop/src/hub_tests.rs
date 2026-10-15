@@ -142,6 +142,27 @@ fn a_client_mode_worker_runs_commands_on_the_main_register() -> Result {
     wait_for(&remote, |e| {
         matches!(e, Event::Failed(pos_core::Error::ShiftAlreadyOpen))
     })?;
+    // The main register's shop profile reaches the device: a change notice,
+    // then its next refresh.
+    let profile = pos_core::SharedProfile {
+        shop: r#"{"version":1,"name":"ร้านหลัก","kind":"mixed","start_in_sell":false,"setup_complete":true}"#.into(),
+        logo: Some(vec![1, 2, 3]),
+    };
+    assert!(main.send(Command::PublishShop(Box::new(profile.clone()))));
+    wait_for(&remote, |e| matches!(e, Event::DevicesChanged))?;
+    assert!(remote.send(Command::Refresh(pos_service::Query {
+        products: Default::default(),
+        sale_offset: 0,
+        report: pos_service::Period::day(pos_service::bangkok_date(1_760_000_000)),
+        shift_offset: 0,
+        movement_shift: None,
+        movement_offset: 0,
+        stock_product: None,
+    })));
+    wait_for(
+        &remote,
+        |e| matches!(e, Event::Ready(data) if data.shop_profile.as_ref() == Some(&profile)),
+    )?;
     // Device-local work is refused on a device.
     assert!(remote.send(Command::Demo));
     wait_for(&remote, |e| {

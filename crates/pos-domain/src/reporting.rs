@@ -47,6 +47,10 @@ pub struct DailySummary {
     /// Ingredients used by sales (voids give back) and removed by hand in
     /// this period, by name.
     pub ingredients: Vec<IngredientUsage>,
+    /// Sales and refunds by register (drawer) they went through, main
+    /// register first. Older sales without a ledger row count as the main one.
+    #[serde(default)]
+    pub registers: Vec<RegisterSales>,
 }
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct PromoSales {
@@ -68,6 +72,14 @@ pub struct IngredientUsage {
     pub removed: i64,
     /// Cost of `used` at the current cost per unit, when known.
     pub cost: Option<Money>,
+}
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct RegisterSales {
+    pub register_id: uuid::Uuid,
+    pub name: String,
+    pub sale_count: u64,
+    pub sales: Money,
+    pub refunds: Money,
 }
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct StaffSales {
