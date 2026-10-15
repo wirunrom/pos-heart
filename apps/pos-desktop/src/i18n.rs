@@ -385,6 +385,8 @@ impl Language {
             ),
             Error::NoOpenShift => self.text("กรุณาเปิดกะก่อนรับเงินหรือคืนเงิน", "Open a shift before taking or refunding payment."),
             Error::ShiftAlreadyOpen => self.text("มีกะเปิดอยู่แล้ว รีเฟรชแล้วตรวจสอบกะปัจจุบัน", "A shift is already open. Refresh and review it."),
+            Error::DeviceNotFound => self.text("ไม่พบเครื่องนี้", "Device not found."),
+            Error::InvalidDevice => self.text("ชื่อเครื่องต้องมี 1–80 ตัวอักษร", "A device name needs 1–80 characters."),
             Error::RegisterNotFound => self.text("ไม่พบเครื่องขายนี้ หรือเลิกใช้แล้ว", "This register was not found or is retired."),
             Error::InvalidRegister => self.text("ชื่อเครื่องขายต้องมี 1–80 ตัวอักษร", "A register name needs 1–80 characters."),
             Error::ShiftChanged => self.text("กะหรือยอดเงินเปลี่ยนแล้ว กรุณาตรวจยอดใหม่ก่อนยืนยัน", "Shift or totals changed. Review the refreshed totals before confirming."),

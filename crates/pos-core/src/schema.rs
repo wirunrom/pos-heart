@@ -61,6 +61,18 @@ diesel::table! {
     }
 }
 diesel::table! {
+    devices (id) {
+        id -> Text,
+        name -> Text,
+        kind -> Text,
+        register_id -> Text,
+        token_hash -> Text,
+        paired_at -> BigInt,
+        revoked_at -> Nullable<BigInt>,
+        last_seen_at -> Nullable<BigInt>,
+    }
+}
+diesel::table! {
     registers (id) {
         id -> Text,
         name -> Text,
@@ -210,6 +222,7 @@ diesel::table! {
     }
 }
 diesel::allow_tables_to_appear_in_same_query!(
+    devices,
     registers,
     option_sets,
     categories,

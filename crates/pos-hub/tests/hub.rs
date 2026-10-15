@@ -1,8 +1,9 @@
-//! A hub and devices over loopback: two registers selling the shared stock,
-//! per-device sign-in, retries after a dropped connection and refusals.
-use pos_core::{MAIN_REGISTER, Pos};
+//! A hub and devices over loopback TLS: pairing, pinning, two registers
+//! selling the shared stock, per-device sign-in, retries after a dropped
+//! connection, revocation and refusals.
+use pos_core::{DeviceKind, MAIN_REGISTER, Pos};
 use pos_domain::{Cart, CartLine, PaymentMethod, PaymentRequest, ProductInput};
-use pos_hub::{Client, ClientError, Executor, Hub, Job, wire::Refusal};
+use pos_hub::{Client, ClientError, Executor, Hub, Job, tls::Identity, wire::Refusal};
 use pos_service::{Reply, Request, Topic};
 use std::{
     net::TcpListener,
@@ -12,25 +13,52 @@ use std::{
 use uuid::Uuid;
 type Result<T = ()> = std::result::Result<T, Box<dyn std::error::Error>>;
 
+type Task = Box<dyn FnOnce(&mut Pos, &mut Executor) + Send>;
+enum Owner {
+    Job(Job),
+    /// Test hook: run something on the database owner.
+    Do(Task),
+}
 /// The database owner: one thread running jobs in order, like the worker.
-fn owner(mut pos: Pos) -> (pos_hub::Submit, thread::JoinHandle<Pos>) {
-    let (tx, rx) = mpsc::channel::<Job>();
+fn owner(
+    mut pos: Pos,
+) -> (
+    pos_hub::Submit,
+    mpsc::Sender<Owner>,
+    thread::JoinHandle<Pos>,
+) {
+    let (tx, rx) = mpsc::channel::<Owner>();
     let handle = thread::spawn(move || {
         let mut executor = Executor::default();
         let mut now = 1_760_000_000;
-        while let Ok(job) = rx.recv() {
+        while let Ok(item) = rx.recv() {
             now += 1;
-            executor.run(&mut pos, job, now);
+            match item {
+                Owner::Job(job) => executor.run(&mut pos, job, now),
+                Owner::Do(f) => f(&mut pos, &mut executor),
+            }
         }
         pos
     });
-    let tx = Mutex::new(tx);
-    let submit: pos_hub::Submit = Arc::new(move |job| tx.lock().is_ok_and(|t| t.send(job).is_ok()));
-    (submit, handle)
+    let jobs = Mutex::new(tx.clone());
+    let submit: pos_hub::Submit =
+        Arc::new(move |job| jobs.lock().is_ok_and(|t| t.send(Owner::Job(job)).is_ok()));
+    (submit, tx, handle)
+}
+fn query() -> pos_service::Query {
+    pos_service::Query {
+        products: Default::default(),
+        sale_offset: 0,
+        report: pos_service::Period::day(pos_service::bangkok_date(1_760_000_000)),
+        shift_offset: 0,
+        movement_shift: None,
+        movement_offset: 0,
+        stock_product: None,
+    }
 }
 
 #[test]
-fn two_registers_sell_shared_stock_through_the_hub() -> Result {
+fn paired_registers_sell_shared_stock_over_tls() -> Result {
     let dir = tempfile::tempdir()?;
     let mut pos = Pos::open(dir.path().join("shop.sqlite3"))?;
     let product = pos.save_product(ProductInput {
@@ -40,39 +68,49 @@ fn two_registers_sell_shared_stock_through_the_hub() -> Result {
         stock: Some(3),
         ..Default::default()
     })?;
-    let second = Uuid::new_v4();
-    pos.add_register(second, "เคาน์เตอร์ 2", 1)?;
-    let (submit, owner) = owner(pos);
-    let tablet = Uuid::new_v4();
-    let register2 = Uuid::new_v4();
-    let authorize: pos_hub::Authorize = Arc::new(move |device, token| {
-        if device == tablet && token == "t-token" {
-            Some(MAIN_REGISTER)
-        } else if device == register2 && token == "r-token" {
-            Some(second)
-        } else {
-            None
-        }
-    });
-    let hub = Hub::start(TcpListener::bind("127.0.0.1:0")?, authorize, submit)?;
+    let (submit, control, owner) = owner(pos);
+    let identity = Identity::generate()?;
+    let hub = Hub::start(TcpListener::bind("127.0.0.1:0")?, &identity, submit)?;
     let addr = hub.address();
 
-    // Unknown devices and wrong tokens are refused.
+    // No pairing open, then a wrong code: refused.
+    let tablet = Uuid::new_v4();
     assert!(matches!(
-        Client::connect(addr, Uuid::new_v4(), "x"),
+        Client::pair(addr, "000000", tablet, "iPad 1", DeviceKind::Ordering),
+        Err(ClientError::Refused(Refusal::WrongCode))
+    ));
+    let code = hub.open_pairing();
+    let wrong = if code == "111111" { "222222" } else { "111111" };
+    assert!(matches!(
+        Client::pair(addr, wrong, tablet, "iPad 1", DeviceKind::Ordering),
+        Err(ClientError::Refused(Refusal::WrongCode))
+    ));
+    let a_pair = Client::pair(addr, &code, tablet, "iPad 1", DeviceKind::Ordering)?;
+    assert_eq!(a_pair.register, MAIN_REGISTER);
+    assert_eq!(a_pair.fingerprint, identity.fingerprint());
+    // A code works once.
+    assert!(Client::pair(addr, &code, Uuid::new_v4(), "x", DeviceKind::Ordering).is_err());
+    let counter2 = Uuid::new_v4();
+    let code = hub.open_pairing();
+    let b_pair = Client::pair(addr, &code, counter2, "เคาน์เตอร์ 2", DeviceKind::Register)?;
+    assert_eq!(
+        b_pair.register, counter2,
+        "a register device gets its own register"
+    );
+
+    // Unknown devices, wrong tokens and another certificate are refused.
+    assert!(matches!(
+        Client::connect(addr, Uuid::new_v4(), &a_pair.token, a_pair.fingerprint),
         Err(ClientError::Refused(Refusal::NotPaired))
     ));
     assert!(matches!(
-        Client::connect(addr, tablet, "wrong"),
+        Client::connect(addr, tablet, "wrong", a_pair.fingerprint),
         Err(ClientError::Refused(Refusal::NotPaired))
     ));
+    assert!(Client::connect(addr, tablet, &a_pair.token, [0u8; 32]).is_err());
 
-    let (mut a, _) = Client::connect(addr, tablet, "t-token")?;
-    let (mut b, _) = Client::connect(addr, register2, "r-token")?;
-    assert_eq!(a.register, MAIN_REGISTER);
-    assert_eq!(b.register, second);
-
-    // Each register opens its own shift.
+    let (mut a, _) = Client::connect(addr, tablet, &a_pair.token, a_pair.fingerprint)?;
+    let (mut b, _) = Client::connect(addr, counter2, &b_pair.token, b_pair.fingerprint)?;
     let shift_a = Uuid::new_v4();
     let shift_b = Uuid::new_v4();
     a.call(Uuid::new_v4(), Request::OpenShift(shift_a, "100".parse()?))?;
@@ -100,23 +138,24 @@ fn two_registers_sell_shared_stock_through_the_hub() -> Result {
     };
     // The answer was "lost": the device reconnects and resends.
     drop(a);
-    let (mut a, _) = Client::connect(addr, tablet, "t-token")?;
+    let (mut a, _) = Client::connect(addr, tablet, &a_pair.token, a_pair.fingerprint)?;
     let Reply::Paid(again) = a.call(call_id, pay_a)? else {
         return Err("expected Paid".into());
     };
     assert_eq!(first.number, again.number);
 
-    // Only one unit is left: the second register cannot sell two.
-    let short = b.call(
-        Uuid::new_v4(),
-        Request::Pay(Box::new(bill(2)), cash("20")?, shift_b),
-    );
-    assert!(matches!(short, Err(ClientError::Business(_))));
-    // Paying against the other register's shift is refused.
+    // One unit left: the second register cannot sell two, nor use A's shift.
+    assert!(matches!(
+        b.call(
+            Uuid::new_v4(),
+            Request::Pay(Box::new(bill(2)), cash("20")?, shift_b)
+        ),
+        Err(ClientError::Business(_))
+    ));
     assert!(
         b.call(
             Uuid::new_v4(),
-            Request::Pay(Box::new(bill(1)), cash("10")?, shift_a),
+            Request::Pay(Box::new(bill(1)), cash("10")?, shift_a)
         )
         .is_err()
     );
@@ -127,29 +166,25 @@ fn two_registers_sell_shared_stock_through_the_hub() -> Result {
     else {
         return Err("expected Paid".into());
     };
-    // B heard about A's sale while it waited.
-    assert!(b.changes().iter().any(|v| v.get(Topic::Sales) > 0));
+    // A hears about B's sale without asking.
+    let mut heard = false;
+    for _ in 0..20 {
+        if a.changes()?.iter().any(|v| v.get(Topic::Sales) >= 2) {
+            heard = true;
+            break;
+        }
+        thread::sleep(std::time::Duration::from_millis(50));
+    }
+    assert!(heard, "change notice reached the other device");
 
-    // Each register sees its own drawer.
-    let refresh = |c: &mut Client| -> Result<pos_service::Data> {
-        match c.call(
-            Uuid::new_v4(),
-            Request::Refresh(Box::new(pos_service::Query {
-                products: Default::default(),
-                sale_offset: 0,
-                report: pos_service::Period::day(pos_service::bangkok_date(1_760_000_000)),
-                shift_offset: 0,
-                movement_shift: None,
-                movement_offset: 0,
-                stock_product: None,
-            })),
-        )? {
+    let data = |c: &mut Client| -> Result<pos_service::Data> {
+        match c.call(Uuid::new_v4(), Request::Refresh(Box::new(query())))? {
             Reply::Data(d) => Ok(*d),
             _ => Err("expected Data".into()),
         }
     };
-    let da = refresh(&mut a)?;
-    let db = refresh(&mut b)?;
+    let da = data(&mut a)?;
+    let db = data(&mut b)?;
     assert_eq!(
         da.shift.as_ref().ok_or("a")?.expected()?.to_string(),
         "120.00"
@@ -159,12 +194,33 @@ fn two_registers_sell_shared_stock_through_the_hub() -> Result {
         "60.00"
     );
     assert_eq!(da.products[0].stock, Some(0));
-    assert_eq!(da.sales.len(), 2);
+    assert_eq!(da.registers.len(), 2);
+
+    // Revoking the tablet ends its access.
+    let (done_tx, done_rx) = mpsc::channel();
+    control.send(Owner::Do(Box::new(move |pos, executor| {
+        let _ = done_tx.send(pos.revoke_device(tablet, 2_000_000_000));
+        executor.forget(tablet);
+    })))?;
+    done_rx.recv()??;
+    hub.disconnect(tablet);
+    assert!(matches!(
+        Client::connect(addr, tablet, &a_pair.token, a_pair.fingerprint),
+        Err(ClientError::Refused(Refusal::NotPaired))
+    ));
 
     drop(a);
     drop(b);
     drop(hub);
-    let _pos = owner.join().map_err(|_| "owner panicked")?;
+    drop(control);
+    let mut pos = owner.join().map_err(|_| "owner panicked")?;
+    let devices = pos.devices()?;
+    assert_eq!(devices.len(), 2);
+    assert!(
+        devices
+            .iter()
+            .any(|d| d.id == tablet && d.revoked_at.is_some())
+    );
     Ok(())
 }
 
@@ -172,7 +228,7 @@ fn two_registers_sell_shared_stock_through_the_hub() -> Result {
 fn sign_in_belongs_to_the_device() -> Result {
     let dir = tempfile::tempdir()?;
     let mut pos = Pos::open(dir.path().join("shop.sqlite3"))?;
-    let owner_member = pos.save_staff(
+    let member = pos.save_staff(
         &pos_domain::StaffInput {
             name: "เจ้าของ".into(),
             role: Some("owner".into()),
@@ -183,18 +239,28 @@ fn sign_in_belongs_to_the_device() -> Result {
         1,
     )?;
     pos.sign_out();
-    let (submit, owner) = owner(pos);
+    let (submit, _control, owner) = owner(pos);
+    let identity = Identity::generate()?;
+    let hub = Hub::start(TcpListener::bind("127.0.0.1:0")?, &identity, submit)?;
     let d1 = Uuid::new_v4();
     let d2 = Uuid::new_v4();
-    let authorize: pos_hub::Authorize =
-        Arc::new(move |device, _| (device == d1 || device == d2).then_some(MAIN_REGISTER));
-    let hub = Hub::start(TcpListener::bind("127.0.0.1:0")?, authorize, submit)?;
-    let (mut one, _) = Client::connect(hub.address(), d1, "")?;
-    let (mut two, _) = Client::connect(hub.address(), d2, "")?;
-    one.call(
-        Uuid::new_v4(),
-        Request::SignIn(owner_member.id, "1234".into()),
+    let p1 = Client::pair(
+        hub.address(),
+        &hub.open_pairing(),
+        d1,
+        "one",
+        DeviceKind::Ordering,
     )?;
+    let p2 = Client::pair(
+        hub.address(),
+        &hub.open_pairing(),
+        d2,
+        "two",
+        DeviceKind::Ordering,
+    )?;
+    let (mut one, _) = Client::connect(hub.address(), d1, &p1.token, p1.fingerprint)?;
+    let (mut two, _) = Client::connect(hub.address(), d2, &p2.token, p2.fingerprint)?;
+    one.call(Uuid::new_v4(), Request::SignIn(member.id, "1234".into()))?;
     // Device two is not signed in: a staffed shop requires sign-in.
     assert!(
         two.call(
@@ -210,6 +276,7 @@ fn sign_in_belongs_to_the_device() -> Result {
     drop(one);
     drop(two);
     drop(hub);
+    drop(_control);
     let _ = owner.join().map_err(|_| "owner panicked")?;
     Ok(())
 }

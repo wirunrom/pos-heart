@@ -16,6 +16,8 @@ pub enum ActivityKind {
     Role,
     /// Dishes cancelled after the kitchen had them.
     Kitchen,
+    /// A device paired with or revoked from the shop hub.
+    Device,
 }
 impl ActivityKind {
     pub fn key(self) -> &'static str {
@@ -28,6 +30,7 @@ impl ActivityKind {
             Self::Staff => "staff",
             Self::Role => "role",
             Self::Kitchen => "kitchen",
+            Self::Device => "device",
         }
     }
 }

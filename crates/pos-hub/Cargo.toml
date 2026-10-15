@@ -12,6 +12,9 @@ serde.workspace = true
 serde_json.workspace = true
 uuid.workspace = true
 time.workspace = true
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12", "logging"] }
+rcgen = { version = "0.13", default-features = false, features = ["ring", "crypto"] }
+sha2 = "0.10"
 [dev-dependencies]
 tempfile.workspace = true
 [lints]

@@ -4,6 +4,7 @@ mod catalog;
 mod category;
 mod checkout;
 mod database;
+mod devices;
 mod dining;
 mod import;
 mod ingredient;
@@ -24,6 +25,7 @@ pub use audit::{ActivityEvent, ActivityKind, ActivityQuery};
 pub use catalog::MAX_IMAGE_BYTES;
 pub use catalog::{CatalogCounts, ProductQuery, ProductView};
 pub use database::{DeviceContext, Pos, SCHEMA_VERSION};
+pub use devices::{Device, DeviceKind};
 pub use import::{ImportIssue, ImportPreview, ImportRow, MAX_IMPORT_BYTES, MAX_IMPORT_ROWS};
 use pos_domain::DomainError;
 pub use pos_domain::MAIN_REGISTER;
@@ -111,6 +113,10 @@ pub enum Error {
     ShiftAlreadyOpen,
     #[error("Register not found or retired")]
     RegisterNotFound,
+    #[error("Device not found")]
+    DeviceNotFound,
+    #[error("Device name must be 1–80 characters")]
+    InvalidDevice,
     #[error("Register name must be 1–80 characters")]
     InvalidRegister,
     #[error("Shift changed; refresh and review the current totals")]

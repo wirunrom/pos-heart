@@ -21,6 +21,7 @@ fn kind_label(kind: ActivityKind, lang: Language) -> &'static str {
         ActivityKind::Staff => lang.text("พนักงาน", "Staff"),
         ActivityKind::Role => lang.text("บทบาท / สิทธิ์", "Role / permissions"),
         ActivityKind::Kitchen => lang.text("ยกเลิกรายการที่ส่งครัวแล้ว", "Kitchen cancellation"),
+        ActivityKind::Device => lang.text("จับคู่ / เพิกถอนเครื่อง", "Device paired / revoked"),
     }
 }
 /// Returns true when a filter, refresh, or page change requests worker I/O.
@@ -59,6 +60,7 @@ pub fn show(ui: &mut egui::Ui, theme: &Theme, lang: Language, state: &mut Activi
                     ActivityKind::Staff,
                     ActivityKind::Role,
                     ActivityKind::Kitchen,
+                    ActivityKind::Device,
                 ] {
                     if ui
                         .selectable_value(&mut state.query.kind, Some(kind), kind_label(kind, lang))
