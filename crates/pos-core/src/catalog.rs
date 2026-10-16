@@ -74,6 +74,19 @@ pub(crate) fn find_product(conn: &mut SqliteConnection, id: Uuid) -> Result<Prod
         .try_into()?;
     crate::option_set::resolve_one(conn, product)
 }
+/// A product archived or not (the cloud keeps archived ones as inactive).
+pub(crate) fn find_any_product(conn: &mut SqliteConnection, id: Uuid) -> Result<Option<Product>> {
+    let Some(row) = products::table
+        .find(id.to_string())
+        .select(ProductRow::as_select())
+        .first::<ProductRow>(conn)
+        .optional()?
+    else {
+        return Ok(None);
+    };
+    let product: Product = row.try_into()?;
+    Ok(Some(crate::option_set::resolve_one(conn, product)?))
+}
 
 /// Saved views shown in the product side navigation.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]

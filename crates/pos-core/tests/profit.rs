@@ -1,3 +1,4 @@
+mod support;
 use pos_core::Pos;
 use pos_domain::{
     Cart, CartLine, Discount, Money, PaymentMethod, ProductInput, RefundLine, RefundRequest,
@@ -232,6 +233,7 @@ fn schema_twelve_migration_keeps_legacy_receipts_unknown_and_byte_identical() ->
     diesel::sql_query("UPDATE sales SET receipt_json=?")
         .bind::<Text, _>(&old)
         .execute(&mut db)?;
+    db.batch_execute(support::DROP_OUTBOX)?;
     db.batch_execute(
         "DROP TABLE devices; DROP INDEX one_open_shift_per_register; ALTER TABLE shifts DROP COLUMN register_id; DROP TABLE registers; CREATE UNIQUE INDEX one_open_shift ON shifts ((1)) WHERE closed_at IS NULL; DROP TABLE purchase_cancellations; DROP TABLE purchase_receipts; DROP TABLE purchase_orders; DROP TABLE suppliers; DROP TABLE option_sets; ALTER TABLE products DROP COLUMN option_sets_json; DROP TABLE categories; DROP TABLE product_images; ALTER TABLE products DROP COLUMN image_rev; DROP TABLE ingredient_movements; DROP TABLE ingredients; ALTER TABLE products DROP COLUMN recipe_json; ALTER TABLE products DROP COLUMN option_recipe_json; DROP TABLE promotions; DROP TABLE credit_notes; DROP TABLE kitchen_tickets; DROP TABLE dining_tables; ALTER TABLE products DROP COLUMN kitchen;
          DROP TABLE activity_events; ALTER TABLE products DROP COLUMN cost_satang; PRAGMA user_version=12;",
