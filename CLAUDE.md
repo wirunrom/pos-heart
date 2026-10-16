@@ -39,7 +39,8 @@ cargo run -p pos-desktop --bin pos-heart -- --data-dir /tmp/shots --page sell --
 # Cloud server (apps/pos-cloud, axum + PostgreSQL via tokio-postgres/deadpool; never sqlx: its libsqlite3 link clashes with diesel's):
 docker compose -f apps/pos-cloud/compose.yaml up -d      # dev PostgreSQL on 127.0.0.1:5433 (password dev)
 DATABASE_URL=postgres://postgres:dev@127.0.0.1:5433/pos_cloud cargo run -p pos-cloud   # http://127.0.0.1:8080
-POS_CLOUD_TEST_DATABASE_URL=postgres://postgres:dev@127.0.0.1:5433/postgres cargo test -p pos-cloud   # skipped without the variable; CI runs it on Linux
+POS_CLOUD_TEST_DATABASE_URL=postgres://postgres:dev@127.0.0.1:5433/postgres cargo test -p pos-cloud   # skipped without the variable; CI runs it on Linux (the desktop cloud_tests also use it)
+cargo run -p pos-cloud --example demo_shop -- http://127.0.0.1:8080 LINKCODE   # fictional week of sales for the dashboard (code from the dashboard's Shop tab)
 
 # Required before finishing (same as CI on macOS + Windows, which adds --locked):
 cargo fmt --all -- --check

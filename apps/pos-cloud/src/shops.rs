@@ -218,8 +218,12 @@ pub async fn changes(
         .db()
         .await?
         .query(
-            "SELECT seq, kind, record_id, patch, created_at, applied_at, outcome FROM changes
-             WHERE shop_id = $1 ORDER BY seq DESC LIMIT 100",
+            "SELECT c.seq, c.kind, c.record_id, c.patch, c.created_at, c.applied_at, c.outcome,
+                    r.data->>'name'
+             FROM changes c
+             LEFT JOIN records r
+               ON r.shop_id = c.shop_id AND r.kind = c.kind AND r.record_id = c.record_id
+             WHERE c.shop_id = $1 ORDER BY c.seq DESC LIMIT 100",
             &[&shop],
         )
         .await?;
@@ -233,6 +237,7 @@ pub async fn changes(
                 "created_at": r.get::<_, i64>(4),
                 "applied_at": r.get::<_, Option<i64>>(5),
                 "outcome": r.get::<_, Option<String>>(6),
+                "name": r.get::<_, Option<String>>(7),
             }))
             .collect::<Vec<_>>()
     )))
