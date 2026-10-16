@@ -55,6 +55,8 @@ pub struct App {
     pub worker: Worker,
     /// This computer as the shop hub (Settings → Devices).
     pub hub: crate::hub_ui::State,
+    /// Cloud sync of this main register (Settings → Devices & cloud).
+    pub cloud: crate::cloud_ui::State,
     pub auto_lock: crate::auto_lock::State,
     pub auto_backup: crate::auto_backup_ui::State,
     /// Immediate local gate; only a current-generation successful PIN clears it.
@@ -247,6 +249,7 @@ impl App {
         Ok(Self {
             worker,
             hub,
+            cloud: Default::default(),
             auto_lock,
             auto_backup: crate::auto_backup_ui::State::load(&data_dir),
             session_locked: false,
@@ -1755,6 +1758,9 @@ impl eframe::App for App {
             && self.hub.error.is_none()
         {
             crate::hub_ui::start(self);
+        }
+        if self.ready {
+            crate::cloud_ui::start(self);
         }
         // `--page tables` and older links land on the Sell floor.
         if self.page == Page::Tables {

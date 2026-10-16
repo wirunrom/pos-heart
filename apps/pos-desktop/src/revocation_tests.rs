@@ -121,11 +121,14 @@ fn revoke_is_nonblocking_even_with_a_full_busy_queue() -> Result {
     let (tx, _commands) = mpsc::sync_channel(1);
     let (_events, rx) = mpsc::channel();
     let (jobs, _job_rx) = mpsc::channel();
+    let (cloud, _cloud_rx) = mpsc::channel();
     let worker = Worker {
         tx,
         rx,
         epoch: Arc::new(AtomicU64::new(0)),
         jobs,
+        cloud,
+        cloud_on: Arc::new(std::sync::atomic::AtomicBool::new(false)),
     };
     assert!(worker.send(Command::SignIn(Uuid::new_v4(), "1234".into())));
     worker.revoke(); // The wake command cannot fit; the atomic revocation still happens.

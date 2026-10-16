@@ -24,11 +24,22 @@ const LEGACY_LIMIT_KEY: &str = "cashier_discount_limit_bp";
 
 #[derive(Debug, Clone, Default)]
 pub(crate) struct Session {
+    /// Owner edits from the cloud (`Pos::apply_cloud_change` only).
+    pub cloud: bool,
     pub actor: Option<Uuid>,
     /// One-shot approval for the next command; the caller clears it.
     pub approver: Option<Uuid>,
     failures: u32,
     locked_until: Option<Instant>,
+}
+
+impl Session {
+    pub(crate) fn cloud() -> Self {
+        Self {
+            cloud: true,
+            ..Self::default()
+        }
+    }
 }
 
 fn hash(pin: &str, salt: &[u8]) -> [u8; 32] {
@@ -175,6 +186,12 @@ pub(crate) fn authorize(
     session: &Session,
     permission: Option<Permission>,
 ) -> Result<Attribution> {
+    if session.cloud {
+        return Ok(Attribution {
+            by: Some(crate::cloud::cloud_ref()),
+            approved_by: None,
+        });
+    }
     if !enabled(conn)? {
         return Ok(Attribution::default());
     }

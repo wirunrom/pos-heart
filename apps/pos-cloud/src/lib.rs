@@ -67,6 +67,11 @@ pub async fn migrate(pool: &Pool) -> Result<(), BoxError> {
     Ok(())
 }
 
+/// Serves the API on `listener` until the task is dropped.
+pub async fn serve(listener: tokio::net::TcpListener, state: AppState) -> std::io::Result<()> {
+    axum::serve(listener, router(state)).await
+}
+
 pub fn router(state: AppState) -> Router {
     Router::new()
         .route("/healthz", get(|| async { "ok" }))

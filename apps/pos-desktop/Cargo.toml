@@ -12,6 +12,7 @@ pos-domain.workspace = true
 pos-core.workspace = true
 pos-service.workspace = true
 pos-hub.workspace = true
+ureq = { version = "3", features = ["json"] }
 eframe.workspace = true
 directories.workspace = true
 uuid.workspace = true
@@ -31,3 +32,6 @@ features = ["png", "jpeg"]
 
 [dev-dependencies]
 tempfile.workspace = true
+# Cloud sync test against a real server (skipped without a database URL).
+pos-cloud = { path = "../pos-cloud" }
+tokio = { version = "1", features = ["rt-multi-thread", "net"] }

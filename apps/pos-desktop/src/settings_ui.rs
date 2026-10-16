@@ -177,7 +177,7 @@ impl Section {
             Self::Printing => lang.text("การพิมพ์", "Printing"),
             Self::Staff => lang.text("พนักงานและสิทธิ์", "Staff & permissions"),
             Self::Display => lang.text("ภาษาและหน้าจอ", "Language & display"),
-            Self::Devices => lang.text("อุปกรณ์ในร้าน", "Shop devices"),
+            Self::Devices => lang.text("อุปกรณ์และคลาวด์", "Devices & cloud"),
             Self::Data => lang.text("ข้อมูลและการสำรอง", "Data & backup"),
         }
     }
@@ -355,7 +355,10 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
                                     card(ui, &t, |ui| crate::staff_ui::settings_card(app, ui));
                                 }
                                 Section::Display => card(ui, &t, |ui| display_card(app, ui)),
-                                Section::Devices => card(ui, &t, |ui| crate::hub_ui::card(app, ui)),
+                                Section::Devices => {
+                                    card(ui, &t, |ui| crate::hub_ui::card(app, ui));
+                                    card(ui, &t, |ui| crate::cloud_ui::card(app, ui));
+                                }
                                 Section::Data => card(ui, &t, |ui| data_card(app, ui)),
                             }
                             #[cfg(debug_assertions)]

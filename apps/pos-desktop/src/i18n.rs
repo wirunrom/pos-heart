@@ -295,6 +295,10 @@ impl Language {
                 "โต๊ะนี้มีบิลเปิดอยู่แล้ว เลือกโต๊ะอื่นหรือเปิดบิลเดิม",
                 "This table already has an open bill. Pick another table or open that bill.",
             ),
+            Error::InvalidCloudChange => self.text(
+                "ใช้การแก้ไขจากคลาวด์นี้ไม่ได้",
+                "This change from the cloud cannot be applied.",
+            ),
             Error::BillChanged => self.text(
                 "บิลนี้ถูกแก้จากเครื่องอื่น โหลดบิลล่าสุดแล้ว ตรวจรายการอีกครั้ง",
                 "Another device changed this bill. The latest version is loaded; check it again.",

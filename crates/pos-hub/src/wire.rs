@@ -191,6 +191,7 @@ impl WireError {
             "TableNotFound" => E::TableNotFound,
             "TableBusy" => E::TableBusy,
             "BillChanged" => E::BillChanged,
+            "InvalidCloudChange" => E::InvalidCloudChange,
             "DuplicateTable" => E::DuplicateTable,
             "TicketNotFound" => E::TicketNotFound,
             "NotTaxReceipt" => E::NotTaxReceipt,

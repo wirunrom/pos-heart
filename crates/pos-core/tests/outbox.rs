@@ -119,3 +119,125 @@ fn writes_queue_their_records_for_the_cloud() -> Result {
     assert!(all.iter().all(|i| i.record.is_some()));
     Ok(())
 }
+
+#[test]
+fn owner_edits_from_the_cloud_apply_as_cloud() -> Result {
+    let dir = tempfile::tempdir()?;
+    let mut pos = Pos::open(dir.path().join("shop.sqlite3"))?;
+    let tea = pos.save_product(ProductInput {
+        sku: "T1".into(),
+        name: "ชาไทย".into(),
+        price: "45".parse()?,
+        stock: Some(5),
+        ..Default::default()
+    })?;
+    pos.save_product(ProductInput {
+        sku: "C1".into(),
+        name: "กาแฟ".into(),
+        price: "50".parse()?,
+        ..Default::default()
+    })?;
+    // A staffed shop with nobody signed in: the cloud still applies.
+    pos.save_staff(
+        &pos_domain::StaffInput {
+            name: "เจ้าของ".into(),
+            role: Some("owner".into()),
+            pin: Some("1234".into()),
+            active: true,
+            ..Default::default()
+        },
+        1,
+    )?;
+    pos.sign_out();
+    let patch = |v: serde_json::Value| -> Result<serde_json::Map<String, serde_json::Value>> {
+        Ok(serde_json::from_value(v)?)
+    };
+    let id = tea.id.to_string();
+    pos.apply_cloud_change(
+        "product",
+        &id,
+        &patch(serde_json::json!({"price": 5500, "name": "ชาไทยเย็น"}))?,
+        10,
+    )?;
+    let now = pos.products("", 0)?;
+    let edited = now.iter().find(|p| p.id == tea.id).ok_or("tea")?;
+    assert_eq!(edited.price.to_string(), "55.00");
+    assert_eq!(edited.name, "ชาไทยเย็น");
+    assert_eq!(edited.stock, Some(5), "stock is never touched");
+    let events = pos.activity(&pos_core::ActivityQuery::default())?;
+    let by = events[0].staff.by.as_ref().ok_or("attribution")?;
+    assert_eq!(by.id, pos_core::CLOUD_STAFF);
+    // The session is back: the counter itself still needs a sign-in.
+    assert!(matches!(
+        pos.save_product(ProductInput {
+            sku: "X".into(),
+            name: "x".into(),
+            ..Default::default()
+        }),
+        Err(pos_core::Error::SignInRequired)
+    ));
+    // Refusals leave the shop unchanged.
+    assert!(matches!(
+        pos.apply_cloud_change(
+            "product",
+            &id,
+            &patch(serde_json::json!({"sku": "C1"}))?,
+            11
+        ),
+        Err(pos_core::Error::DuplicateSku)
+    ));
+    assert!(matches!(
+        pos.apply_cloud_change("product", &id, &patch(serde_json::json!({"pin": "1"}))?, 11),
+        Err(pos_core::Error::InvalidCloudChange)
+    ));
+    assert!(matches!(
+        pos.apply_cloud_change("staff", &id, &patch(serde_json::json!({"name": "x"}))?, 11),
+        Err(pos_core::Error::InvalidCloudChange)
+    ));
+    // Archive, restore, and a new product with the owner's ID.
+    pos.apply_cloud_change(
+        "product",
+        &id,
+        &patch(serde_json::json!({"active": false}))?,
+        12,
+    )?;
+    assert!(pos.products("", 0)?.iter().all(|p| p.id != tea.id));
+    pos.apply_cloud_change(
+        "product",
+        &id,
+        &patch(serde_json::json!({"active": true, "price": 6000}))?,
+        13,
+    )?;
+    let back = pos.products("", 0)?;
+    assert_eq!(
+        back.iter()
+            .find(|p| p.id == tea.id)
+            .ok_or("restored")?
+            .price
+            .to_string(),
+        "60.00"
+    );
+    let new = Uuid::new_v4();
+    assert!(matches!(
+        pos.apply_cloud_change(
+            "product",
+            &new.to_string(),
+            &patch(serde_json::json!({"name": "น้ำ"}))?,
+            14
+        ),
+        Err(pos_core::Error::InvalidCloudChange)
+    ));
+    pos.apply_cloud_change(
+        "product",
+        &new.to_string(),
+        &patch(serde_json::json!({"name": "น้ำเปล่า", "sku": "W1", "price": 1500, "category": "เครื่องดื่ม"}))?,
+        15,
+    )?;
+    let water = pos.products("", 0)?;
+    let water = water.iter().find(|p| p.id == new).ok_or("water")?;
+    assert_eq!(
+        (water.sku.as_str(), water.category.as_str()),
+        ("W1", "เครื่องดื่ม")
+    );
+    Ok(())
+}

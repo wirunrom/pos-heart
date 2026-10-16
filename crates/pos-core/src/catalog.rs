@@ -331,11 +331,14 @@ impl Pos {
                     return Err(Error::DuplicateBarcode);
                 }
             }
+            // A given ID that does not exist yet adds the product with it
+            // (owner edits from the cloud); an archived one stays refused.
             let previous = match input.id {
-                Some(_) => Some(find_product(
-                    conn,
-                    Uuid::parse_str(&id).map_err(|_| Error::CorruptData)?,
-                )?),
+                Some(given) => match find_any_product(conn, given)? {
+                    Some(p) if p.active => Some(p),
+                    Some(_) => return Err(Error::ProductUnavailable),
+                    None => None,
+                },
                 None => None,
             };
             // Option rows are checked like recipe items (sign aside).

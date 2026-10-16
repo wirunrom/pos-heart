@@ -3,6 +3,7 @@ mod audit;
 mod catalog;
 mod category;
 mod checkout;
+mod cloud;
 mod database;
 mod devices;
 mod dining;
@@ -26,6 +27,7 @@ mod void;
 pub use audit::{ActivityEvent, ActivityKind, ActivityQuery};
 pub use catalog::MAX_IMAGE_BYTES;
 pub use catalog::{CatalogCounts, ProductQuery, ProductView};
+pub use cloud::CLOUD_STAFF;
 pub use database::{DeviceContext, Pos, SCHEMA_VERSION};
 pub use devices::{Device, DeviceKind};
 pub use import::{ImportIssue, ImportPreview, ImportRow, MAX_IMPORT_BYTES, MAX_IMPORT_ROWS};
@@ -172,6 +174,8 @@ pub enum Error {
     TableBusy,
     #[error("Another device changed this bill; reload it")]
     BillChanged,
+    #[error("This change from the cloud cannot be applied")]
+    InvalidCloudChange,
     #[error("A table with this name already exists in the zone")]
     DuplicateTable,
     #[error("Kitchen ticket not found")]

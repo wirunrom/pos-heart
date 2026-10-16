@@ -3139,6 +3139,7 @@ dependencies = [
  "directories",
  "eframe",
  "image",
+ "pos-cloud",
  "pos-core",
  "pos-domain",
  "pos-hub",
@@ -3149,6 +3150,8 @@ dependencies = [
  "sha2 0.10.9",
  "tempfile",
  "time",
+ "tokio",
+ "ureq",
  "uuid",
 ]
 

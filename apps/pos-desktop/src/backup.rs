@@ -314,6 +314,7 @@ pub fn prepare(pos: &mut Pos, data: &Path, reviewed: &Review) -> pos_core::Resul
             "web-ca.der",
             "web-ca-key.der",
             "device.json",
+            "cloud.json",
         ] {
             if data.join(name).exists() {
                 copy_file(&data.join(name), &stage.join(name))?;

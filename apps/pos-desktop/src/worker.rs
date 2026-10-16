@@ -207,6 +207,9 @@ pub struct Worker {
     epoch: Arc<AtomicU64>,
     /// Device jobs from the hub (multi-device), run between commands.
     jobs: mpsc::Sender<pos_hub::Job>,
+    /// Cloud sync jobs (phase 2), run between commands.
+    cloud: mpsc::Sender<crate::cloud::Job>,
+    cloud_on: Arc<std::sync::atomic::AtomicBool>,
 }
 /// Revocation is observed before every command, independently of queue capacity.
 /// A command already executing may finish; its result keeps the old generation.
@@ -278,6 +281,12 @@ impl Worker {
         let jobs = std::sync::Mutex::new(self.jobs.clone());
         Arc::new(move |job| jobs.lock().is_ok_and(|tx| tx.send(job).is_ok()))
     }
+    /// Queues cloud sync jobs; the worker polls faster from then on.
+    pub fn cloud_submit(&self) -> crate::cloud::Submit {
+        self.cloud_on.store(true, Ordering::SeqCst);
+        let jobs = std::sync::Mutex::new(self.cloud.clone());
+        Arc::new(move |job| jobs.lock().is_ok_and(|tx| tx.send(job).is_ok()))
+    }
     /// Always revokes immediately, even if the queue is full or a write is busy.
     pub fn revoke(&self) {
         self.epoch.fetch_add(1, Ordering::SeqCst);
@@ -287,6 +296,9 @@ impl Worker {
         let (tx, commands) = mpsc::sync_channel::<CommandEnvelope>(16);
         let (events, rx) = mpsc::channel();
         let (jobs, job_rx) = mpsc::channel::<pos_hub::Job>();
+        let (cloud, cloud_rx) = mpsc::channel::<crate::cloud::Job>();
+        let cloud_on = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let worker_cloud_on = Arc::clone(&cloud_on);
         let epoch = Arc::new(AtomicU64::new(0));
         let worker_epoch = Arc::clone(&epoch);
         thread::Builder::new()
@@ -348,6 +360,18 @@ impl Worker {
                     while let Ok(job) = job_rx.try_recv() {
                         changed |= executor.run(&mut pos, job, now());
                     }
+                    // Cloud sync: owner edits change the catalog here and
+                    // on the paired devices.
+                    let mut edited = false;
+                    while let Ok(job) = cloud_rx.try_recv() {
+                        edited |= crate::cloud::run(&mut pos, job, now());
+                    }
+                    if edited {
+                        if let Some(n) = &notifier {
+                            n.touch(pos_service::Topic::Catalog);
+                        }
+                        changed = true;
+                    }
                     if changed {
                         send(EventEnvelope {
                             generation: worker_epoch.load(Ordering::SeqCst),
@@ -357,11 +381,13 @@ impl Worker {
                     }
                     let wait = next_backup
                         .saturating_duration_since(std::time::Instant::now())
-                        .min(std::time::Duration::from_millis(if notifier.is_some() {
-                            50
-                        } else {
-                            1_000
-                        }));
+                        .min(std::time::Duration::from_millis(
+                            if notifier.is_some() || worker_cloud_on.load(Ordering::SeqCst) {
+                                50
+                            } else {
+                                1_000
+                            },
+                        ));
                     let envelope = match commands.recv_timeout(wait) {
                         Ok(envelope) => envelope,
                         Err(mpsc::RecvTimeoutError::Timeout) => continue,
@@ -410,6 +436,8 @@ impl Worker {
             rx,
             epoch,
             jobs,
+            cloud,
+            cloud_on,
         })
     }
 }
@@ -463,6 +491,9 @@ impl Worker {
         let (tx, commands) = mpsc::sync_channel::<CommandEnvelope>(16);
         let (events, rx) = mpsc::channel();
         let (jobs, _unused) = mpsc::channel::<pos_hub::Job>();
+        // A device has no outbox of its own: the main register syncs.
+        let (cloud, _unused_cloud) = mpsc::channel::<crate::cloud::Job>();
+        let cloud_on = Arc::new(std::sync::atomic::AtomicBool::new(false));
         let epoch = Arc::new(AtomicU64::new(0));
         let worker_epoch = Arc::clone(&epoch);
         thread::Builder::new()
@@ -610,6 +641,8 @@ impl Worker {
             rx,
             epoch,
             jobs,
+            cloud,
+            cloud_on,
         })
     }
 }
