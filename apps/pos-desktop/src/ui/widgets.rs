@@ -412,6 +412,8 @@ pub struct FieldOpts<'a> {
     pub invalid: bool,
     pub id: Option<Id>,
     pub enabled: bool,
+    /// Masks the text (passwords).
+    pub password: bool,
 }
 impl Default for FieldOpts<'_> {
     fn default() -> Self {
@@ -422,6 +424,7 @@ impl Default for FieldOpts<'_> {
             invalid: false,
             id: None,
             enabled: true,
+            password: false,
         }
     }
 }
@@ -436,7 +439,8 @@ pub fn text_input(ui: &mut Ui, value: &mut String, opts: FieldOpts<'_>) -> Respo
         .vertical_align(Align::Center)
         .min_size(vec2(width, t.m.control_md))
         .desired_width(width - 2.0 * space::S3)
-        .char_limit(opts.limit);
+        .char_limit(opts.limit)
+        .password(opts.password);
     if let Some(id) = opts.id {
         edit = edit.id(id);
     }

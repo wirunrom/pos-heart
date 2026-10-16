@@ -119,6 +119,25 @@ fn call(method: &str, url: &str, token: Option<&str>, body: Option<Value>) -> Re
     Ok((status, serde_json::from_str(&text).unwrap_or(Value::Null)))
 }
 
+/// Posts raw bytes; (status, body bytes).
+fn raw(method: &str, url: &str, token: &str, body: Option<&[u8]>) -> Result<(u16, Vec<u8>)> {
+    let agent: ureq::Agent = ureq::Agent::config_builder()
+        .http_status_as_error(false)
+        .build()
+        .into();
+    let auth = format!("Bearer {token}");
+    let mut response = match (method, body) {
+        ("POST", Some(b)) => agent
+            .post(url)
+            .header("Authorization", &auth)
+            .header("Content-Type", "application/octet-stream")
+            .send(b)?,
+        _ => agent.get(url).header("Authorization", &auth).call()?,
+    };
+    let status = response.status().as_u16();
+    Ok((status, response.body_mut().read_to_vec()?))
+}
+
 /// A real shop: one product, one sale, everything in the outbox.
 fn shop_outbox() -> Result<(tempfile::TempDir, pos_core::Pos, Uuid)> {
     let dir = tempfile::tempdir()?;
@@ -349,6 +368,30 @@ fn owners_hubs_uploads_reports_and_menu_edits() -> Result {
     assert_eq!(shops[0]["hub"]["name"], "เครื่องหลัก");
     assert_eq!(shops[0]["pending_changes"], 0);
 
+    // Encrypted backups: only the container is accepted; the owner downloads it back.
+    assert_eq!(
+        raw("POST", &api("/hub/backups"), &hub, Some(b"plain database"))?.0,
+        400
+    );
+    let sealed = [b"PHCLOUD1".as_slice(), &[7u8; 64]].concat();
+    let (status, _) = raw("POST", &api("/hub/backups"), &hub, Some(&sealed))?;
+    assert_eq!(status, 200);
+    let (_, backups) = call(
+        "GET",
+        &api(&format!("/shops/{shop_id}/backups")),
+        Some(&owner),
+        None,
+    )?;
+    assert_eq!(backups[0]["size"], sealed.len());
+    let backup = backups[0]["id"].as_str().ok_or("backup id")?.to_owned();
+    let (status, bytes) = raw(
+        "GET",
+        &api(&format!("/shops/{shop_id}/backups/{backup}")),
+        &owner,
+        None,
+    )?;
+    assert_eq!((status, bytes), (200, sealed));
+
     // Another owner sees nothing of this shop.
     let (_, other) = call(
         "POST",
@@ -361,6 +404,7 @@ fn owners_hubs_uploads_reports_and_menu_edits() -> Result {
         "summary?from=2025-10-09&to=2025-10-09",
         "products",
         "changes",
+        "backups",
     ] {
         assert_eq!(
             call(

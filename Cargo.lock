@@ -3136,6 +3136,7 @@ name = "pos-desktop"
 version = "0.1.0"
 dependencies = [
  "ab_glyph",
+ "argon2",
  "directories",
  "eframe",
  "image",
@@ -3145,6 +3146,7 @@ dependencies = [
  "pos-hub",
  "pos-service",
  "qrcodegen",
+ "ring",
  "serde",
  "serde_json",
  "sha2 0.10.9",

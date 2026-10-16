@@ -20,6 +20,11 @@ pub struct State {
     linking: Option<mpsc::Receiver<Result<CloudFile, String>>>,
     pub error: Option<String>,
     started: bool,
+    /// Backup password form (never kept after the key is derived).
+    password: String,
+    confirm: String,
+    deriving: Option<mpsc::Receiver<std::io::Result<crate::cloud_backup::Key>>>,
+    changing: bool,
 }
 
 /// Starts syncing once the database is open, when this computer is linked.
@@ -35,9 +40,14 @@ pub fn start(app: &mut App) {
 }
 fn begin(app: &mut App, file: CloudFile) {
     let ctx = app.ctx.clone();
-    app.cloud.sync = Some(Syncer::start(file, app.worker.cloud_submit(), move || {
-        ctx.request_repaint();
-    }));
+    app.cloud.sync = Some(Syncer::start(
+        file,
+        app.worker.cloud_submit(),
+        app.data_dir.clone(),
+        move || {
+            ctx.request_repaint();
+        },
+    ));
 }
 
 pub fn card(app: &mut App, ui: &mut egui::Ui) {
@@ -208,6 +218,8 @@ fn linked(app: &mut App, ui: &mut egui::Ui, t: &Theme, file: &CloudFile, may: bo
         );
     }
     ui.add_space(space::S2);
+    backups(app, ui, t, file, &status, may);
+    ui.add_space(space::S2);
     ui.horizontal(|ui| {
         if w::button(lang.text("ซิงก์ตอนนี้", "Sync now"))
             .ghost()
@@ -235,6 +247,174 @@ fn linked(app: &mut App, ui: &mut egui::Ui, t: &Theme, file: &CloudFile, may: bo
                 }
                 Err(e) => app.cloud.error = Some(e.to_string()),
             }
+        }
+    });
+}
+
+/// Encrypted daily backups to the cloud, sealed with the owner's password.
+fn backups(
+    app: &mut App,
+    ui: &mut egui::Ui,
+    t: &Theme,
+    file: &CloudFile,
+    status: &crate::cloud::Status,
+    may: bool,
+) {
+    let lang = app.lang;
+    ui.label(t.text(
+        lang.text("ข้อมูลสำรองบนคลาวด์", "Cloud backups"),
+        type_scale::BODY_STRONG,
+    ));
+    if let Some(rx) = &app.cloud.deriving
+        && let Ok(result) = rx.try_recv()
+    {
+        app.cloud.deriving = None;
+        match result {
+            Ok(key) => {
+                let mut saved = file.clone();
+                let (salt, hex) = key.to_hex();
+                saved.backup_salt = Some(salt);
+                saved.backup_key = Some(hex);
+                match saved.save(&app.data_dir) {
+                    Ok(()) => {
+                        app.cloud.file = Some(saved.clone());
+                        app.cloud.changing = false;
+                        begin(app, saved);
+                        if let Some(sync) = &app.cloud.sync {
+                            sync.backup_now();
+                        }
+                        app.toast(lang.text(
+                            "ตั้งรหัสผ่านข้อมูลสำรองแล้ว กำลังสำรองครั้งแรก",
+                            "Backup password set. Making the first backup.",
+                        ));
+                    }
+                    Err(e) => app.cloud.error = Some(e.to_string()),
+                }
+            }
+            Err(e) => app.cloud.error = Some(e.to_string()),
+        }
+    }
+    let has_key = file.key().is_some();
+    if has_key && !app.cloud.changing {
+        let state = if status.backing_up {
+            lang.text("กำลังสำรอง…", "Backing up…").to_owned()
+        } else {
+            match status.last_backup {
+                Some(at) => format!(
+                    "{} {}",
+                    lang.text("สำรองล่าสุด", "Last backup"),
+                    format::date_time(lang, at)
+                ),
+                None => lang.text("ยังไม่ได้สำรอง", "No backup yet").to_owned(),
+            }
+        };
+        w::kv(ui, lang.text("สถานะ", "Status"), &state, w::Value::Plain);
+        if let Some(e) = &status.backup_error {
+            w::inline_error(
+                ui,
+                &format!("{} {e}", lang.text("สำรองไม่สำเร็จ:", "Backup failed:")),
+            );
+        }
+        w::help_text(
+            ui,
+            lang.text(
+                "สำรองทั้งร้านวันละครั้ง เข้ารหัสในเครื่องนี้ก่อนส่ง คลาวด์อ่านไม่ได้ ดาวน์โหลดได้จากหน้าเว็บเจ้าของ แล้วกู้คืนที่ ตั้งค่า → ข้อมูลและสำรอง ด้วยรหัสผ่านนี้",
+                "The whole shop is backed up daily, encrypted on this computer before it leaves; the cloud cannot read it. Download from the owner's web page and restore in Settings → Data & backup with this password.",
+            ),
+        );
+        ui.horizontal(|ui| {
+            if w::button(lang.text("สำรองตอนนี้", "Back up now"))
+                .ghost()
+                .enabled(!status.backing_up)
+                .show(ui)
+                .clicked()
+                && let Some(sync) = &app.cloud.sync
+            {
+                sync.backup_now();
+            }
+            if w::button(lang.text("เปลี่ยนรหัสผ่าน", "Change password"))
+                .ghost()
+                .enabled(may)
+                .show(ui)
+                .clicked()
+            {
+                app.cloud.changing = true;
+            }
+        });
+        return;
+    }
+    w::help_text(
+        ui,
+        lang.text(
+            "ตั้งรหัสผ่านสำหรับข้อมูลสำรอง (อย่างน้อย 10 ตัว) ข้อมูลจะถูกเข้ารหัสด้วยรหัสนี้ก่อนส่ง จดเก็บไว้ให้ดี ถ้าลืม ข้อมูลสำรองบนคลาวด์จะเปิดไม่ได้ และไม่มีใครกู้รหัสให้ได้",
+            "Set a password for backups (at least 10 characters). Backups are encrypted with it before they leave. Keep it safe: if it is lost, cloud backups cannot be opened and nobody can recover it.",
+        ),
+    );
+    if has_key {
+        w::help_text(
+            ui,
+            lang.text(
+                "ข้อมูลสำรองเก่ายังต้องใช้รหัสผ่านเดิม",
+                "Older backups still need the old password.",
+            ),
+        );
+    }
+    let deriving = app.cloud.deriving.is_some();
+    for (value, label) in [
+        (
+            &mut app.cloud.password,
+            lang.text("รหัสผ่านข้อมูลสำรอง", "Backup password"),
+        ),
+        (&mut app.cloud.confirm, lang.text("ใส่อีกครั้ง", "Repeat it")),
+    ] {
+        w::field_label(ui, label, None);
+        w::text_input(
+            ui,
+            value,
+            w::FieldOpts {
+                limit: 200,
+                password: true,
+                enabled: !deriving,
+                ..Default::default()
+            },
+        );
+    }
+    let long = app.cloud.password.chars().count() >= crate::cloud_backup::MIN_PASSWORD;
+    let same = app.cloud.password == app.cloud.confirm;
+    if !app.cloud.confirm.is_empty() && !same {
+        w::inline_error(
+            ui,
+            lang.text("รหัสผ่านสองช่องไม่ตรงกัน", "The passwords do not match."),
+        );
+    }
+    ui.horizontal(|ui| {
+        if w::button(if deriving {
+            lang.text("กำลังตั้งรหัส…", "Setting…")
+        } else {
+            lang.text("ตั้งรหัสผ่านและเริ่มสำรอง", "Set password and start backups")
+        })
+        .enabled(may && long && same && !deriving)
+        .loading(deriving)
+        .show(ui)
+        .clicked()
+        {
+            let password = std::mem::take(&mut app.cloud.password);
+            app.cloud.confirm.clear();
+            let (tx, rx) = mpsc::channel();
+            app.cloud.deriving = Some(rx);
+            std::thread::spawn(move || {
+                let _ = tx.send(crate::cloud_backup::Key::new(&password));
+            });
+        }
+        if has_key
+            && w::button(lang.text("ยกเลิก", "Cancel"))
+                .ghost()
+                .show(ui)
+                .clicked()
+        {
+            app.cloud.changing = false;
+            app.cloud.password.clear();
+            app.cloud.confirm.clear();
         }
     });
 }

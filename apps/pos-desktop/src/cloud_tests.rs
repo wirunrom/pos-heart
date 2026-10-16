@@ -142,8 +142,9 @@ fn sales_go_up_and_owner_edits_come_down() -> Result {
 
     // Link and sync: the outbox empties and the owner sees the sale.
     let file = link(&server, &code, "เครื่องหลัก")?;
+    let file_copy = file.clone();
     assert_eq!(file.shop_name, "ร้านทดสอบ");
-    let sync = Syncer::start(file, worker.cloud_submit(), || {});
+    let sync = Syncer::start(file, worker.cloud_submit(), dir.path().to_path_buf(), || {});
     until(|| {
         let s = sync.status();
         s.last_sync.is_some() && s.pending == Some(0)
@@ -171,6 +172,34 @@ fn sales_go_up_and_owner_edits_come_down() -> Result {
     until(|| sync.status().pending == Some(0) && !sync.status().syncing)?;
     let catalog = get(&api(&format!("/shops/{shop}/products")), &owner)?;
     assert_eq!(catalog["products"][0]["price"], 5000);
+    // Encrypted backup: set a password, back up now, download as the owner,
+    // decrypt and the recovery bundle checks out.
+    drop(sync);
+    let mut file = CloudFile::load(dir.path()).unwrap_or(file_copy);
+    let key = crate::cloud_backup::Key::new("shop backup password")?;
+    let (salt, hex) = key.to_hex();
+    file.backup_salt = Some(salt);
+    file.backup_key = Some(hex);
+    let sync = Syncer::start(file, worker.cloud_submit(), dir.path().to_path_buf(), || {});
+    sync.backup_now();
+    until(|| sync.status().last_backup.is_some())?;
+    assert_eq!(sync.status().backup_error, None);
+    let backups = get(&api(&format!("/shops/{shop}/backups")), &owner)?;
+    let id = backups[0]["id"].as_str().ok_or("backup")?.to_owned();
+    let mut response = agent()
+        .get(&api(&format!("/shops/{shop}/backups/{id}")))
+        .header("Authorization", &format!("Bearer {owner}"))
+        .call()?;
+    let sealed = response
+        .body_mut()
+        .with_config()
+        .limit(1 << 30)
+        .read_to_vec()?;
+    let restored = dir.path().join("restored.posbackup");
+    assert!(crate::cloud_backup::open(&sealed, "not the password", &restored).is_err());
+    crate::cloud_backup::open(&sealed, "shop backup password", &restored)?;
+    let review = crate::backup::inspect(&restored)?;
+    assert_eq!(review.manifest.info.sales, 1);
     drop(sync);
     drop(worker);
     runtime.block_on(async {

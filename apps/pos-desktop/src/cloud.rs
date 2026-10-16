@@ -40,8 +40,22 @@ pub struct CloudFile {
     pub token: String,
     pub shop: Uuid,
     pub shop_name: String,
+    /// Backup key derived from the owner's backup password (hex), with
+    /// its salt; the password itself is never stored.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub backup_salt: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub backup_key: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_backup: Option<i64>,
 }
 impl CloudFile {
+    pub fn key(&self) -> Option<crate::cloud_backup::Key> {
+        crate::cloud_backup::Key::from_hex(
+            self.backup_salt.as_deref()?,
+            self.backup_key.as_deref()?,
+        )
+    }
     pub fn load(dir: &Path) -> Option<Self> {
         let bytes = std::fs::read(dir.join(FILE)).ok()?;
         serde_json::from_slice(&bytes).ok()
@@ -85,6 +99,8 @@ pub enum Work {
     Apply(Vec<Change>),
     Requeue,
     Pending,
+    /// A recovery bundle of the data folder (first) at the new folder (second).
+    Snapshot(std::path::PathBuf, std::path::PathBuf),
 }
 pub enum Done {
     Batch(Vec<OutboxItem>),
@@ -107,6 +123,11 @@ pub fn run(pos: &mut Pos, job: Job, now: i64) -> bool {
         Work::Ack(seqs) => pos.outbox_ack(&seqs).map(|()| Done::Ok),
         Work::Requeue => pos.requeue_all().map(|()| Done::Ok),
         Work::Pending => pos.outbox_len().map(Done::Pending),
+        // The owner opted in by setting a backup password: scheduled
+        // maintenance, like automatic local backups.
+        Work::Snapshot(data, dest) => {
+            crate::backup::create_maintenance(pos, &data, &dest).map(|_| Done::Ok)
+        }
         Work::Apply(changes) => Ok(Done::Applied(
             changes
                 .into_iter()
@@ -194,6 +215,9 @@ pub fn link(server: &str, code: &str, name: &str) -> Result<CloudFile, String> {
         token: text("token")?,
         shop: uuid("shop")?,
         shop_name: text("shop_name")?,
+        backup_salt: None,
+        backup_key: None,
+        last_backup: None,
     })
 }
 
@@ -206,6 +230,44 @@ pub struct Status {
     pub error: Option<String>,
     /// Owner edits applied since the app started.
     pub applied: u64,
+    pub last_backup: Option<i64>,
+    pub backup_error: Option<String>,
+    pub backing_up: bool,
+}
+
+/// Backups go up once a day (and on "Back up now").
+const BACKUP_EVERY: i64 = 86_400;
+/// Seals a fresh recovery bundle and uploads it; returns when it was made.
+fn backup(file: &CloudFile, submit: &Submit, data: &Path) -> Result<i64, String> {
+    let key = file.key().ok_or("set a backup password first")?;
+    let dest = std::env::temp_dir().join(format!(
+        "pos-heart-cloud-{}.posbackup",
+        Uuid::new_v4().simple()
+    ));
+    ask(submit, Work::Snapshot(data.to_path_buf(), dest.clone()))?;
+    let sealed = crate::cloud_backup::seal(&key, &dest);
+    let _ = std::fs::remove_dir_all(&dest);
+    let sealed = sealed.map_err(|e| e.to_string())?;
+    answer(
+        ureq::Agent::config_builder()
+            .timeout_global(Some(Duration::from_secs(600)))
+            .http_status_as_error(false)
+            .build()
+            .new_agent()
+            .post(file.url("/hub/backups"))
+            .header("Authorization", &file.auth())
+            .header("Content-Type", "application/octet-stream")
+            .send(&sealed[..]),
+    )?;
+    let at = time::OffsetDateTime::now_utc().unix_timestamp();
+    // Keep the time across restarts (cloud.json may have changed meanwhile).
+    if let Some(mut saved) = CloudFile::load(data)
+        && saved.hub == file.hub
+    {
+        saved.last_backup = Some(at);
+        let _ = saved.save(data);
+    }
+    Ok(at)
 }
 
 /// One full sync: upload until the outbox is empty, then apply edits (and
@@ -276,18 +338,31 @@ fn round(file: &CloudFile, submit: &Submit, status: &Mutex<Status>) -> Result<bo
 /// The sync thread. Dropping it stops the loop after the current sync.
 pub struct Syncer {
     stop: Arc<AtomicBool>,
+    backup_now: Arc<AtomicBool>,
     wake: mpsc::Sender<()>,
     pub status: Arc<Mutex<Status>>,
 }
 impl Syncer {
-    pub fn start(file: CloudFile, submit: Submit, repaint: impl Fn() + Send + 'static) -> Self {
+    pub fn start(
+        file: CloudFile,
+        submit: Submit,
+        data: std::path::PathBuf,
+        repaint: impl Fn() + Send + 'static,
+    ) -> Self {
         let stop = Arc::new(AtomicBool::new(false));
-        let status = Arc::new(Mutex::new(Status::default()));
+        let backup_now = Arc::new(AtomicBool::new(false));
+        let status = Arc::new(Mutex::new(Status {
+            last_backup: file.last_backup,
+            ..Status::default()
+        }));
         let (wake, woken) = mpsc::channel::<()>();
-        let (thread_stop, thread_status) = (stop.clone(), status.clone());
+        let (thread_stop, thread_status, thread_backup) =
+            (stop.clone(), status.clone(), backup_now.clone());
         let _ = thread::Builder::new()
             .name("pos-cloud-sync".into())
             .spawn(move || {
+                // A failed backup waits an hour before the schedule retries.
+                let mut backup_after = 0;
                 while !thread_stop.load(Ordering::SeqCst) {
                     if let Ok(mut s) = thread_status.lock() {
                         s.syncing = true;
@@ -312,13 +387,50 @@ impl Syncer {
                         }
                     }
                     repaint();
+                    let now = time::OffsetDateTime::now_utc().unix_timestamp();
+                    let last = thread_status.lock().ok().and_then(|s| s.last_backup);
+                    let due = now >= backup_after && last.is_none_or(|at| now - at >= BACKUP_EVERY);
+                    if !failed
+                        && file.key().is_some()
+                        && (thread_backup.swap(false, Ordering::SeqCst) || due)
+                    {
+                        if let Ok(mut s) = thread_status.lock() {
+                            s.backing_up = true;
+                        }
+                        repaint();
+                        let result = backup(&file, &submit, &data);
+                        if let Ok(mut s) = thread_status.lock() {
+                            s.backing_up = false;
+                            match result {
+                                Ok(at) => {
+                                    s.last_backup = Some(at);
+                                    s.backup_error = None;
+                                }
+                                Err(e) => {
+                                    s.backup_error = Some(e);
+                                    backup_after = now + 3600;
+                                }
+                            }
+                        }
+                        repaint();
+                    }
                     match woken.recv_timeout(if failed { RETRY } else { IDLE }) {
                         Ok(()) | Err(mpsc::RecvTimeoutError::Timeout) => {}
                         Err(mpsc::RecvTimeoutError::Disconnected) => break,
                     }
                 }
             });
-        Self { stop, wake, status }
+        Self {
+            stop,
+            backup_now,
+            wake,
+            status,
+        }
+    }
+    /// Backs up after the next sync, whatever the schedule.
+    pub fn backup_now(&self) {
+        self.backup_now.store(true, Ordering::SeqCst);
+        self.wake();
     }
     /// Syncs now (after a sale, or "Sync now").
     pub fn wake(&self) {

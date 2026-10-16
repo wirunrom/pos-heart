@@ -6,6 +6,7 @@
 //! JSON API under `/api/v1`, errors as `{"error": {"kind", "message"}}`,
 //! bearer tokens (owner sessions, hub tokens) stored only as SHA-256.
 mod auth;
+mod backups;
 mod hub;
 mod report;
 mod shops;
@@ -57,11 +58,18 @@ pub async fn migrate(pool: &Pool) -> Result<(), BoxError> {
             .await?;
         tx.commit().await?;
     }
-    let version: i32 = db
+    let mut version: i32 = db
         .query_one("SELECT version FROM cloud_meta", &[])
         .await?
         .get(0);
-    if version != 1 {
+    if version == 1 {
+        let tx = db.transaction().await?;
+        tx.batch_execute(include_str!("../migrations/002_backups.sql"))
+            .await?;
+        tx.commit().await?;
+        version = 2;
+    }
+    if version != 2 {
         return Err(format!("unsupported cloud schema {version}").into());
     }
     Ok(())
@@ -95,6 +103,15 @@ pub fn router(state: AppState) -> Router {
         .route("/api/v1/hub/upload", post(hub::upload))
         .route("/api/v1/hub/changes", get(hub::changes))
         .route("/api/v1/hub/changes/ack", post(hub::ack))
+        .route(
+            "/api/v1/hub/backups",
+            post(backups::upload).layer(DefaultBodyLimit::max(backups::MAX_BACKUP)),
+        )
+        .route("/api/v1/shops/{shop}/backups", get(backups::list))
+        .route(
+            "/api/v1/shops/{shop}/backups/{backup}",
+            get(backups::download),
+        )
         .layer(DefaultBodyLimit::max(MAX_BODY))
         .with_state(state)
 }

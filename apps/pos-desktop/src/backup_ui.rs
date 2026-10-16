@@ -13,6 +13,16 @@ pub struct State {
     pub review: Option<Review>,
     pub confirm: bool,
     pub pending: Option<std::path::PathBuf>,
+    /// Password of a cloud backup file (`.phcloud`); cleared after use.
+    pub cloud_password: String,
+    decrypting: Option<std::sync::mpsc::Receiver<std::io::Result<std::path::PathBuf>>>,
+}
+/// A downloaded cloud backup rather than a backup folder.
+fn cloud_file(source: &str) -> bool {
+    source
+        .trim()
+        .to_ascii_lowercase()
+        .ends_with(&format!(".{}", crate::cloud_backup::EXTENSION))
 }
 pub fn controls(app: &mut App, ui: &mut egui::Ui) {
     let lang = app.lang;
@@ -25,9 +35,40 @@ pub fn controls(app: &mut App, ui: &mut egui::Ui) {
         });
         w::help_text(ui, lang.text("ชุดสำรองเป็นโฟลเดอร์ รวมฐานข้อมูล ข้อมูลร้าน บิลค้างและร่างนับเงิน ไม่รวมการตั้งค่าเครื่องพิมพ์และหน้าจอ คัดลอกทั้งโฟลเดอร์ไปเก็บนอกเครื่องได้", "A backup folder includes the database, shop profile, open bill and drawer drafts. Printer and display settings stay on this device. Copy the entire folder to external storage."));
         ui.add_space(space::S3);
-        w::field_label(ui, lang.text("โฟลเดอร์ชุดสำรองที่ต้องการกู้คืน", "Backup folder to restore"), None);
+        w::field_label(ui, lang.text("โฟลเดอร์ชุดสำรอง หรือไฟล์ .phcloud จากคลาวด์ ที่ต้องการกู้คืน", "Backup folder, or .phcloud file from the cloud, to restore"), None);
         if ui.add(egui::TextEdit::singleline(&mut app.recovery.source).desired_width(ui.available_width())).changed() { app.recovery.review = None; }
-        if w::button(lang.text("ตรวจชุดสำรอง", "Inspect backup")).enabled(!app.recovery.source.trim().is_empty()).show(ui).clicked() {
+        if let Some(rx) = &app.recovery.decrypting && let Ok(result) = rx.try_recv() {
+            app.recovery.decrypting = None;
+            match result {
+                Ok(folder) => {
+                    app.recovery.source = folder.display().to_string();
+                    app.send(Command::InspectBackup(folder));
+                }
+                Err(e) => app.error = Some(format!("{}: {e}", lang.text("เปิดข้อมูลสำรองจากคลาวด์ไม่ได้", "Cannot open the cloud backup"))),
+            }
+        }
+        if cloud_file(&app.recovery.source) {
+            let decrypting = app.recovery.decrypting.is_some();
+            w::field_label(ui, lang.text("รหัสผ่านข้อมูลสำรอง", "Backup password"), None);
+            w::text_input(ui, &mut app.recovery.cloud_password, w::FieldOpts { limit: 200, password: true, enabled: !decrypting, ..Default::default() });
+            if w::button(if decrypting { lang.text("กำลังถอดรหัส…", "Decrypting…") } else { lang.text("ถอดรหัสและตรวจ", "Decrypt and inspect") })
+                .enabled(!app.recovery.cloud_password.is_empty() && !decrypting).loading(decrypting).show(ui).clicked()
+            {
+                let source = std::path::PathBuf::from(app.recovery.source.trim());
+                let password = std::mem::take(&mut app.recovery.cloud_password);
+                let stamp = time::OffsetDateTime::now_utc().unix_timestamp();
+                // Beside the data folder, like other recovery folders.
+                let dest = app.data_dir.parent().unwrap_or(&app.data_dir).join(format!("cloud-restore-{stamp}.posbackup"));
+                let (tx, rx) = std::sync::mpsc::channel();
+                app.recovery.decrypting = Some(rx);
+                std::thread::spawn(move || {
+                    let result = std::fs::read(&source)
+                        .and_then(|bytes| crate::cloud_backup::open(&bytes, &password, &dest))
+                        .map(|()| dest);
+                    let _ = tx.send(result);
+                });
+            }
+        } else if w::button(lang.text("ตรวจชุดสำรอง", "Inspect backup")).enabled(!app.recovery.source.trim().is_empty()).show(ui).clicked() {
             app.send(Command::InspectBackup(app.recovery.source.trim().into()));
         }
         if let Some(review) = app.recovery.review.clone() {

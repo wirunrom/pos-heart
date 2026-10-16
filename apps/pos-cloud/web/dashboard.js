@@ -234,7 +234,10 @@ async function menuView() {
 
 async function shopView() {
   const shop = shops.find((s) => s.id === shopId);
-  const changes = await api("GET", `/shops/${shopId}/changes`);
+  const [changes, backups] = await Promise.all([
+    api("GET", `/shops/${shopId}/changes`),
+    api("GET", `/shops/${shopId}/backups`),
+  ]);
   const hub = el("section", { class: "pane" }, el("h2", {}, "เครื่องหลักในร้าน"));
   if (shop.hub) {
     hub.append(el("div", { class: "rows" },
@@ -265,9 +268,26 @@ async function shopView() {
       label(c),
       el("span", { class: "sub" }, `${when(c.created_at)}${c.outcome && c.outcome !== "applied" ? ` · ${c.outcome}` : ""}`)))),
     changes.length ? null : el("p", { class: "muted" }, "ยังไม่มี"));
+  const size = (n) => n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`;
+  const download = (b) => guard(async () => {
+    const res = await fetch(`/api/v1/shops/${shopId}/backups/${b.id}`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const url = URL.createObjectURL(await res.blob());
+    const name = (res.headers.get("Content-Disposition") || "").match(/filename="([^"]+)"/);
+    const a = el("a", { href: url, download: name ? name[1] : "pos-heart.phcloud" });
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+  });
+  const saved = el("section", { class: "pane" }, el("h2", {}, "ข้อมูลสำรองที่เข้ารหัส"),
+    el("p", { class: "muted" }, "เครื่องหลักสำรองทั้งร้านวันละครั้ง เข้ารหัสด้วยรหัสผ่านข้อมูลสำรองของร้านก่อนส่ง ระบบนี้อ่านไม่ได้ ถ้าเครื่องในร้านเสีย ดาวน์โหลดไฟล์ล่าสุดแล้วกู้คืนที่เครื่องใหม่: ตั้งค่า → ข้อมูลและสำรอง"),
+    el("div", { class: "rows" }, ...backups.map((b) => el("div", { class: "row" },
+      el("span", {}, when(b.created_at)),
+      el("button", { class: "secondary", onclick: () => download(b) }, "ดาวน์โหลด"),
+      el("span", { class: "sub" }, size(b.size))))),
+    backups.length ? null : el("p", { class: "muted" }, "ยังไม่มี ตั้งรหัสผ่านข้อมูลสำรองที่เครื่องหลัก: ตั้งค่า → อุปกรณ์และคลาวด์"));
   const another = el("section", { class: "pane" }, el("h2", {}, "ร้านอื่น"),
     el("button", { class: "secondary", onclick: () => { $("view").replaceChildren(newShopView()); } }, "เพิ่มร้าน"));
-  return [hub, history, another];
+  return [hub, saved, history, another];
 }
 
 $("tabs").addEventListener("click", (ev) => {

@@ -14,7 +14,7 @@ pub const MAX_BATCH: usize = 1000;
 
 /// A linked main register (`Authorization: Bearer <hub id>.<token>`).
 pub struct Hub {
-    shop: Uuid,
+    pub(crate) shop: Uuid,
 }
 impl FromRequestParts<AppState> for Hub {
     type Rejection = ApiError;

@@ -13,6 +13,8 @@ pos-core.workspace = true
 pos-service.workspace = true
 pos-hub.workspace = true
 ureq = { version = "3", features = ["json"] }
+ring = "0.17"
+argon2 = { version = "0.5", features = ["std"] }
 eframe.workspace = true
 directories.workspace = true
 uuid.workspace = true
