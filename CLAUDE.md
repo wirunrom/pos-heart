@@ -36,6 +36,11 @@ cargo run -p pos-desktop --bin pos-heart -- --data-dir /tmp/shots --page sell --
 # Split payment / split bill (Sell with a filled cart): --preview sell-split (split footer) | sell-split-review (review dialog, PromptPay QR for the transfer part when an ID is set) | bill-split (split-bill dialog)
 # Tables (seed with --tables): --page tables (Sell with the floor tab); --preview kitchen (kitchen window embedded for capture) | table-bill | table-move (move mode) | table-pay (payment section open) | table-editor
 
+# Cloud server (apps/pos-cloud, axum + PostgreSQL via tokio-postgres/deadpool; never sqlx: its libsqlite3 link clashes with diesel's):
+docker compose -f apps/pos-cloud/compose.yaml up -d      # dev PostgreSQL on 127.0.0.1:5433 (password dev)
+DATABASE_URL=postgres://postgres:dev@127.0.0.1:5433/pos_cloud cargo run -p pos-cloud   # http://127.0.0.1:8080
+POS_CLOUD_TEST_DATABASE_URL=postgres://postgres:dev@127.0.0.1:5433/postgres cargo test -p pos-cloud   # skipped without the variable; CI runs it on Linux
+
 # Required before finishing (same as CI on macOS + Windows, which adds --locked):
 cargo fmt --all -- --check
 cargo clippy --workspace --all-targets -- -D warnings
@@ -59,7 +64,7 @@ Protocol tests: `crates/pos-service/tests/protocol.rs`; hub tests (loopback devi
 
 ## Architecture in brief
 
-- `apps/pos-desktop` (egui/eframe UI) → `crates/pos-service` (serializable `Request`/`Reply` business protocol, `Query`/`Data`, `handle()` — the one dispatcher, shared with future paired devices) → `crates/pos-core` (Diesel/SQLite persistence and transactions) → `crates/pos-domain` (Money, Cart, Sale, Shift, PaymentMethod, validation). Domain never imports UI or storage; no repository traits, no async runtime, no network yet (multi-device plan: docs/multi-device.md). New business commands go into `pos_service::Request`/`Reply`/`handle` and are mapped in `worker::request`/`worker::event`; device-local work stays in the worker.
+- `apps/pos-desktop` (egui/eframe UI) → `crates/pos-service` (serializable `Request`/`Reply` business protocol, `Query`/`Data`, `handle()` — the one dispatcher, shared with future paired devices) → `crates/pos-core` (Diesel/SQLite persistence and transactions) → `crates/pos-domain` (Money, Cart, Sale, Shift, PaymentMethod, validation). Domain never imports UI or storage; no repository traits and no async runtime in the shop apps/crates (the separate cloud server `apps/pos-cloud` uses tokio/axum); network services are opt-in (multi-device plan: docs/multi-device.md). New business commands go into `pos_service::Request`/`Reply`/`handle` and are mapped in `worker::request`/`worker::event`; device-local work stays in the worker.
 - A single worker thread (`apps/pos-desktop/src/worker.rs`) owns the one SQLite connection. UI screens send typed requests over a bounded channel and render the worker's `Data` results; no DB work in paint. Worker requests a repaint on completion.
 - Migrations are plain SQL in `crates/pos-core/migrations/NNN_*.sql`, applied by `database.rs` via `PRAGMA user_version` inside an IMMEDIATE transaction; unknown future versions refuse startup. `schema.rs` is hand-maintained to mirror the SQL — update both when adding a migration (current is 026; next is 027). Old-schema test fixtures drop migration 026 first with `tests/support::DROP_OUTBOX`.
 - Writes (checkout, void, shift open/close, cash movement) are single IMMEDIATE transactions that revalidate catalog/shift state and commit receipt, stock, held-cart removal, ledger entry and shift totals together. Retry identity (cart ID / UUID) is looked up before the active-shift gate.

@@ -1,0 +1,31 @@
+[package]
+name = "pos-cloud"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+description = "POS Heart cloud server: shop records from hubs, owner dashboard, catalog changes back to the shop"
+
+[dependencies]
+pos-domain.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+uuid.workspace = true
+time.workspace = true
+# The server is a separate process: async (tokio/axum) is fine here; the
+# shop apps stay thread-based.
+axum = { version = "0.8", default-features = false, features = ["http1", "json", "query", "tokio"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "signal"] }
+tokio-postgres = { version = "0.7", features = ["with-uuid-1", "with-serde_json-1"] }
+deadpool-postgres = "0.14"
+argon2 = { version = "0.5", features = ["std"] }
+password-hash = { version = "0.5", features = ["getrandom"] }
+sha2 = "0.10"
+
+[dev-dependencies]
+ureq = { version = "3", features = ["json"] }
+pos-core.workspace = true
+tempfile.workspace = true
+
+[lints]
+workspace = true

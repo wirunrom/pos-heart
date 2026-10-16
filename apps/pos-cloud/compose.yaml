@@ -1,0 +1,18 @@
+# Local development database for pos-cloud (not for production).
+#   docker compose -f apps/pos-cloud/compose.yaml up -d
+#   DATABASE_URL=postgres://postgres:dev@127.0.0.1:5433/pos_cloud cargo run -p pos-cloud
+#   POS_CLOUD_TEST_DATABASE_URL=postgres://postgres:dev@127.0.0.1:5433/postgres cargo test -p pos-cloud
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: pos-heart-cloud-db
+    environment:
+      POSTGRES_PASSWORD: dev
+      POSTGRES_DB: pos_cloud
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - pos-heart-cloud-db:/var/lib/postgresql/data
+    restart: unless-stopped
+volumes:
+  pos-heart-cloud-db:

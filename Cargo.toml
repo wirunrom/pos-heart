@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/pos-domain", "crates/pos-core", "crates/pos-service", "crates/pos-hub", "apps/pos-desktop"]
+members = ["crates/pos-domain", "crates/pos-core", "crates/pos-service", "crates/pos-hub", "apps/pos-desktop", "apps/pos-cloud"]
 resolver = "3"
 default-members = ["apps/pos-desktop"]
 
