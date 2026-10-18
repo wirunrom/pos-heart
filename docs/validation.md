@@ -33,7 +33,7 @@ Database checks establish the stored note and backup integrity; they do not veri
 ## Still unverified
 
 - Other display scaling, physical touch hardware and very long shop data. The minimum sale layout now has scoped macOS evidence below.
-- Windows build/runtime in this session. CI configuration is provided; no remote CI success is claimed.
+- Windows runtime beyond the first VM run below (CI builds and tests pass on Windows; see "Installers and first Windows run").
 - Installers/signing, barcode scanner behavior, receipt printers and other shop hardware.
 - Recovery on Windows, actual power-loss recovery and field testing (the restore UI now has scoped macOS evidence below).
 
@@ -305,3 +305,10 @@ Automated on macOS: `cargo fmt --all -- --check`, warnings-denied workspace Clip
 Native debug captures (`seed_screens DIR --restaurant --tables --sets`, fictional data) were inspected for every workspace at 1280×820 Thai Compact Soft Saffron, and at 1000×700 English Touch Square Jade for Home, History, Shift close, Products editor, Reports and Settings; Sell was also checked at 1000×700 Thai Compact, Touch payment, Square, and the table floor. Fixes from this inspection: text drawn on the graphite (headings, kitchen header, demo label) uses chrome colours; free-table text uses muted ink; accent text follows the preset; the reconcile pane, close/reconcile buttons, search hint, best-seller rows, receipts-by-method pane and unknown gross-profit figure fit narrow windows. Not every Cartesian combination of shape, accent, language, density and size was captured.
 
 Not verified: clicked end-to-end flows in the new layout (captures use presets), Windows runtime, real printers/drawers/scanners, picture import from real files or drag and drop, the Sell "load more" scroll beyond 500 products, and the screenshot pack in `screenshots/2026-10-14/` (still the pre-v0.2 design; re-run `capture.py`). History filter-chip counts cover the loaded page (50 receipts), not the whole period.
+
+## Installers and first Windows run — 2026-10-18
+
+- Release workflow run 39121572099 (manual, commit `ab02819`) built the universal macOS dmg and the Windows setup `POS-Heart-0.1.0-Windows-Setup.exe` (SHA-256 `491ee1c9af8b6e7f05d518d0892950d23b61bffec7f7386f94450bd961920f5e`) on GitHub runners.
+- macOS: an Apple-silicon-only `POS Heart.app` built locally (ad hoc signed, Gatekeeper rejects it as expected until Developer ID signing) launched from the bundle and showed first-run setup.
+- **Windows, first runtime evidence** (owner-run, Azure VM, AMD EPYC 2 vCPU, 4 GB RAM, no GPU): the setup installed per user, the app opened with the icon, Thai text and Settings rendered correctly, and the owner reported the rest of the basic run as fine. Memory use was small. CPU reached 90%+ while the mouse moved or the UI changed and fell to a few percent when idle: with no GPU, Windows renders through the software adapter, so every repaint costs CPU. Real shop PCs with any integrated GPU are not expected to show this; a VM without a GPU is the worst case.
+- Not verified on Windows yet: printers and cash drawer, scanner, shop-device hub/client and iPad over a LAN, cloud sync, recovery/restore, 125% scaling on a small screen, a real (GPU) PC, installing an update over a previous version with data.

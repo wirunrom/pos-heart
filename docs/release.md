@@ -24,6 +24,13 @@ Unsigned builds work but warn on first launch:
 - **macOS:** the app is signed ad hoc. The first time, right-click (or Control-click) **POS Heart** in Applications → **Open** → **Open**. To remove the warning, get an Apple Developer ID (Apple Developer Program, about US$99/year), put the certificate in the runner keychain and set `MACOS_SIGN_IDENTITY`; with `APPLE_ID`, `APPLE_TEAM_ID` and `APPLE_APP_PASSWORD` the script also notarizes and staples the dmg.
 - **Windows:** SmartScreen shows "Windows protected your PC" → **More info** → **Run anyway**. A code-signing certificate (OV/EV) removes it once it has reputation; sign `pos-heart.exe` and the setup with `signtool` before publishing.
 
+## Computer requirements
+
+- macOS 11 or later (Apple silicon or Intel); Windows 10/11 64-bit.
+- 2 CPU cores and 4 GB RAM are enough (measured on a 2 vCPU / 4 GB Windows VM: little memory, idle CPU a few percent).
+- **A graphics adapter is needed for smooth use:** any integrated GPU (Intel UHD/Iris, AMD Radeon, Apple) with DirectX 12, Vulkan or Metal. Without one (cloud VMs, remote desktops) Windows draws the app on the CPU: it works, but CPU jumps while the screen changes.
+- Screen at least 1000×700 points (the app scales down to fit, e.g. 1366×768 at 125%).
+
 ## Installing and updating
 
 - macOS: open the dmg, drag **POS Heart** to **Applications**. Windows: run the setup (per user, no administrator needed; an "all users" install is offered).
