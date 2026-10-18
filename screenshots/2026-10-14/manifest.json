@@ -12,10 +12,9 @@
       "preset": "page",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/01-main/home.png",
-      "status": "ok",
-      "elapsed_seconds": 1.45
+      "theme": "soft",
+      "file": "soft/01-main/home.png",
+      "status": "ok"
     },
     {
       "group": "01-main",
@@ -25,10 +24,9 @@
       "preset": "page",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/01-main/sell.png",
-      "status": "ok",
-      "elapsed_seconds": 2.05
+      "theme": "soft",
+      "file": "soft/01-main/sell.png",
+      "status": "ok"
     },
     {
       "group": "01-main",
@@ -38,10 +36,9 @@
       "preset": "page",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/01-main/products.png",
-      "status": "ok",
-      "elapsed_seconds": 2.65
+      "theme": "soft",
+      "file": "soft/01-main/products.png",
+      "status": "ok"
     },
     {
       "group": "01-main",
@@ -51,10 +48,9 @@
       "preset": "page",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/01-main/history.png",
-      "status": "ok",
-      "elapsed_seconds": 2.66
+      "theme": "soft",
+      "file": "soft/01-main/history.png",
+      "status": "ok"
     },
     {
       "group": "01-main",
@@ -64,10 +60,9 @@
       "preset": "page",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/01-main/shift.png",
-      "status": "ok",
-      "elapsed_seconds": 2.68
+      "theme": "soft",
+      "file": "soft/01-main/shift.png",
+      "status": "ok"
     },
     {
       "group": "01-main",
@@ -77,10 +72,9 @@
       "preset": "page",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/01-main/reports.png",
-      "status": "ok",
-      "elapsed_seconds": 2.8
+      "theme": "soft",
+      "file": "soft/01-main/reports.png",
+      "status": "ok"
     },
     {
       "group": "01-main",
@@ -90,10 +84,9 @@
       "preset": "page",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/01-main/settings.png",
-      "status": "ok",
-      "elapsed_seconds": 1.58
+      "theme": "soft",
+      "file": "soft/01-main/settings.png",
+      "status": "ok"
     },
     {
       "group": "01-main",
@@ -103,10 +96,9 @@
       "preset": "activity",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/01-main/activity.png",
-      "status": "ok",
-      "elapsed_seconds": 1.44
+      "theme": "soft",
+      "file": "soft/01-main/activity.png",
+      "status": "ok"
     },
     {
       "group": "01-main",
@@ -116,8 +108,8 @@
       "preset": null,
       "fixture": "fresh",
       "login": false,
-      "theme": "light",
-      "file": "light/01-main/setup.png",
+      "theme": "soft",
+      "file": "soft/01-main/setup.png",
       "status": "ok"
     },
     {
@@ -128,8 +120,8 @@
       "preset": null,
       "fixture": "main",
       "login": false,
-      "theme": "light",
-      "file": "light/01-main/lock.png",
+      "theme": "soft",
+      "file": "soft/01-main/lock.png",
       "status": "ok"
     },
     {
@@ -140,8 +132,8 @@
       "preset": null,
       "fixture": "empty",
       "login": false,
-      "theme": "light",
-      "file": "light/01-main/open-shift.png",
+      "theme": "soft",
+      "file": "soft/01-main/open-shift.png",
       "status": "ok"
     },
     {
@@ -152,10 +144,9 @@
       "preset": "sell-held",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/02-sell/sell-held.png",
-      "status": "ok",
-      "elapsed_seconds": 2.51
+      "theme": "soft",
+      "file": "soft/02-sell/sell-held.png",
+      "status": "ok"
     },
     {
       "group": "02-sell",
@@ -165,10 +156,9 @@
       "preset": "sell-note",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/02-sell/sell-note.png",
-      "status": "ok",
-      "elapsed_seconds": 2.31
+      "theme": "soft",
+      "file": "soft/02-sell/sell-note.png",
+      "status": "ok"
     },
     {
       "group": "02-sell",
@@ -178,8 +168,8 @@
       "preset": "sell-options",
       "fixture": "sets",
       "login": true,
-      "theme": "light",
-      "file": "light/02-sell/sell-options.png",
+      "theme": "soft",
+      "file": "soft/02-sell/sell-options.png",
       "status": "ok"
     },
     {
@@ -190,8 +180,8 @@
       "preset": "sell-discount",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/02-sell/sell-discount.png",
+      "theme": "soft",
+      "file": "soft/02-sell/sell-discount.png",
       "status": "ok"
     },
     {
@@ -202,8 +192,8 @@
       "preset": "sell-review",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/02-sell/sell-review.png",
+      "theme": "soft",
+      "file": "soft/02-sell/sell-review.png",
       "status": "ok"
     },
     {
@@ -214,10 +204,9 @@
       "preset": "sell-split",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/02-sell/sell-split.png",
-      "status": "ok",
-      "elapsed_seconds": 2.54
+      "theme": "soft",
+      "file": "soft/02-sell/sell-split.png",
+      "status": "ok"
     },
     {
       "group": "02-sell",
@@ -227,8 +216,8 @@
       "preset": "sell-split-review",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/02-sell/sell-split-review.png",
+      "theme": "soft",
+      "file": "soft/02-sell/sell-split-review.png",
       "status": "ok"
     },
     {
@@ -239,8 +228,8 @@
       "preset": "bill-split",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/02-sell/bill-split.png",
+      "theme": "soft",
+      "file": "soft/02-sell/bill-split.png",
       "status": "ok"
     },
     {
@@ -251,8 +240,8 @@
       "preset": "sell-coupon",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/02-sell/sell-coupon.png",
+      "theme": "soft",
+      "file": "soft/02-sell/sell-coupon.png",
       "status": "ok"
     },
     {
@@ -263,8 +252,8 @@
       "preset": "sell-large",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/02-sell/sell-large.png",
+      "theme": "soft",
+      "file": "soft/02-sell/sell-large.png",
       "status": "ok"
     },
     {
@@ -275,10 +264,9 @@
       "preset": "paid",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/02-sell/paid.png",
-      "status": "ok",
-      "elapsed_seconds": 1.88
+      "theme": "soft",
+      "file": "soft/02-sell/paid.png",
+      "status": "ok"
     },
     {
       "group": "02-sell",
@@ -288,10 +276,9 @@
       "preset": "table-bill",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/02-sell/table-bill.png",
-      "status": "ok",
-      "elapsed_seconds": 2.47
+      "theme": "soft",
+      "file": "soft/02-sell/table-bill.png",
+      "status": "ok"
     },
     {
       "group": "02-sell",
@@ -301,8 +288,1231 @@
       "preset": "table-pay",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/02-sell/table-pay.png",
+      "theme": "soft",
+      "file": "soft/02-sell/table-pay.png",
+      "status": "ok"
+    },
+    {
+      "group": "02-sell",
+      "slug": "table-move",
+      "label": "ย้ายโต๊ะ",
+      "page": "sell",
+      "preset": "table-move",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/02-sell/table-move.png",
+      "status": "ok"
+    },
+    {
+      "group": "02-sell",
+      "slug": "kitchen",
+      "label": "จอครัว",
+      "page": "sell",
+      "preset": "kitchen",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/02-sell/kitchen.png",
+      "status": "ok"
+    },
+    {
+      "group": "02-sell",
+      "slug": "tables",
+      "label": "ผังโต๊ะ",
+      "page": "tables",
+      "preset": "page",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/02-sell/tables.png",
+      "status": "ok"
+    },
+    {
+      "group": "03-catalog",
+      "slug": "product",
+      "label": "แก้ไขสินค้า",
+      "page": "products",
+      "preset": "product",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/03-catalog/product.png",
+      "status": "ok"
+    },
+    {
+      "group": "03-catalog",
+      "slug": "product-new",
+      "label": "เพิ่มสินค้า",
+      "page": "products",
+      "preset": "product-new",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/03-catalog/product-new.png",
+      "status": "ok"
+    },
+    {
+      "group": "03-catalog",
+      "slug": "product-cost",
+      "label": "ต้นทุนสินค้า",
+      "page": "products",
+      "preset": "product-cost",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/03-catalog/product-cost.png",
+      "status": "ok"
+    },
+    {
+      "group": "03-catalog",
+      "slug": "product-recipe",
+      "label": "สูตรและสูตรตามตัวเลือก",
+      "page": "products",
+      "preset": "product-recipe",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/03-catalog/product-recipe.png",
+      "status": "ok"
+    },
+    {
+      "group": "03-catalog",
+      "slug": "bulk",
+      "label": "เลือกหลายสินค้า",
+      "page": "products",
+      "preset": "bulk",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/03-catalog/bulk.png",
+      "status": "ok"
+    },
+    {
+      "group": "03-catalog",
+      "slug": "stock-count",
+      "label": "นับสต็อก",
+      "page": "products",
+      "preset": "stock-count",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/03-catalog/stock-count.png",
+      "status": "ok"
+    },
+    {
+      "group": "03-catalog",
+      "slug": "stock-remove",
+      "label": "นำสต็อกออก",
+      "page": "products",
+      "preset": "stock-remove",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/03-catalog/stock-remove.png",
+      "status": "ok"
+    },
+    {
+      "group": "03-catalog",
+      "slug": "csv-import",
+      "label": "นำเข้าสินค้า CSV",
+      "page": "products",
+      "preset": "csv-import",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/03-catalog/csv-import.png",
+      "status": "ok"
+    },
+    {
+      "group": "03-catalog",
+      "slug": "csv-import-errors",
+      "label": "ข้อผิดพลาดการนำเข้า CSV",
+      "page": "products",
+      "preset": "csv-import-errors",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/03-catalog/csv-import-errors.png",
+      "status": "ok"
+    },
+    {
+      "group": "03-catalog",
+      "slug": "categories",
+      "label": "จัดการหมวดหมู่",
+      "page": "products",
+      "preset": "categories",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/03-catalog/categories.png",
+      "status": "ok"
+    },
+    {
+      "group": "03-catalog",
+      "slug": "category-rename",
+      "label": "เปลี่ยนชื่อ / รวมหมวด",
+      "page": "products",
+      "preset": "category-rename",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/03-catalog/category-rename.png",
+      "status": "ok"
+    },
+    {
+      "group": "03-catalog",
+      "slug": "option-sets",
+      "label": "ชุดตัวเลือกร่วม",
+      "page": "products",
+      "preset": "option-sets",
+      "fixture": "sets",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/03-catalog/option-sets.png",
+      "status": "ok"
+    },
+    {
+      "group": "03-catalog",
+      "slug": "option-set-editor",
+      "label": "แก้ไขชุดตัวเลือกร่วม",
+      "page": "products",
+      "preset": "option-set-editor",
+      "fixture": "sets",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/03-catalog/option-set-editor.png",
+      "status": "ok"
+    },
+    {
+      "group": "03-catalog",
+      "slug": "option-set-bulk",
+      "label": "ผูกชุดตัวเลือกหลายสินค้า",
+      "page": "products",
+      "preset": "option-set-bulk",
+      "fixture": "sets",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/03-catalog/option-set-bulk.png",
+      "status": "ok"
+    },
+    {
+      "group": "03-catalog",
+      "slug": "ingredients",
+      "label": "วัตถุดิบ",
+      "page": "products",
+      "preset": "ingredients",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/03-catalog/ingredients.png",
+      "status": "ok"
+    },
+    {
+      "group": "03-catalog",
+      "slug": "ingredient-history",
+      "label": "ประวัติวัตถุดิบ",
+      "page": "products",
+      "preset": "ingredient-history",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/03-catalog/ingredient-history.png",
+      "status": "ok"
+    },
+    {
+      "group": "04-purchasing",
+      "slug": "purchasing",
+      "label": "รายการใบสั่งซื้อ",
+      "page": "products",
+      "preset": "purchasing",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/04-purchasing/purchasing.png",
+      "status": "ok"
+    },
+    {
+      "group": "04-purchasing",
+      "slug": "suppliers",
+      "label": "ผู้ขาย",
+      "page": "products",
+      "preset": "suppliers",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/04-purchasing/suppliers.png",
+      "status": "ok"
+    },
+    {
+      "group": "04-purchasing",
+      "slug": "supplier-editor",
+      "label": "แก้ไขผู้ขาย",
+      "page": "products",
+      "preset": "supplier-editor",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/04-purchasing/supplier-editor.png",
+      "status": "ok"
+    },
+    {
+      "group": "04-purchasing",
+      "slug": "purchase-create",
+      "label": "สร้างใบสั่งซื้อ",
+      "page": "products",
+      "preset": "purchase-create",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/04-purchasing/purchase-create.png",
+      "status": "ok"
+    },
+    {
+      "group": "04-purchasing",
+      "slug": "purchase-create-confirm",
+      "label": "ยืนยันใบสั่งซื้อ",
+      "page": "products",
+      "preset": "purchase-create-confirm",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/04-purchasing/purchase-create-confirm.png",
+      "status": "ok"
+    },
+    {
+      "group": "04-purchasing",
+      "slug": "purchase-detail",
+      "label": "รายละเอียดและประวัติรับของ",
+      "page": "products",
+      "preset": "purchase-detail",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/04-purchasing/purchase-detail.png",
+      "status": "ok"
+    },
+    {
+      "group": "04-purchasing",
+      "slug": "purchase-receive",
+      "label": "รับของบางส่วน",
+      "page": "products",
+      "preset": "purchase-receive",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/04-purchasing/purchase-receive.png",
+      "status": "ok"
+    },
+    {
+      "group": "04-purchasing",
+      "slug": "purchase-receive-confirm",
+      "label": "ยืนยันรับของ",
+      "page": "products",
+      "preset": "purchase-receive-confirm",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/04-purchasing/purchase-receive-confirm.png",
+      "status": "ok"
+    },
+    {
+      "group": "04-purchasing",
+      "slug": "purchase-cancel",
+      "label": "ยกเลิกส่วนที่เหลือ",
+      "page": "products",
+      "preset": "purchase-cancel",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/04-purchasing/purchase-cancel.png",
+      "status": "ok"
+    },
+    {
+      "group": "05-history",
+      "slug": "history-detail",
+      "label": "รายละเอียดบิล",
+      "page": "history",
+      "preset": "history-detail",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/05-history/history-detail.png",
+      "status": "ok"
+    },
+    {
+      "group": "05-history",
+      "slug": "history-refunded",
+      "label": "บิลที่คืนบางรายการ",
+      "page": "history",
+      "preset": "history-refunded",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/05-history/history-refunded.png",
+      "status": "ok"
+    },
+    {
+      "group": "05-history",
+      "slug": "receipt",
+      "label": "ใบเสร็จ",
+      "page": "history",
+      "preset": "receipt",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/05-history/receipt.png",
+      "status": "ok"
+    },
+    {
+      "group": "05-history",
+      "slug": "void",
+      "label": "ยกเลิกทั้งบิล",
+      "page": "history",
+      "preset": "void",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/05-history/void.png",
+      "status": "ok"
+    },
+    {
+      "group": "05-history",
+      "slug": "refund",
+      "label": "คืนบางรายการ",
+      "page": "history",
+      "preset": "refund",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/05-history/refund.png",
+      "status": "ok"
+    },
+    {
+      "group": "05-history",
+      "slug": "invoice",
+      "label": "ออกใบกำกับภาษีเต็มรูป",
+      "page": "history",
+      "preset": "invoice",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/05-history/invoice.png",
+      "status": "ok"
+    },
+    {
+      "group": "05-history",
+      "slug": "history-invoiced",
+      "label": "บิลพร้อมใบกำกับและใบลดหนี้",
+      "page": "history",
+      "preset": "history-invoiced",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/05-history/history-invoiced.png",
+      "status": "ok"
+    },
+    {
+      "group": "05-history",
+      "slug": "credit-note",
+      "label": "ตัวอย่างใบลดหนี้",
+      "page": "history",
+      "preset": "credit-note",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/05-history/credit-note.png",
+      "status": "ok"
+    },
+    {
+      "group": "05-history",
+      "slug": "receipt-preview",
+      "label": "ตัวอย่างพิมพ์ใบเสร็จ",
+      "page": "history",
+      "preset": "receipt-preview",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/05-history/receipt-preview.png",
+      "status": "ok"
+    },
+    {
+      "group": "05-history",
+      "slug": "check-bill",
+      "label": "ตรวจบิลก่อนชำระ",
+      "page": "sell",
+      "preset": "check-bill",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/05-history/check-bill.png",
+      "status": "ok"
+    },
+    {
+      "group": "06-shifts",
+      "slug": "close",
+      "label": "นับและสรุปปิดกะ",
+      "page": "shift",
+      "preset": "close",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/06-shifts/close.png",
+      "status": "ok"
+    },
+    {
+      "group": "06-shifts",
+      "slug": "close-confirm",
+      "label": "ยืนยันปิดกะ",
+      "page": "shift",
+      "preset": "close-confirm",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/06-shifts/close-confirm.png",
+      "status": "ok"
+    },
+    {
+      "group": "06-shifts",
+      "slug": "shift-history",
+      "label": "ประวัติกะ",
+      "page": "shift",
+      "preset": "shift-history",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/06-shifts/shift-history.png",
+      "status": "ok"
+    },
+    {
+      "group": "07-reports",
+      "slug": "report-week",
+      "label": "รายงาน 7 วัน",
+      "page": "reports",
+      "preset": "report-week",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/07-reports/report-week.png",
+      "status": "ok"
+    },
+    {
+      "group": "07-reports",
+      "slug": "report-month",
+      "label": "รายงานรายเดือน",
+      "page": "reports",
+      "preset": "report-month",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/07-reports/report-month.png",
+      "status": "ok"
+    },
+    {
+      "group": "07-reports",
+      "slug": "report-categories",
+      "label": "รายงานหมวดหมู่",
+      "page": "reports",
+      "preset": "report-categories",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/07-reports/report-categories.png",
+      "status": "ok"
+    },
+    {
+      "group": "07-reports",
+      "slug": "report-staff",
+      "label": "รายงานพนักงาน",
+      "page": "reports",
+      "preset": "report-staff",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/07-reports/report-staff.png",
+      "status": "ok"
+    },
+    {
+      "group": "07-reports",
+      "slug": "report-promos",
+      "label": "รายงานโปรโมชัน",
+      "page": "reports",
+      "preset": "report-promos",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/07-reports/report-promos.png",
+      "status": "ok"
+    },
+    {
+      "group": "07-reports",
+      "slug": "report-ingredients",
+      "label": "รายงานวัตถุดิบ",
+      "page": "reports",
+      "preset": "report-ingredients",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/07-reports/report-ingredients.png",
+      "status": "ok"
+    },
+    {
+      "group": "07-reports",
+      "slug": "report-profit",
+      "label": "รายงานกำไรขั้นต้น",
+      "page": "reports",
+      "preset": "report-profit",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/07-reports/report-profit.png",
+      "status": "ok"
+    },
+    {
+      "group": "07-reports",
+      "slug": "report-registers",
+      "label": "รายงานแยกเครื่องขาย",
+      "page": "reports",
+      "preset": "report-registers",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/07-reports/report-registers.png",
+      "status": "ok"
+    },
+    {
+      "group": "08-settings",
+      "slug": "settings-shop",
+      "label": "ร้านและหน้าเริ่มต้น",
+      "page": "settings",
+      "preset": "settings-shop",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/08-settings/settings-shop.png",
+      "status": "ok"
+    },
+    {
+      "group": "08-settings",
+      "slug": "settings-pricing",
+      "label": "ราคาและภาษี",
+      "page": "settings",
+      "preset": "settings-pricing",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/08-settings/settings-pricing.png",
+      "status": "ok"
+    },
+    {
+      "group": "08-settings",
+      "slug": "settings-promotions",
+      "label": "โปรโมชัน",
+      "page": "settings",
+      "preset": "settings-promotions",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/08-settings/settings-promotions.png",
+      "status": "ok"
+    },
+    {
+      "group": "08-settings",
+      "slug": "settings-tables",
+      "label": "โต๊ะและโซน",
+      "page": "settings",
+      "preset": "settings-tables",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/08-settings/settings-tables.png",
+      "status": "ok"
+    },
+    {
+      "group": "08-settings",
+      "slug": "settings-printing",
+      "label": "เอกสารและการพิมพ์",
+      "page": "settings",
+      "preset": "settings-printing",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/08-settings/settings-printing.png",
+      "status": "ok"
+    },
+    {
+      "group": "08-settings",
+      "slug": "settings-staff",
+      "label": "พนักงานและสิทธิ์",
+      "page": "settings",
+      "preset": "settings-staff",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/08-settings/settings-staff.png",
+      "status": "ok"
+    },
+    {
+      "group": "08-settings",
+      "slug": "settings-display",
+      "label": "ภาษาและหน้าจอ",
+      "page": "settings",
+      "preset": "settings-display",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/08-settings/settings-display.png",
+      "status": "ok"
+    },
+    {
+      "group": "08-settings",
+      "slug": "settings-devices",
+      "label": "อุปกรณ์และคลาวด์",
+      "page": "settings",
+      "preset": "settings-devices",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/08-settings/settings-devices.png",
+      "status": "ok"
+    },
+    {
+      "group": "08-settings",
+      "slug": "settings-devices-pairing",
+      "label": "จับคู่เครื่อง (รหัส 6 หลัก + QR iPad)",
+      "page": "settings",
+      "preset": "settings-devices-pairing",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/08-settings/settings-devices-pairing.png",
+      "status": "ok"
+    },
+    {
+      "group": "08-settings",
+      "slug": "settings-cloud",
+      "label": "คลาวด์ที่เชื่อมแล้ว (ด้านล่าง)",
+      "page": "settings",
+      "preset": "settings-cloud",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/08-settings/settings-cloud.png",
+      "status": "ok"
+    },
+    {
+      "group": "08-settings",
+      "slug": "settings-data",
+      "label": "ข้อมูลและการสำรอง",
+      "page": "settings",
+      "preset": "settings-data",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/08-settings/settings-data.png",
+      "status": "ok"
+    },
+    {
+      "group": "08-settings",
+      "slug": "settings-vat",
+      "label": "ข้อมูล VAT (ด้านล่าง)",
+      "page": "settings",
+      "preset": "settings-vat",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/08-settings/settings-vat.png",
+      "status": "ok"
+    },
+    {
+      "group": "08-settings",
+      "slug": "settings-printer",
+      "label": "เครื่องพิมพ์ (ด้านล่าง)",
+      "page": "settings",
+      "preset": "settings-printer",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/08-settings/settings-printer.png",
+      "status": "ok"
+    },
+    {
+      "group": "08-settings",
+      "slug": "settings-roles",
+      "label": "รายการบทบาท (ด้านล่าง)",
+      "page": "settings",
+      "preset": "settings-roles",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/08-settings/settings-roles.png",
+      "status": "ok"
+    },
+    {
+      "group": "08-settings",
+      "slug": "templates-bill",
+      "label": "แม่แบบตรวจบิล",
+      "page": "settings",
+      "preset": "templates-bill",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/08-settings/templates-bill.png",
+      "status": "ok"
+    },
+    {
+      "group": "08-settings",
+      "slug": "templates-kitchen",
+      "label": "แม่แบบใบครัว",
+      "page": "settings",
+      "preset": "templates-kitchen",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/08-settings/templates-kitchen.png",
+      "status": "ok"
+    },
+    {
+      "group": "08-settings",
+      "slug": "staff-editor",
+      "label": "แก้ไขพนักงาน",
+      "page": "settings",
+      "preset": "staff-editor",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/08-settings/staff-editor.png",
+      "status": "ok"
+    },
+    {
+      "group": "08-settings",
+      "slug": "role-editor",
+      "label": "แก้ไขบทบาทและสิทธิ์",
+      "page": "settings",
+      "preset": "role-editor",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/08-settings/role-editor.png",
+      "status": "ok"
+    },
+    {
+      "group": "08-settings",
+      "slug": "promo-editor",
+      "label": "แก้ไขโปรโมชัน",
+      "page": "settings",
+      "preset": "promo-editor",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/08-settings/promo-editor.png",
+      "status": "ok"
+    },
+    {
+      "group": "08-settings",
+      "slug": "table-editor",
+      "label": "แก้ไขโต๊ะ",
+      "page": "settings",
+      "preset": "table-editor",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/08-settings/table-editor.png",
+      "status": "ok"
+    },
+    {
+      "group": "08-settings",
+      "slug": "automatic-backups",
+      "label": "สำรองอัตโนมัติ",
+      "page": "settings",
+      "preset": "automatic-backups",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/08-settings/automatic-backups.png",
+      "status": "ok"
+    },
+    {
+      "group": "09-dialogs",
+      "slug": "palette",
+      "label": "ค้นหาและสั่งงาน",
+      "page": "home",
+      "preset": "palette",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/09-dialogs/palette.png",
+      "status": "ok"
+    },
+    {
+      "group": "09-dialogs",
+      "slug": "display",
+      "label": "เมนูภาษาและธีม",
+      "page": "home",
+      "preset": "display",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/09-dialogs/display.png",
+      "status": "ok"
+    },
+    {
+      "group": "09-dialogs",
+      "slug": "approval",
+      "label": "ขออนุมัติจากผู้จัดการ",
+      "page": "history",
+      "preset": "approval",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/09-dialogs/approval.png",
+      "status": "ok"
+    },
+    {
+      "group": "09-dialogs",
+      "slug": "backup-review",
+      "label": "ตรวจชุดสำรอง",
+      "page": "settings",
+      "preset": "backup-review",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/09-dialogs/backup-review.png",
+      "status": "ok"
+    },
+    {
+      "group": "09-dialogs",
+      "slug": "backup-confirm",
+      "label": "ยืนยันกู้คืน",
+      "page": "settings",
+      "preset": "backup-confirm",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/09-dialogs/backup-confirm.png",
+      "status": "ok"
+    },
+    {
+      "group": "09-dialogs",
+      "slug": "backup-pending",
+      "label": "เตรียมกู้คืนแล้ว",
+      "page": "settings",
+      "preset": "backup-pending",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/09-dialogs/backup-pending.png",
+      "status": "ok"
+    },
+    {
+      "group": "09-dialogs",
+      "slug": "restore-cloud",
+      "label": "กู้คืนจากไฟล์คลาวด์ (.phcloud)",
+      "page": "settings",
+      "preset": "restore-cloud",
+      "fixture": "main",
+      "login": true,
+      "theme": "soft",
+      "file": "soft/09-dialogs/restore-cloud.png",
+      "status": "ok"
+    },
+    {
+      "group": "01-main",
+      "slug": "home",
+      "label": "หน้าหลัก",
+      "page": "home",
+      "preset": "page",
+      "fixture": "main",
+      "login": true,
+      "theme": "square",
+      "file": "square/01-main/home.png",
+      "status": "ok"
+    },
+    {
+      "group": "01-main",
+      "slug": "sell",
+      "label": "ขาย",
+      "page": "sell",
+      "preset": "page",
+      "fixture": "main",
+      "login": true,
+      "theme": "square",
+      "file": "square/01-main/sell.png",
+      "status": "ok"
+    },
+    {
+      "group": "01-main",
+      "slug": "products",
+      "label": "สินค้า",
+      "page": "products",
+      "preset": "page",
+      "fixture": "main",
+      "login": true,
+      "theme": "square",
+      "file": "square/01-main/products.png",
+      "status": "ok"
+    },
+    {
+      "group": "01-main",
+      "slug": "history",
+      "label": "ประวัติขาย",
+      "page": "history",
+      "preset": "page",
+      "fixture": "main",
+      "login": true,
+      "theme": "square",
+      "file": "square/01-main/history.png",
+      "status": "ok"
+    },
+    {
+      "group": "01-main",
+      "slug": "shift",
+      "label": "กะและลิ้นชัก",
+      "page": "shift",
+      "preset": "page",
+      "fixture": "main",
+      "login": true,
+      "theme": "square",
+      "file": "square/01-main/shift.png",
+      "status": "ok"
+    },
+    {
+      "group": "01-main",
+      "slug": "reports",
+      "label": "รายงานประจำวัน",
+      "page": "reports",
+      "preset": "page",
+      "fixture": "main",
+      "login": true,
+      "theme": "square",
+      "file": "square/01-main/reports.png",
+      "status": "ok"
+    },
+    {
+      "group": "01-main",
+      "slug": "settings",
+      "label": "ตั้งค่า",
+      "page": "settings",
+      "preset": "page",
+      "fixture": "main",
+      "login": true,
+      "theme": "square",
+      "file": "square/01-main/settings.png",
+      "status": "ok"
+    },
+    {
+      "group": "01-main",
+      "slug": "activity",
+      "label": "ประวัติกิจกรรม",
+      "page": "activity",
+      "preset": "activity",
+      "fixture": "main",
+      "login": true,
+      "theme": "square",
+      "file": "square/01-main/activity.png",
+      "status": "ok"
+    },
+    {
+      "group": "01-main",
+      "slug": "setup",
+      "label": "เริ่มต้นร้าน",
+      "page": "home",
+      "preset": null,
+      "fixture": "fresh",
+      "login": false,
+      "theme": "square",
+      "file": "square/01-main/setup.png",
+      "status": "ok"
+    },
+    {
+      "group": "01-main",
+      "slug": "lock",
+      "label": "หน้าลงชื่อเข้าใช้ / ล็อก",
+      "page": "home",
+      "preset": null,
+      "fixture": "main",
+      "login": false,
+      "theme": "square",
+      "file": "square/01-main/lock.png",
+      "status": "ok"
+    },
+    {
+      "group": "01-main",
+      "slug": "open-shift",
+      "label": "เปิดกะ (ยังไม่มีกะ)",
+      "page": "shift",
+      "preset": null,
+      "fixture": "empty",
+      "login": false,
+      "theme": "square",
+      "file": "square/01-main/open-shift.png",
+      "status": "ok"
+    },
+    {
+      "group": "02-sell",
+      "slug": "sell-held",
+      "label": "บิลพัก",
+      "page": "sell",
+      "preset": "sell-held",
+      "fixture": "main",
+      "login": true,
+      "theme": "square",
+      "file": "square/02-sell/sell-held.png",
+      "status": "ok"
+    },
+    {
+      "group": "02-sell",
+      "slug": "sell-note",
+      "label": "หมายเหตุรายการ",
+      "page": "sell",
+      "preset": "sell-note",
+      "fixture": "main",
+      "login": true,
+      "theme": "square",
+      "file": "square/02-sell/sell-note.png",
+      "status": "ok",
+      "elapsed_seconds": 2.68
+    },
+    {
+      "group": "02-sell",
+      "slug": "sell-options",
+      "label": "เลือกตัวเลือกสินค้า",
+      "page": "sell",
+      "preset": "sell-options",
+      "fixture": "sets",
+      "login": true,
+      "theme": "square",
+      "file": "square/02-sell/sell-options.png",
+      "status": "ok",
+      "elapsed_seconds": 2.34
+    },
+    {
+      "group": "02-sell",
+      "slug": "sell-discount",
+      "label": "ส่วนลดรายการ",
+      "page": "sell",
+      "preset": "sell-discount",
+      "fixture": "main",
+      "login": true,
+      "theme": "square",
+      "file": "square/02-sell/sell-discount.png",
+      "status": "ok",
+      "elapsed_seconds": 2.27
+    },
+    {
+      "group": "02-sell",
+      "slug": "sell-review",
+      "label": "ยืนยันรับโอน / QR",
+      "page": "sell",
+      "preset": "sell-review",
+      "fixture": "main",
+      "login": true,
+      "theme": "square",
+      "file": "square/02-sell/sell-review.png",
+      "status": "ok",
+      "elapsed_seconds": 2.65
+    },
+    {
+      "group": "02-sell",
+      "slug": "sell-split",
+      "label": "แบ่งวิธีชำระ",
+      "page": "sell",
+      "preset": "sell-split",
+      "fixture": "main",
+      "login": true,
+      "theme": "square",
+      "file": "square/02-sell/sell-split.png",
+      "status": "ok",
+      "elapsed_seconds": 2.6
+    },
+    {
+      "group": "02-sell",
+      "slug": "sell-split-review",
+      "label": "ยืนยันแบ่งชำระ",
+      "page": "sell",
+      "preset": "sell-split-review",
+      "fixture": "main",
+      "login": true,
+      "theme": "square",
+      "file": "square/02-sell/sell-split-review.png",
+      "status": "ok",
+      "elapsed_seconds": 2.71
+    },
+    {
+      "group": "02-sell",
+      "slug": "bill-split",
+      "label": "แยกบิล",
+      "page": "sell",
+      "preset": "bill-split",
+      "fixture": "main",
+      "login": true,
+      "theme": "square",
+      "file": "square/02-sell/bill-split.png",
+      "status": "ok",
+      "elapsed_seconds": 2.5
+    },
+    {
+      "group": "02-sell",
+      "slug": "sell-coupon",
+      "label": "ใส่คูปอง",
+      "page": "sell",
+      "preset": "sell-coupon",
+      "fixture": "main",
+      "login": true,
+      "theme": "square",
+      "file": "square/02-sell/sell-coupon.png",
+      "status": "ok",
+      "elapsed_seconds": 2.38
+    },
+    {
+      "group": "02-sell",
+      "slug": "sell-large",
+      "label": "ยืนยันเงินสดจำนวนมาก",
+      "page": "sell",
+      "preset": "sell-large",
+      "fixture": "main",
+      "login": true,
+      "theme": "square",
+      "file": "square/02-sell/sell-large.png",
+      "status": "ok",
+      "elapsed_seconds": 2.58
+    },
+    {
+      "group": "02-sell",
+      "slug": "paid",
+      "label": "ชำระเสร็จ",
+      "page": "sell",
+      "preset": "paid",
+      "fixture": "main",
+      "login": true,
+      "theme": "square",
+      "file": "square/02-sell/paid.png",
+      "status": "ok",
+      "elapsed_seconds": 2.77
+    },
+    {
+      "group": "02-sell",
+      "slug": "table-bill",
+      "label": "บิลโต๊ะ",
+      "page": "sell",
+      "preset": "table-bill",
+      "fixture": "main",
+      "login": true,
+      "theme": "square",
+      "file": "square/02-sell/table-bill.png",
+      "status": "ok",
+      "elapsed_seconds": 4.13
+    },
+    {
+      "group": "02-sell",
+      "slug": "table-pay",
+      "label": "ชำระบิลโต๊ะ",
+      "page": "sell",
+      "preset": "table-pay",
+      "fixture": "main",
+      "login": true,
+      "theme": "square",
+      "file": "square/02-sell/table-pay.png",
       "status": "ok",
       "elapsed_seconds": 2.56
     },
@@ -314,10 +1524,10 @@
       "preset": "table-move",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/02-sell/table-move.png",
+      "theme": "square",
+      "file": "square/02-sell/table-move.png",
       "status": "ok",
-      "elapsed_seconds": 2.63
+      "elapsed_seconds": 2.72
     },
     {
       "group": "02-sell",
@@ -327,10 +1537,10 @@
       "preset": "kitchen",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/02-sell/kitchen.png",
+      "theme": "square",
+      "file": "square/02-sell/kitchen.png",
       "status": "ok",
-      "elapsed_seconds": 2.07
+      "elapsed_seconds": 2.55
     },
     {
       "group": "02-sell",
@@ -340,10 +1550,10 @@
       "preset": "page",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/02-sell/tables.png",
+      "theme": "square",
+      "file": "square/02-sell/tables.png",
       "status": "ok",
-      "elapsed_seconds": 2.64
+      "elapsed_seconds": 2.47
     },
     {
       "group": "03-catalog",
@@ -353,10 +1563,10 @@
       "preset": "product",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/03-catalog/product.png",
+      "theme": "square",
+      "file": "square/03-catalog/product.png",
       "status": "ok",
-      "elapsed_seconds": 2.75
+      "elapsed_seconds": 2.85
     },
     {
       "group": "03-catalog",
@@ -366,10 +1576,10 @@
       "preset": "product-new",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/03-catalog/product-new.png",
+      "theme": "square",
+      "file": "square/03-catalog/product-new.png",
       "status": "ok",
-      "elapsed_seconds": 2.62
+      "elapsed_seconds": 2.6
     },
     {
       "group": "03-catalog",
@@ -379,10 +1589,10 @@
       "preset": "product-cost",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/03-catalog/product-cost.png",
+      "theme": "square",
+      "file": "square/03-catalog/product-cost.png",
       "status": "ok",
-      "elapsed_seconds": 2.14
+      "elapsed_seconds": 2.82
     },
     {
       "group": "03-catalog",
@@ -392,10 +1602,10 @@
       "preset": "product-recipe",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/03-catalog/product-recipe.png",
+      "theme": "square",
+      "file": "square/03-catalog/product-recipe.png",
       "status": "ok",
-      "elapsed_seconds": 1.52
+      "elapsed_seconds": 1.38
     },
     {
       "group": "03-catalog",
@@ -405,10 +1615,10 @@
       "preset": "bulk",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/03-catalog/bulk.png",
+      "theme": "square",
+      "file": "square/03-catalog/bulk.png",
       "status": "ok",
-      "elapsed_seconds": 2.87
+      "elapsed_seconds": 2.69
     },
     {
       "group": "03-catalog",
@@ -418,9 +1628,10 @@
       "preset": "stock-count",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/03-catalog/stock-count.png",
-      "status": "ok"
+      "theme": "square",
+      "file": "square/03-catalog/stock-count.png",
+      "status": "ok",
+      "elapsed_seconds": 2.58
     },
     {
       "group": "03-catalog",
@@ -430,9 +1641,10 @@
       "preset": "stock-remove",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/03-catalog/stock-remove.png",
-      "status": "ok"
+      "theme": "square",
+      "file": "square/03-catalog/stock-remove.png",
+      "status": "ok",
+      "elapsed_seconds": 2.56
     },
     {
       "group": "03-catalog",
@@ -442,9 +1654,10 @@
       "preset": "csv-import",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/03-catalog/csv-import.png",
-      "status": "ok"
+      "theme": "square",
+      "file": "square/03-catalog/csv-import.png",
+      "status": "ok",
+      "elapsed_seconds": 2.32
     },
     {
       "group": "03-catalog",
@@ -454,9 +1667,10 @@
       "preset": "csv-import-errors",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/03-catalog/csv-import-errors.png",
-      "status": "ok"
+      "theme": "square",
+      "file": "square/03-catalog/csv-import-errors.png",
+      "status": "ok",
+      "elapsed_seconds": 1.81
     },
     {
       "group": "03-catalog",
@@ -466,10 +1680,10 @@
       "preset": "categories",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/03-catalog/categories.png",
+      "theme": "square",
+      "file": "square/03-catalog/categories.png",
       "status": "ok",
-      "elapsed_seconds": 2.59
+      "elapsed_seconds": 2.7
     },
     {
       "group": "03-catalog",
@@ -479,9 +1693,10 @@
       "preset": "category-rename",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/03-catalog/category-rename.png",
-      "status": "ok"
+      "theme": "square",
+      "file": "square/03-catalog/category-rename.png",
+      "status": "ok",
+      "elapsed_seconds": 2.26
     },
     {
       "group": "03-catalog",
@@ -491,10 +1706,10 @@
       "preset": "option-sets",
       "fixture": "sets",
       "login": true,
-      "theme": "light",
-      "file": "light/03-catalog/option-sets.png",
+      "theme": "square",
+      "file": "square/03-catalog/option-sets.png",
       "status": "ok",
-      "elapsed_seconds": 2.27
+      "elapsed_seconds": 2.44
     },
     {
       "group": "03-catalog",
@@ -504,9 +1719,10 @@
       "preset": "option-set-editor",
       "fixture": "sets",
       "login": true,
-      "theme": "light",
-      "file": "light/03-catalog/option-set-editor.png",
-      "status": "ok"
+      "theme": "square",
+      "file": "square/03-catalog/option-set-editor.png",
+      "status": "ok",
+      "elapsed_seconds": 2.09
     },
     {
       "group": "03-catalog",
@@ -516,9 +1732,10 @@
       "preset": "option-set-bulk",
       "fixture": "sets",
       "login": true,
-      "theme": "light",
-      "file": "light/03-catalog/option-set-bulk.png",
-      "status": "ok"
+      "theme": "square",
+      "file": "square/03-catalog/option-set-bulk.png",
+      "status": "ok",
+      "elapsed_seconds": 1.95
     },
     {
       "group": "03-catalog",
@@ -528,10 +1745,10 @@
       "preset": "ingredients",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/03-catalog/ingredients.png",
+      "theme": "square",
+      "file": "square/03-catalog/ingredients.png",
       "status": "ok",
-      "elapsed_seconds": 2.61
+      "elapsed_seconds": 2.47
     },
     {
       "group": "03-catalog",
@@ -541,10 +1758,10 @@
       "preset": "ingredient-history",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/03-catalog/ingredient-history.png",
+      "theme": "square",
+      "file": "square/03-catalog/ingredient-history.png",
       "status": "ok",
-      "elapsed_seconds": 2.67
+      "elapsed_seconds": 2.5
     },
     {
       "group": "04-purchasing",
@@ -554,10 +1771,10 @@
       "preset": "purchasing",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/04-purchasing/purchasing.png",
+      "theme": "square",
+      "file": "square/04-purchasing/purchasing.png",
       "status": "ok",
-      "elapsed_seconds": 2.67
+      "elapsed_seconds": 2.77
     },
     {
       "group": "04-purchasing",
@@ -567,10 +1784,10 @@
       "preset": "suppliers",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/04-purchasing/suppliers.png",
+      "theme": "square",
+      "file": "square/04-purchasing/suppliers.png",
       "status": "ok",
-      "elapsed_seconds": 2.7
+      "elapsed_seconds": 2.78
     },
     {
       "group": "04-purchasing",
@@ -580,9 +1797,10 @@
       "preset": "supplier-editor",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/04-purchasing/supplier-editor.png",
-      "status": "ok"
+      "theme": "square",
+      "file": "square/04-purchasing/supplier-editor.png",
+      "status": "ok",
+      "elapsed_seconds": 2.41
     },
     {
       "group": "04-purchasing",
@@ -592,9 +1810,10 @@
       "preset": "purchase-create",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/04-purchasing/purchase-create.png",
-      "status": "ok"
+      "theme": "square",
+      "file": "square/04-purchasing/purchase-create.png",
+      "status": "ok",
+      "elapsed_seconds": 2.18
     },
     {
       "group": "04-purchasing",
@@ -604,9 +1823,10 @@
       "preset": "purchase-create-confirm",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/04-purchasing/purchase-create-confirm.png",
-      "status": "ok"
+      "theme": "square",
+      "file": "square/04-purchasing/purchase-create-confirm.png",
+      "status": "ok",
+      "elapsed_seconds": 2.1
     },
     {
       "group": "04-purchasing",
@@ -616,9 +1836,10 @@
       "preset": "purchase-detail",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/04-purchasing/purchase-detail.png",
-      "status": "ok"
+      "theme": "square",
+      "file": "square/04-purchasing/purchase-detail.png",
+      "status": "ok",
+      "elapsed_seconds": 2.54
     },
     {
       "group": "04-purchasing",
@@ -628,9 +1849,10 @@
       "preset": "purchase-receive",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/04-purchasing/purchase-receive.png",
-      "status": "ok"
+      "theme": "square",
+      "file": "square/04-purchasing/purchase-receive.png",
+      "status": "ok",
+      "elapsed_seconds": 2.36
     },
     {
       "group": "04-purchasing",
@@ -640,9 +1862,10 @@
       "preset": "purchase-receive-confirm",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/04-purchasing/purchase-receive-confirm.png",
-      "status": "ok"
+      "theme": "square",
+      "file": "square/04-purchasing/purchase-receive-confirm.png",
+      "status": "ok",
+      "elapsed_seconds": 2.28
     },
     {
       "group": "04-purchasing",
@@ -652,9 +1875,10 @@
       "preset": "purchase-cancel",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/04-purchasing/purchase-cancel.png",
-      "status": "ok"
+      "theme": "square",
+      "file": "square/04-purchasing/purchase-cancel.png",
+      "status": "ok",
+      "elapsed_seconds": 6.82
     },
     {
       "group": "05-history",
@@ -664,10 +1888,10 @@
       "preset": "history-detail",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/05-history/history-detail.png",
+      "theme": "square",
+      "file": "square/05-history/history-detail.png",
       "status": "ok",
-      "elapsed_seconds": 2.87
+      "elapsed_seconds": 2.27
     },
     {
       "group": "05-history",
@@ -677,10 +1901,10 @@
       "preset": "history-refunded",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/05-history/history-refunded.png",
+      "theme": "square",
+      "file": "square/05-history/history-refunded.png",
       "status": "ok",
-      "elapsed_seconds": 2.84
+      "elapsed_seconds": 2.75
     },
     {
       "group": "05-history",
@@ -690,9 +1914,10 @@
       "preset": "receipt",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/05-history/receipt.png",
-      "status": "ok"
+      "theme": "square",
+      "file": "square/05-history/receipt.png",
+      "status": "ok",
+      "elapsed_seconds": 1.93
     },
     {
       "group": "05-history",
@@ -702,9 +1927,10 @@
       "preset": "void",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/05-history/void.png",
-      "status": "ok"
+      "theme": "square",
+      "file": "square/05-history/void.png",
+      "status": "ok",
+      "elapsed_seconds": 2.04
     },
     {
       "group": "05-history",
@@ -714,9 +1940,10 @@
       "preset": "refund",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/05-history/refund.png",
-      "status": "ok"
+      "theme": "square",
+      "file": "square/05-history/refund.png",
+      "status": "ok",
+      "elapsed_seconds": 2.32
     },
     {
       "group": "05-history",
@@ -726,9 +1953,10 @@
       "preset": "invoice",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/05-history/invoice.png",
-      "status": "ok"
+      "theme": "square",
+      "file": "square/05-history/invoice.png",
+      "status": "ok",
+      "elapsed_seconds": 2.33
     },
     {
       "group": "05-history",
@@ -738,10 +1966,10 @@
       "preset": "history-invoiced",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/05-history/history-invoiced.png",
+      "theme": "square",
+      "file": "square/05-history/history-invoiced.png",
       "status": "ok",
-      "elapsed_seconds": 3.02
+      "elapsed_seconds": 2.82
     },
     {
       "group": "05-history",
@@ -751,9 +1979,10 @@
       "preset": "credit-note",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/05-history/credit-note.png",
-      "status": "ok"
+      "theme": "square",
+      "file": "square/05-history/credit-note.png",
+      "status": "ok",
+      "elapsed_seconds": 1.68
     },
     {
       "group": "05-history",
@@ -763,9 +1992,10 @@
       "preset": "receipt-preview",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/05-history/receipt-preview.png",
-      "status": "ok"
+      "theme": "square",
+      "file": "square/05-history/receipt-preview.png",
+      "status": "ok",
+      "elapsed_seconds": 1.89
     },
     {
       "group": "05-history",
@@ -775,9 +2005,10 @@
       "preset": "check-bill",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/05-history/check-bill.png",
-      "status": "ok"
+      "theme": "square",
+      "file": "square/05-history/check-bill.png",
+      "status": "ok",
+      "elapsed_seconds": 1.84
     },
     {
       "group": "06-shifts",
@@ -787,10 +2018,10 @@
       "preset": "close",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/06-shifts/close.png",
+      "theme": "square",
+      "file": "square/06-shifts/close.png",
       "status": "ok",
-      "elapsed_seconds": 1.8
+      "elapsed_seconds": 1.74
     },
     {
       "group": "06-shifts",
@@ -800,9 +2031,10 @@
       "preset": "close-confirm",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/06-shifts/close-confirm.png",
-      "status": "ok"
+      "theme": "square",
+      "file": "square/06-shifts/close-confirm.png",
+      "status": "ok",
+      "elapsed_seconds": 1.89
     },
     {
       "group": "06-shifts",
@@ -812,8 +2044,8 @@
       "preset": "shift-history",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/06-shifts/shift-history.png",
+      "theme": "square",
+      "file": "square/06-shifts/shift-history.png",
       "status": "ok",
       "elapsed_seconds": 2.49
     },
@@ -825,10 +2057,10 @@
       "preset": "report-week",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/07-reports/report-week.png",
+      "theme": "square",
+      "file": "square/07-reports/report-week.png",
       "status": "ok",
-      "elapsed_seconds": 2.54
+      "elapsed_seconds": 2.49
     },
     {
       "group": "07-reports",
@@ -838,10 +2070,10 @@
       "preset": "report-month",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/07-reports/report-month.png",
+      "theme": "square",
+      "file": "square/07-reports/report-month.png",
       "status": "ok",
-      "elapsed_seconds": 2.52
+      "elapsed_seconds": 2.2
     },
     {
       "group": "07-reports",
@@ -851,10 +2083,10 @@
       "preset": "report-categories",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/07-reports/report-categories.png",
+      "theme": "square",
+      "file": "square/07-reports/report-categories.png",
       "status": "ok",
-      "elapsed_seconds": 2.6
+      "elapsed_seconds": 2.7
     },
     {
       "group": "07-reports",
@@ -864,10 +2096,10 @@
       "preset": "report-staff",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/07-reports/report-staff.png",
+      "theme": "square",
+      "file": "square/07-reports/report-staff.png",
       "status": "ok",
-      "elapsed_seconds": 2.77
+      "elapsed_seconds": 2.7
     },
     {
       "group": "07-reports",
@@ -877,1185 +2109,12 @@
       "preset": "report-promos",
       "fixture": "main",
       "login": true,
-      "theme": "light",
-      "file": "light/07-reports/report-promos.png",
-      "status": "ok",
-      "elapsed_seconds": 2.54
-    },
-    {
-      "group": "07-reports",
-      "slug": "report-ingredients",
-      "label": "รายงานวัตถุดิบ",
-      "page": "reports",
-      "preset": "report-ingredients",
-      "fixture": "main",
-      "login": true,
-      "theme": "light",
-      "file": "light/07-reports/report-ingredients.png",
-      "status": "ok",
-      "elapsed_seconds": 2.41
-    },
-    {
-      "group": "07-reports",
-      "slug": "report-profit",
-      "label": "รายงานกำไรขั้นต้น",
-      "page": "reports",
-      "preset": "report-profit",
-      "fixture": "main",
-      "login": true,
-      "theme": "light",
-      "file": "light/07-reports/report-profit.png",
-      "status": "ok",
-      "elapsed_seconds": 2.66
-    },
-    {
-      "group": "08-settings",
-      "slug": "settings-shop",
-      "label": "ร้านและหน้าเริ่มต้น",
-      "page": "settings",
-      "preset": "settings-shop",
-      "fixture": "main",
-      "login": true,
-      "theme": "light",
-      "file": "light/08-settings/settings-shop.png",
-      "status": "ok",
-      "elapsed_seconds": 2.46
-    },
-    {
-      "group": "08-settings",
-      "slug": "settings-pricing",
-      "label": "ราคาและภาษี",
-      "page": "settings",
-      "preset": "settings-pricing",
-      "fixture": "main",
-      "login": true,
-      "theme": "light",
-      "file": "light/08-settings/settings-pricing.png",
+      "theme": "square",
+      "file": "square/07-reports/report-promos.png",
       "status": "ok",
       "elapsed_seconds": 2.69
     },
     {
-      "group": "08-settings",
-      "slug": "settings-promotions",
-      "label": "โปรโมชัน",
-      "page": "settings",
-      "preset": "settings-promotions",
-      "fixture": "main",
-      "login": true,
-      "theme": "light",
-      "file": "light/08-settings/settings-promotions.png",
-      "status": "ok",
-      "elapsed_seconds": 2.61
-    },
-    {
-      "group": "08-settings",
-      "slug": "settings-tables",
-      "label": "โต๊ะและโซน",
-      "page": "settings",
-      "preset": "settings-tables",
-      "fixture": "main",
-      "login": true,
-      "theme": "light",
-      "file": "light/08-settings/settings-tables.png",
-      "status": "ok",
-      "elapsed_seconds": 2.25
-    },
-    {
-      "group": "08-settings",
-      "slug": "settings-printing",
-      "label": "เอกสารและการพิมพ์",
-      "page": "settings",
-      "preset": "settings-printing",
-      "fixture": "main",
-      "login": true,
-      "theme": "light",
-      "file": "light/08-settings/settings-printing.png",
-      "status": "ok",
-      "elapsed_seconds": 2.77
-    },
-    {
-      "group": "08-settings",
-      "slug": "settings-staff",
-      "label": "พนักงานและสิทธิ์",
-      "page": "settings",
-      "preset": "settings-staff",
-      "fixture": "main",
-      "login": true,
-      "theme": "light",
-      "file": "light/08-settings/settings-staff.png",
-      "status": "ok",
-      "elapsed_seconds": 2.52
-    },
-    {
-      "group": "08-settings",
-      "slug": "settings-display",
-      "label": "ภาษาและหน้าจอ",
-      "page": "settings",
-      "preset": "settings-display",
-      "fixture": "main",
-      "login": true,
-      "theme": "light",
-      "file": "light/08-settings/settings-display.png",
-      "status": "ok",
-      "elapsed_seconds": 2.5
-    },
-    {
-      "group": "08-settings",
-      "slug": "settings-data",
-      "label": "ข้อมูลและการสำรอง",
-      "page": "settings",
-      "preset": "settings-data",
-      "fixture": "main",
-      "login": true,
-      "theme": "light",
-      "file": "light/08-settings/settings-data.png",
-      "status": "ok",
-      "elapsed_seconds": 2.61
-    },
-    {
-      "group": "08-settings",
-      "slug": "settings-vat",
-      "label": "ข้อมูล VAT (ด้านล่าง)",
-      "page": "settings",
-      "preset": "settings-vat",
-      "fixture": "main",
-      "login": true,
-      "theme": "light",
-      "file": "light/08-settings/settings-vat.png",
-      "status": "ok",
-      "elapsed_seconds": 2.16
-    },
-    {
-      "group": "08-settings",
-      "slug": "settings-printer",
-      "label": "เครื่องพิมพ์ (ด้านล่าง)",
-      "page": "settings",
-      "preset": "settings-printer",
-      "fixture": "main",
-      "login": true,
-      "theme": "light",
-      "file": "light/08-settings/settings-printer.png",
-      "status": "ok",
-      "elapsed_seconds": 1.37
-    },
-    {
-      "group": "08-settings",
-      "slug": "settings-roles",
-      "label": "รายการบทบาท (ด้านล่าง)",
-      "page": "settings",
-      "preset": "settings-roles",
-      "fixture": "main",
-      "login": true,
-      "theme": "light",
-      "file": "light/08-settings/settings-roles.png",
-      "status": "ok",
-      "elapsed_seconds": 1.89
-    },
-    {
-      "group": "08-settings",
-      "slug": "templates-bill",
-      "label": "แม่แบบตรวจบิล",
-      "page": "settings",
-      "preset": "templates-bill",
-      "fixture": "main",
-      "login": true,
-      "theme": "light",
-      "file": "light/08-settings/templates-bill.png",
-      "status": "ok",
-      "elapsed_seconds": 2.74
-    },
-    {
-      "group": "08-settings",
-      "slug": "templates-kitchen",
-      "label": "แม่แบบใบครัว",
-      "page": "settings",
-      "preset": "templates-kitchen",
-      "fixture": "main",
-      "login": true,
-      "theme": "light",
-      "file": "light/08-settings/templates-kitchen.png",
-      "status": "ok",
-      "elapsed_seconds": 2.67
-    },
-    {
-      "group": "08-settings",
-      "slug": "staff-editor",
-      "label": "แก้ไขพนักงาน",
-      "page": "settings",
-      "preset": "staff-editor",
-      "fixture": "main",
-      "login": true,
-      "theme": "light",
-      "file": "light/08-settings/staff-editor.png",
-      "status": "ok"
-    },
-    {
-      "group": "08-settings",
-      "slug": "role-editor",
-      "label": "แก้ไขบทบาทและสิทธิ์",
-      "page": "settings",
-      "preset": "role-editor",
-      "fixture": "main",
-      "login": true,
-      "theme": "light",
-      "file": "light/08-settings/role-editor.png",
-      "status": "ok"
-    },
-    {
-      "group": "08-settings",
-      "slug": "promo-editor",
-      "label": "แก้ไขโปรโมชัน",
-      "page": "settings",
-      "preset": "promo-editor",
-      "fixture": "main",
-      "login": true,
-      "theme": "light",
-      "file": "light/08-settings/promo-editor.png",
-      "status": "ok"
-    },
-    {
-      "group": "08-settings",
-      "slug": "table-editor",
-      "label": "แก้ไขโต๊ะ",
-      "page": "settings",
-      "preset": "table-editor",
-      "fixture": "main",
-      "login": true,
-      "theme": "light",
-      "file": "light/08-settings/table-editor.png",
-      "status": "ok"
-    },
-    {
-      "group": "08-settings",
-      "slug": "automatic-backups",
-      "label": "สำรองอัตโนมัติ",
-      "page": "settings",
-      "preset": "automatic-backups",
-      "fixture": "main",
-      "login": true,
-      "theme": "light",
-      "file": "light/08-settings/automatic-backups.png",
-      "status": "ok",
-      "elapsed_seconds": 2.39
-    },
-    {
-      "group": "09-dialogs",
-      "slug": "palette",
-      "label": "ค้นหาและสั่งงาน",
-      "page": "home",
-      "preset": "palette",
-      "fixture": "main",
-      "login": true,
-      "theme": "light",
-      "file": "light/09-dialogs/palette.png",
-      "status": "ok"
-    },
-    {
-      "group": "09-dialogs",
-      "slug": "display",
-      "label": "เมนูภาษาและธีม",
-      "page": "home",
-      "preset": "display",
-      "fixture": "main",
-      "login": true,
-      "theme": "light",
-      "file": "light/09-dialogs/display.png",
-      "status": "ok",
-      "elapsed_seconds": 1.86
-    },
-    {
-      "group": "09-dialogs",
-      "slug": "approval",
-      "label": "ขออนุมัติจากผู้จัดการ",
-      "page": "history",
-      "preset": "approval",
-      "fixture": "main",
-      "login": true,
-      "theme": "light",
-      "file": "light/09-dialogs/approval.png",
-      "status": "ok"
-    },
-    {
-      "group": "09-dialogs",
-      "slug": "backup-review",
-      "label": "ตรวจชุดสำรอง",
-      "page": "settings",
-      "preset": "backup-review",
-      "fixture": "main",
-      "login": true,
-      "theme": "light",
-      "file": "light/09-dialogs/backup-review.png",
-      "status": "ok",
-      "elapsed_seconds": 2.4
-    },
-    {
-      "group": "09-dialogs",
-      "slug": "backup-confirm",
-      "label": "ยืนยันกู้คืน",
-      "page": "settings",
-      "preset": "backup-confirm",
-      "fixture": "main",
-      "login": true,
-      "theme": "light",
-      "file": "light/09-dialogs/backup-confirm.png",
-      "status": "ok"
-    },
-    {
-      "group": "09-dialogs",
-      "slug": "backup-pending",
-      "label": "เตรียมกู้คืนแล้ว",
-      "page": "settings",
-      "preset": "backup-pending",
-      "fixture": "main",
-      "login": true,
-      "theme": "light",
-      "file": "light/09-dialogs/backup-pending.png",
-      "status": "ok"
-    },
-    {
-      "group": "01-main",
-      "slug": "home",
-      "label": "หน้าหลัก",
-      "page": "home",
-      "preset": "page",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/01-main/home.png",
-      "status": "ok",
-      "elapsed_seconds": 2.61
-    },
-    {
-      "group": "01-main",
-      "slug": "sell",
-      "label": "ขาย",
-      "page": "sell",
-      "preset": "page",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/01-main/sell.png",
-      "status": "ok",
-      "elapsed_seconds": 2.51
-    },
-    {
-      "group": "01-main",
-      "slug": "products",
-      "label": "สินค้า",
-      "page": "products",
-      "preset": "page",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/01-main/products.png",
-      "status": "ok",
-      "elapsed_seconds": 2.84
-    },
-    {
-      "group": "01-main",
-      "slug": "history",
-      "label": "ประวัติขาย",
-      "page": "history",
-      "preset": "page",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/01-main/history.png",
-      "status": "ok"
-    },
-    {
-      "group": "01-main",
-      "slug": "shift",
-      "label": "กะและลิ้นชัก",
-      "page": "shift",
-      "preset": "page",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/01-main/shift.png",
-      "status": "ok"
-    },
-    {
-      "group": "01-main",
-      "slug": "reports",
-      "label": "รายงานประจำวัน",
-      "page": "reports",
-      "preset": "page",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/01-main/reports.png",
-      "status": "ok"
-    },
-    {
-      "group": "01-main",
-      "slug": "settings",
-      "label": "ตั้งค่า",
-      "page": "settings",
-      "preset": "page",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/01-main/settings.png",
-      "status": "ok"
-    },
-    {
-      "group": "01-main",
-      "slug": "activity",
-      "label": "ประวัติกิจกรรม",
-      "page": "activity",
-      "preset": "activity",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/01-main/activity.png",
-      "status": "ok"
-    },
-    {
-      "group": "01-main",
-      "slug": "setup",
-      "label": "เริ่มต้นร้าน",
-      "page": "home",
-      "preset": null,
-      "fixture": "fresh",
-      "login": false,
-      "theme": "dark",
-      "file": "dark/01-main/setup.png",
-      "status": "ok"
-    },
-    {
-      "group": "01-main",
-      "slug": "lock",
-      "label": "หน้าลงชื่อเข้าใช้ / ล็อก",
-      "page": "home",
-      "preset": null,
-      "fixture": "main",
-      "login": false,
-      "theme": "dark",
-      "file": "dark/01-main/lock.png",
-      "status": "ok"
-    },
-    {
-      "group": "01-main",
-      "slug": "open-shift",
-      "label": "เปิดกะ (ยังไม่มีกะ)",
-      "page": "shift",
-      "preset": null,
-      "fixture": "empty",
-      "login": false,
-      "theme": "dark",
-      "file": "dark/01-main/open-shift.png",
-      "status": "ok"
-    },
-    {
-      "group": "02-sell",
-      "slug": "sell-held",
-      "label": "บิลพัก",
-      "page": "sell",
-      "preset": "sell-held",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/02-sell/sell-held.png",
-      "status": "ok"
-    },
-    {
-      "group": "02-sell",
-      "slug": "sell-note",
-      "label": "หมายเหตุรายการ",
-      "page": "sell",
-      "preset": "sell-note",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/02-sell/sell-note.png",
-      "status": "ok"
-    },
-    {
-      "group": "02-sell",
-      "slug": "sell-options",
-      "label": "เลือกตัวเลือกสินค้า",
-      "page": "sell",
-      "preset": "sell-options",
-      "fixture": "sets",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/02-sell/sell-options.png",
-      "status": "ok"
-    },
-    {
-      "group": "02-sell",
-      "slug": "sell-discount",
-      "label": "ส่วนลดรายการ",
-      "page": "sell",
-      "preset": "sell-discount",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/02-sell/sell-discount.png",
-      "status": "ok"
-    },
-    {
-      "group": "02-sell",
-      "slug": "sell-review",
-      "label": "ยืนยันรับโอน / QR",
-      "page": "sell",
-      "preset": "sell-review",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/02-sell/sell-review.png",
-      "status": "ok"
-    },
-    {
-      "group": "02-sell",
-      "slug": "sell-split",
-      "label": "แบ่งวิธีชำระ",
-      "page": "sell",
-      "preset": "sell-split",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/02-sell/sell-split.png",
-      "status": "ok"
-    },
-    {
-      "group": "02-sell",
-      "slug": "sell-split-review",
-      "label": "ยืนยันแบ่งชำระ",
-      "page": "sell",
-      "preset": "sell-split-review",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/02-sell/sell-split-review.png",
-      "status": "ok"
-    },
-    {
-      "group": "02-sell",
-      "slug": "bill-split",
-      "label": "แยกบิล",
-      "page": "sell",
-      "preset": "bill-split",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/02-sell/bill-split.png",
-      "status": "ok"
-    },
-    {
-      "group": "02-sell",
-      "slug": "sell-coupon",
-      "label": "ใส่คูปอง",
-      "page": "sell",
-      "preset": "sell-coupon",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/02-sell/sell-coupon.png",
-      "status": "ok"
-    },
-    {
-      "group": "02-sell",
-      "slug": "sell-large",
-      "label": "ยืนยันเงินสดจำนวนมาก",
-      "page": "sell",
-      "preset": "sell-large",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/02-sell/sell-large.png",
-      "status": "ok"
-    },
-    {
-      "group": "02-sell",
-      "slug": "paid",
-      "label": "ชำระเสร็จ",
-      "page": "sell",
-      "preset": "paid",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/02-sell/paid.png",
-      "status": "ok"
-    },
-    {
-      "group": "02-sell",
-      "slug": "table-bill",
-      "label": "บิลโต๊ะ",
-      "page": "sell",
-      "preset": "table-bill",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/02-sell/table-bill.png",
-      "status": "ok"
-    },
-    {
-      "group": "02-sell",
-      "slug": "table-pay",
-      "label": "ชำระบิลโต๊ะ",
-      "page": "sell",
-      "preset": "table-pay",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/02-sell/table-pay.png",
-      "status": "ok"
-    },
-    {
-      "group": "02-sell",
-      "slug": "table-move",
-      "label": "ย้ายโต๊ะ",
-      "page": "sell",
-      "preset": "table-move",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/02-sell/table-move.png",
-      "status": "ok"
-    },
-    {
-      "group": "02-sell",
-      "slug": "kitchen",
-      "label": "จอครัว",
-      "page": "sell",
-      "preset": "kitchen",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/02-sell/kitchen.png",
-      "status": "ok"
-    },
-    {
-      "group": "02-sell",
-      "slug": "tables",
-      "label": "ผังโต๊ะ",
-      "page": "tables",
-      "preset": "page",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/02-sell/tables.png",
-      "status": "ok"
-    },
-    {
-      "group": "03-catalog",
-      "slug": "product",
-      "label": "แก้ไขสินค้า",
-      "page": "products",
-      "preset": "product",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/03-catalog/product.png",
-      "status": "ok"
-    },
-    {
-      "group": "03-catalog",
-      "slug": "product-new",
-      "label": "เพิ่มสินค้า",
-      "page": "products",
-      "preset": "product-new",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/03-catalog/product-new.png",
-      "status": "ok"
-    },
-    {
-      "group": "03-catalog",
-      "slug": "product-cost",
-      "label": "ต้นทุนสินค้า",
-      "page": "products",
-      "preset": "product-cost",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/03-catalog/product-cost.png",
-      "status": "ok"
-    },
-    {
-      "group": "03-catalog",
-      "slug": "product-recipe",
-      "label": "สูตรและสูตรตามตัวเลือก",
-      "page": "products",
-      "preset": "product-recipe",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/03-catalog/product-recipe.png",
-      "status": "ok"
-    },
-    {
-      "group": "03-catalog",
-      "slug": "bulk",
-      "label": "เลือกหลายสินค้า",
-      "page": "products",
-      "preset": "bulk",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/03-catalog/bulk.png",
-      "status": "ok"
-    },
-    {
-      "group": "03-catalog",
-      "slug": "stock-count",
-      "label": "นับสต็อก",
-      "page": "products",
-      "preset": "stock-count",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/03-catalog/stock-count.png",
-      "status": "ok"
-    },
-    {
-      "group": "03-catalog",
-      "slug": "stock-remove",
-      "label": "นำสต็อกออก",
-      "page": "products",
-      "preset": "stock-remove",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/03-catalog/stock-remove.png",
-      "status": "ok"
-    },
-    {
-      "group": "03-catalog",
-      "slug": "csv-import",
-      "label": "นำเข้าสินค้า CSV",
-      "page": "products",
-      "preset": "csv-import",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/03-catalog/csv-import.png",
-      "status": "ok"
-    },
-    {
-      "group": "03-catalog",
-      "slug": "csv-import-errors",
-      "label": "ข้อผิดพลาดการนำเข้า CSV",
-      "page": "products",
-      "preset": "csv-import-errors",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/03-catalog/csv-import-errors.png",
-      "status": "ok"
-    },
-    {
-      "group": "03-catalog",
-      "slug": "categories",
-      "label": "จัดการหมวดหมู่",
-      "page": "products",
-      "preset": "categories",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/03-catalog/categories.png",
-      "status": "ok"
-    },
-    {
-      "group": "03-catalog",
-      "slug": "category-rename",
-      "label": "เปลี่ยนชื่อ / รวมหมวด",
-      "page": "products",
-      "preset": "category-rename",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/03-catalog/category-rename.png",
-      "status": "ok"
-    },
-    {
-      "group": "03-catalog",
-      "slug": "option-sets",
-      "label": "ชุดตัวเลือกร่วม",
-      "page": "products",
-      "preset": "option-sets",
-      "fixture": "sets",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/03-catalog/option-sets.png",
-      "status": "ok"
-    },
-    {
-      "group": "03-catalog",
-      "slug": "option-set-editor",
-      "label": "แก้ไขชุดตัวเลือกร่วม",
-      "page": "products",
-      "preset": "option-set-editor",
-      "fixture": "sets",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/03-catalog/option-set-editor.png",
-      "status": "ok"
-    },
-    {
-      "group": "03-catalog",
-      "slug": "option-set-bulk",
-      "label": "ผูกชุดตัวเลือกหลายสินค้า",
-      "page": "products",
-      "preset": "option-set-bulk",
-      "fixture": "sets",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/03-catalog/option-set-bulk.png",
-      "status": "ok"
-    },
-    {
-      "group": "03-catalog",
-      "slug": "ingredients",
-      "label": "วัตถุดิบ",
-      "page": "products",
-      "preset": "ingredients",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/03-catalog/ingredients.png",
-      "status": "ok"
-    },
-    {
-      "group": "03-catalog",
-      "slug": "ingredient-history",
-      "label": "ประวัติวัตถุดิบ",
-      "page": "products",
-      "preset": "ingredient-history",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/03-catalog/ingredient-history.png",
-      "status": "ok"
-    },
-    {
-      "group": "04-purchasing",
-      "slug": "purchasing",
-      "label": "รายการใบสั่งซื้อ",
-      "page": "products",
-      "preset": "purchasing",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/04-purchasing/purchasing.png",
-      "status": "ok"
-    },
-    {
-      "group": "04-purchasing",
-      "slug": "suppliers",
-      "label": "ผู้ขาย",
-      "page": "products",
-      "preset": "suppliers",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/04-purchasing/suppliers.png",
-      "status": "ok"
-    },
-    {
-      "group": "04-purchasing",
-      "slug": "supplier-editor",
-      "label": "แก้ไขผู้ขาย",
-      "page": "products",
-      "preset": "supplier-editor",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/04-purchasing/supplier-editor.png",
-      "status": "ok"
-    },
-    {
-      "group": "04-purchasing",
-      "slug": "purchase-create",
-      "label": "สร้างใบสั่งซื้อ",
-      "page": "products",
-      "preset": "purchase-create",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/04-purchasing/purchase-create.png",
-      "status": "ok"
-    },
-    {
-      "group": "04-purchasing",
-      "slug": "purchase-create-confirm",
-      "label": "ยืนยันใบสั่งซื้อ",
-      "page": "products",
-      "preset": "purchase-create-confirm",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/04-purchasing/purchase-create-confirm.png",
-      "status": "ok"
-    },
-    {
-      "group": "04-purchasing",
-      "slug": "purchase-detail",
-      "label": "รายละเอียดและประวัติรับของ",
-      "page": "products",
-      "preset": "purchase-detail",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/04-purchasing/purchase-detail.png",
-      "status": "ok"
-    },
-    {
-      "group": "04-purchasing",
-      "slug": "purchase-receive",
-      "label": "รับของบางส่วน",
-      "page": "products",
-      "preset": "purchase-receive",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/04-purchasing/purchase-receive.png",
-      "status": "ok"
-    },
-    {
-      "group": "04-purchasing",
-      "slug": "purchase-receive-confirm",
-      "label": "ยืนยันรับของ",
-      "page": "products",
-      "preset": "purchase-receive-confirm",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/04-purchasing/purchase-receive-confirm.png",
-      "status": "ok"
-    },
-    {
-      "group": "04-purchasing",
-      "slug": "purchase-cancel",
-      "label": "ยกเลิกส่วนที่เหลือ",
-      "page": "products",
-      "preset": "purchase-cancel",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/04-purchasing/purchase-cancel.png",
-      "status": "ok"
-    },
-    {
-      "group": "05-history",
-      "slug": "history-detail",
-      "label": "รายละเอียดบิล",
-      "page": "history",
-      "preset": "history-detail",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/05-history/history-detail.png",
-      "status": "ok"
-    },
-    {
-      "group": "05-history",
-      "slug": "history-refunded",
-      "label": "บิลที่คืนบางรายการ",
-      "page": "history",
-      "preset": "history-refunded",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/05-history/history-refunded.png",
-      "status": "ok"
-    },
-    {
-      "group": "05-history",
-      "slug": "receipt",
-      "label": "ใบเสร็จ",
-      "page": "history",
-      "preset": "receipt",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/05-history/receipt.png",
-      "status": "ok"
-    },
-    {
-      "group": "05-history",
-      "slug": "void",
-      "label": "ยกเลิกทั้งบิล",
-      "page": "history",
-      "preset": "void",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/05-history/void.png",
-      "status": "ok"
-    },
-    {
-      "group": "05-history",
-      "slug": "refund",
-      "label": "คืนบางรายการ",
-      "page": "history",
-      "preset": "refund",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/05-history/refund.png",
-      "status": "ok"
-    },
-    {
-      "group": "05-history",
-      "slug": "invoice",
-      "label": "ออกใบกำกับภาษีเต็มรูป",
-      "page": "history",
-      "preset": "invoice",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/05-history/invoice.png",
-      "status": "ok"
-    },
-    {
-      "group": "05-history",
-      "slug": "history-invoiced",
-      "label": "บิลพร้อมใบกำกับและใบลดหนี้",
-      "page": "history",
-      "preset": "history-invoiced",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/05-history/history-invoiced.png",
-      "status": "ok"
-    },
-    {
-      "group": "05-history",
-      "slug": "credit-note",
-      "label": "ตัวอย่างใบลดหนี้",
-      "page": "history",
-      "preset": "credit-note",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/05-history/credit-note.png",
-      "status": "ok"
-    },
-    {
-      "group": "05-history",
-      "slug": "receipt-preview",
-      "label": "ตัวอย่างพิมพ์ใบเสร็จ",
-      "page": "history",
-      "preset": "receipt-preview",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/05-history/receipt-preview.png",
-      "status": "ok"
-    },
-    {
-      "group": "05-history",
-      "slug": "check-bill",
-      "label": "ตรวจบิลก่อนชำระ",
-      "page": "sell",
-      "preset": "check-bill",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/05-history/check-bill.png",
-      "status": "ok"
-    },
-    {
-      "group": "06-shifts",
-      "slug": "close",
-      "label": "นับและสรุปปิดกะ",
-      "page": "shift",
-      "preset": "close",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/06-shifts/close.png",
-      "status": "ok"
-    },
-    {
-      "group": "06-shifts",
-      "slug": "close-confirm",
-      "label": "ยืนยันปิดกะ",
-      "page": "shift",
-      "preset": "close-confirm",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/06-shifts/close-confirm.png",
-      "status": "ok"
-    },
-    {
-      "group": "06-shifts",
-      "slug": "shift-history",
-      "label": "ประวัติกะ",
-      "page": "shift",
-      "preset": "shift-history",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/06-shifts/shift-history.png",
-      "status": "ok"
-    },
-    {
-      "group": "07-reports",
-      "slug": "report-week",
-      "label": "รายงาน 7 วัน",
-      "page": "reports",
-      "preset": "report-week",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/07-reports/report-week.png",
-      "status": "ok"
-    },
-    {
-      "group": "07-reports",
-      "slug": "report-month",
-      "label": "รายงานรายเดือน",
-      "page": "reports",
-      "preset": "report-month",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/07-reports/report-month.png",
-      "status": "ok"
-    },
-    {
-      "group": "07-reports",
-      "slug": "report-categories",
-      "label": "รายงานหมวดหมู่",
-      "page": "reports",
-      "preset": "report-categories",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/07-reports/report-categories.png",
-      "status": "ok"
-    },
-    {
-      "group": "07-reports",
-      "slug": "report-staff",
-      "label": "รายงานพนักงาน",
-      "page": "reports",
-      "preset": "report-staff",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/07-reports/report-staff.png",
-      "status": "ok"
-    },
-    {
-      "group": "07-reports",
-      "slug": "report-promos",
-      "label": "รายงานโปรโมชัน",
-      "page": "reports",
-      "preset": "report-promos",
-      "fixture": "main",
-      "login": true,
-      "theme": "dark",
-      "file": "dark/07-reports/report-promos.png",
-      "status": "ok"
-    },
-    {
       "group": "07-reports",
       "slug": "report-ingredients",
       "label": "รายงานวัตถุดิบ",
@@ -2063,9 +2122,10 @@
       "preset": "report-ingredients",
       "fixture": "main",
       "login": true,
-      "theme": "dark",
-      "file": "dark/07-reports/report-ingredients.png",
-      "status": "ok"
+      "theme": "square",
+      "file": "square/07-reports/report-ingredients.png",
+      "status": "ok",
+      "elapsed_seconds": 2.72
     },
     {
       "group": "07-reports",
@@ -2075,9 +2135,23 @@
       "preset": "report-profit",
       "fixture": "main",
       "login": true,
-      "theme": "dark",
-      "file": "dark/07-reports/report-profit.png",
-      "status": "ok"
+      "theme": "square",
+      "file": "square/07-reports/report-profit.png",
+      "status": "ok",
+      "elapsed_seconds": 2.71
+    },
+    {
+      "group": "07-reports",
+      "slug": "report-registers",
+      "label": "รายงานแยกเครื่องขาย",
+      "page": "reports",
+      "preset": "report-registers",
+      "fixture": "main",
+      "login": true,
+      "theme": "square",
+      "file": "square/07-reports/report-registers.png",
+      "status": "ok",
+      "elapsed_seconds": 2.7
     },
     {
       "group": "08-settings",
@@ -2087,9 +2161,10 @@
       "preset": "settings-shop",
       "fixture": "main",
       "login": true,
-      "theme": "dark",
-      "file": "dark/08-settings/settings-shop.png",
-      "status": "ok"
+      "theme": "square",
+      "file": "square/08-settings/settings-shop.png",
+      "status": "ok",
+      "elapsed_seconds": 2.44
     },
     {
       "group": "08-settings",
@@ -2099,9 +2174,10 @@
       "preset": "settings-pricing",
       "fixture": "main",
       "login": true,
-      "theme": "dark",
-      "file": "dark/08-settings/settings-pricing.png",
-      "status": "ok"
+      "theme": "square",
+      "file": "square/08-settings/settings-pricing.png",
+      "status": "ok",
+      "elapsed_seconds": 2.45
     },
     {
       "group": "08-settings",
@@ -2111,9 +2187,10 @@
       "preset": "settings-promotions",
       "fixture": "main",
       "login": true,
-      "theme": "dark",
-      "file": "dark/08-settings/settings-promotions.png",
-      "status": "ok"
+      "theme": "square",
+      "file": "square/08-settings/settings-promotions.png",
+      "status": "ok",
+      "elapsed_seconds": 2.49
     },
     {
       "group": "08-settings",
@@ -2123,9 +2200,10 @@
       "preset": "settings-tables",
       "fixture": "main",
       "login": true,
-      "theme": "dark",
-      "file": "dark/08-settings/settings-tables.png",
-      "status": "ok"
+      "theme": "square",
+      "file": "square/08-settings/settings-tables.png",
+      "status": "ok",
+      "elapsed_seconds": 2.47
     },
     {
       "group": "08-settings",
@@ -2135,9 +2213,10 @@
       "preset": "settings-printing",
       "fixture": "main",
       "login": true,
-      "theme": "dark",
-      "file": "dark/08-settings/settings-printing.png",
-      "status": "ok"
+      "theme": "square",
+      "file": "square/08-settings/settings-printing.png",
+      "status": "ok",
+      "elapsed_seconds": 2.64
     },
     {
       "group": "08-settings",
@@ -2147,9 +2226,10 @@
       "preset": "settings-staff",
       "fixture": "main",
       "login": true,
-      "theme": "dark",
-      "file": "dark/08-settings/settings-staff.png",
-      "status": "ok"
+      "theme": "square",
+      "file": "square/08-settings/settings-staff.png",
+      "status": "ok",
+      "elapsed_seconds": 2.14
     },
     {
       "group": "08-settings",
@@ -2159,9 +2239,49 @@
       "preset": "settings-display",
       "fixture": "main",
       "login": true,
-      "theme": "dark",
-      "file": "dark/08-settings/settings-display.png",
-      "status": "ok"
+      "theme": "square",
+      "file": "square/08-settings/settings-display.png",
+      "status": "ok",
+      "elapsed_seconds": 2.47
+    },
+    {
+      "group": "08-settings",
+      "slug": "settings-devices",
+      "label": "อุปกรณ์และคลาวด์",
+      "page": "settings",
+      "preset": "settings-devices",
+      "fixture": "main",
+      "login": true,
+      "theme": "square",
+      "file": "square/08-settings/settings-devices.png",
+      "status": "ok",
+      "elapsed_seconds": 2.51
+    },
+    {
+      "group": "08-settings",
+      "slug": "settings-devices-pairing",
+      "label": "จับคู่เครื่อง (รหัส 6 หลัก + QR iPad)",
+      "page": "settings",
+      "preset": "settings-devices-pairing",
+      "fixture": "main",
+      "login": true,
+      "theme": "square",
+      "file": "square/08-settings/settings-devices-pairing.png",
+      "status": "ok",
+      "elapsed_seconds": 2.57
+    },
+    {
+      "group": "08-settings",
+      "slug": "settings-cloud",
+      "label": "คลาวด์ที่เชื่อมแล้ว (ด้านล่าง)",
+      "page": "settings",
+      "preset": "settings-cloud",
+      "fixture": "main",
+      "login": true,
+      "theme": "square",
+      "file": "square/08-settings/settings-cloud.png",
+      "status": "ok",
+      "elapsed_seconds": 2.18
     },
     {
       "group": "08-settings",
@@ -2171,9 +2291,10 @@
       "preset": "settings-data",
       "fixture": "main",
       "login": true,
-      "theme": "dark",
-      "file": "dark/08-settings/settings-data.png",
-      "status": "ok"
+      "theme": "square",
+      "file": "square/08-settings/settings-data.png",
+      "status": "ok",
+      "elapsed_seconds": 2.42
     },
     {
       "group": "08-settings",
@@ -2183,9 +2304,10 @@
       "preset": "settings-vat",
       "fixture": "main",
       "login": true,
-      "theme": "dark",
-      "file": "dark/08-settings/settings-vat.png",
-      "status": "ok"
+      "theme": "square",
+      "file": "square/08-settings/settings-vat.png",
+      "status": "ok",
+      "elapsed_seconds": 2.31
     },
     {
       "group": "08-settings",
@@ -2195,9 +2317,10 @@
       "preset": "settings-printer",
       "fixture": "main",
       "login": true,
-      "theme": "dark",
-      "file": "dark/08-settings/settings-printer.png",
-      "status": "ok"
+      "theme": "square",
+      "file": "square/08-settings/settings-printer.png",
+      "status": "ok",
+      "elapsed_seconds": 1.26
     },
     {
       "group": "08-settings",
@@ -2207,9 +2330,10 @@
       "preset": "settings-roles",
       "fixture": "main",
       "login": true,
-      "theme": "dark",
-      "file": "dark/08-settings/settings-roles.png",
-      "status": "ok"
+      "theme": "square",
+      "file": "square/08-settings/settings-roles.png",
+      "status": "ok",
+      "elapsed_seconds": 2.11
     },
     {
       "group": "08-settings",
@@ -2219,9 +2343,10 @@
       "preset": "templates-bill",
       "fixture": "main",
       "login": true,
-      "theme": "dark",
-      "file": "dark/08-settings/templates-bill.png",
-      "status": "ok"
+      "theme": "square",
+      "file": "square/08-settings/templates-bill.png",
+      "status": "ok",
+      "elapsed_seconds": 2.77
     },
     {
       "group": "08-settings",
@@ -2231,9 +2356,10 @@
       "preset": "templates-kitchen",
       "fixture": "main",
       "login": true,
-      "theme": "dark",
-      "file": "dark/08-settings/templates-kitchen.png",
-      "status": "ok"
+      "theme": "square",
+      "file": "square/08-settings/templates-kitchen.png",
+      "status": "ok",
+      "elapsed_seconds": 2.53
     },
     {
       "group": "08-settings",
@@ -2243,9 +2369,10 @@
       "preset": "staff-editor",
       "fixture": "main",
       "login": true,
-      "theme": "dark",
-      "file": "dark/08-settings/staff-editor.png",
-      "status": "ok"
+      "theme": "square",
+      "file": "square/08-settings/staff-editor.png",
+      "status": "ok",
+      "elapsed_seconds": 2.36
     },
     {
       "group": "08-settings",
@@ -2255,9 +2382,10 @@
       "preset": "role-editor",
       "fixture": "main",
       "login": true,
-      "theme": "dark",
-      "file": "dark/08-settings/role-editor.png",
-      "status": "ok"
+      "theme": "square",
+      "file": "square/08-settings/role-editor.png",
+      "status": "ok",
+      "elapsed_seconds": 1.98
     },
     {
       "group": "08-settings",
@@ -2267,9 +2395,10 @@
       "preset": "promo-editor",
       "fixture": "main",
       "login": true,
-      "theme": "dark",
-      "file": "dark/08-settings/promo-editor.png",
-      "status": "ok"
+      "theme": "square",
+      "file": "square/08-settings/promo-editor.png",
+      "status": "ok",
+      "elapsed_seconds": 1.61
     },
     {
       "group": "08-settings",
@@ -2279,9 +2408,10 @@
       "preset": "table-editor",
       "fixture": "main",
       "login": true,
-      "theme": "dark",
-      "file": "dark/08-settings/table-editor.png",
-      "status": "ok"
+      "theme": "square",
+      "file": "square/08-settings/table-editor.png",
+      "status": "ok",
+      "elapsed_seconds": 2.1
     },
     {
       "group": "08-settings",
@@ -2291,9 +2421,10 @@
       "preset": "automatic-backups",
       "fixture": "main",
       "login": true,
-      "theme": "dark",
-      "file": "dark/08-settings/automatic-backups.png",
-      "status": "ok"
+      "theme": "square",
+      "file": "square/08-settings/automatic-backups.png",
+      "status": "ok",
+      "elapsed_seconds": 2.27
     },
     {
       "group": "09-dialogs",
@@ -2303,9 +2434,10 @@
       "preset": "palette",
       "fixture": "main",
       "login": true,
-      "theme": "dark",
-      "file": "dark/09-dialogs/palette.png",
-      "status": "ok"
+      "theme": "square",
+      "file": "square/09-dialogs/palette.png",
+      "status": "ok",
+      "elapsed_seconds": 1.88
     },
     {
       "group": "09-dialogs",
@@ -2315,9 +2447,10 @@
       "preset": "display",
       "fixture": "main",
       "login": true,
-      "theme": "dark",
-      "file": "dark/09-dialogs/display.png",
-      "status": "ok"
+      "theme": "square",
+      "file": "square/09-dialogs/display.png",
+      "status": "ok",
+      "elapsed_seconds": 1.89
     },
     {
       "group": "09-dialogs",
@@ -2327,9 +2460,10 @@
       "preset": "approval",
       "fixture": "main",
       "login": true,
-      "theme": "dark",
-      "file": "dark/09-dialogs/approval.png",
-      "status": "ok"
+      "theme": "square",
+      "file": "square/09-dialogs/approval.png",
+      "status": "ok",
+      "elapsed_seconds": 2.02
     },
     {
       "group": "09-dialogs",
@@ -2339,9 +2473,10 @@
       "preset": "backup-review",
       "fixture": "main",
       "login": true,
-      "theme": "dark",
-      "file": "dark/09-dialogs/backup-review.png",
-      "status": "ok"
+      "theme": "square",
+      "file": "square/09-dialogs/backup-review.png",
+      "status": "ok",
+      "elapsed_seconds": 2.31
     },
     {
       "group": "09-dialogs",
@@ -2351,9 +2486,10 @@
       "preset": "backup-confirm",
       "fixture": "main",
       "login": true,
-      "theme": "dark",
-      "file": "dark/09-dialogs/backup-confirm.png",
-      "status": "ok"
+      "theme": "square",
+      "file": "square/09-dialogs/backup-confirm.png",
+      "status": "ok",
+      "elapsed_seconds": 2.46
     },
     {
       "group": "09-dialogs",
@@ -2363,9 +2499,23 @@
       "preset": "backup-pending",
       "fixture": "main",
       "login": true,
-      "theme": "dark",
-      "file": "dark/09-dialogs/backup-pending.png",
-      "status": "ok"
+      "theme": "square",
+      "file": "square/09-dialogs/backup-pending.png",
+      "status": "ok",
+      "elapsed_seconds": 2.51
+    },
+    {
+      "group": "09-dialogs",
+      "slug": "restore-cloud",
+      "label": "กู้คืนจากไฟล์คลาวด์ (.phcloud)",
+      "page": "settings",
+      "preset": "restore-cloud",
+      "fixture": "main",
+      "login": true,
+      "theme": "square",
+      "file": "square/09-dialogs/restore-cloud.png",
+      "status": "ok",
+      "elapsed_seconds": 2.29
     }
   ]
 }

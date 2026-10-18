@@ -306,6 +306,22 @@ Native debug captures (`seed_screens DIR --restaurant --tables --sets`, fictiona
 
 Not verified: clicked end-to-end flows in the new layout (captures use presets), Windows runtime, real printers/drawers/scanners, picture import from real files or drag and drop, the Sell "load more" scroll beyond 500 products, and the screenshot pack in `screenshots/2026-10-14/` (still the pre-v0.2 design; re-run `capture.py`). History filter-chip counts cover the loaded page (50 receipts), not the whole period.
 
+## Multi-device (shop LAN) and cloud — 2026-10-16 to 2026-10-18
+
+Automated (all in `cargo test --workspace`; the cloud ones need `POS_CLOUD_TEST_DATABASE_URL` and also run in the Linux CI job against PostgreSQL 16):
+
+- Hub over loopback TLS (`crates/pos-hub/tests/hub.rs`): pairing codes (wrong, expired, single use), pinned certificate, two registers selling shared stock with separate drawers, a payment resent after a dropped connection returning the same receipt, change notices, per-device sign-in, revocation. Desktop worker as hub and as client (`hub_tests.rs`), including the shop profile reaching a paired register and a refused stale bill (`BillChanged`) on the counter.
+- iPad web app over HTTPS trusting the shop CA (`crates/pos-hub/tests/web.rs`): setup page and profile, pairing, state, SendKitchen of a table bill, long-poll wake-up, TableBusy, BillChanged, revocation.
+- Concurrent bill edits (`crates/pos-core/tests/dining.rs`), per-register reports (`shifts.rs`), outbox and owner edits as Cloud (`outbox.rs`), cloud API end to end with a real shop's outbox (`apps/pos-cloud/tests/api.rs`), main register sync + owner edit + encrypted backup → download → decrypt → recovery inspect (`cloud_tests.rs`), backup sealing with wrong-password and tamper refusal (`cloud_backup`).
+
+Manual on this Mac:
+
+- iPad ordering app in a desktop browser at 1024×700 through a local CA-trusting proxy: pair, open a table, options sheet, add dishes, send to kitchen, reopen with "sent" markers.
+- Owner dashboard at phone size (375×812) with a fictional week of sales (`demo_shop`): sales periods, menu edit sent and listed as waiting, shop tab with link status, backups and edit history.
+- Native captures of Settings → Devices & cloud (unlinked, linked sample status, pairing), restore from a `.phcloud` path and the Registers report in Thai/English, Compact/Touch, 1000×700 and 1280×820 (review fixes: folded "use as a shop device" form, sync buttons above the backup section, standard restore path field, main register named in the UI language, aligned first-run buttons, readable first-run heading on the graphite canvas).
+
+Not verified: a real iPad (profile install, Home Screen, touch), two physical computers on a shop LAN, Windows as hub or client, mDNS on a real network, the cloud server on the internet (hosting, TLS, 2FA and login rate limiting are not built), restoring a cloud backup on a second computer through the UI.
+
 ## Installers and first Windows run — 2026-10-18
 
 - Release workflow run 39121572099 (manual, commit `ab02819`) built the universal macOS dmg and the Windows setup `POS-Heart-0.1.0-Windows-Setup.exe` (SHA-256 `491ee1c9af8b6e7f05d518d0892950d23b61bffec7f7386f94450bd961920f5e`) on GitHub runners.

@@ -254,6 +254,39 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         first.get_or_insert(sale);
         t += 1100 + (i as i64 % 4) * 400;
     }
+    // `--registers`: a second register (multi-device) with its own shift
+    // and a few sales, for the Reports "Registers" tab.
+    if std::env::args().any(|a| a == "--registers") {
+        let second = uuid::Uuid::new_v4();
+        pos.add_register(second, "เคาน์เตอร์ 2", start)?;
+        pos.use_register(second)?;
+        let till = uuid::Uuid::new_v4();
+        pos.open_shift(till, "500".parse()?, start + 600)?;
+        for (i, p) in sellable
+            .iter()
+            .filter(|p| p.options.is_empty())
+            .take(4)
+            .enumerate()
+        {
+            let mut cart = Cart::new();
+            cart.lines.push(CartLine {
+                product_id: p.id,
+                quantity: 1 + u32::try_from(i % 2).unwrap_or(0),
+                ..Default::default()
+            });
+            let due = total(&mut pos, &products, &cart, PaymentMethod::Transfer)?;
+            pos.checkout_with_payment(
+                &cart,
+                PaymentRequest {
+                    method: PaymentMethod::Transfer,
+                    amount: due,
+                },
+                Some(till),
+                start + 900 + 600 * i64::try_from(i).unwrap_or(0),
+            )?;
+        }
+        pos.use_register(pos_domain::MAIN_REGISTER)?;
+    }
     if let Some(id) = manager {
         pos.sign_in(id, "5555")?;
     }

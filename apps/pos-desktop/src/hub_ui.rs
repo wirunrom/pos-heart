@@ -72,6 +72,8 @@ pub struct State {
 }
 #[derive(Default)]
 pub struct Join {
+    /// The form is folded until asked for: most computers are the main register.
+    pub open: bool,
     pub address: String,
     pub code: String,
     pub name: String,
@@ -250,6 +252,15 @@ fn join_card(app: &mut App, ui: &mut egui::Ui) {
             "For a second register or a kitchen PC. On the main register press \"Pair a device\", then enter the address and code shown there.",
         ),
     );
+    if !app.hub.join.open && app.hub.join.running.is_none() && app.hub.join.done.is_none() {
+        if w::button(lang.text("ตั้งค่าเป็นเครื่องลูก…", "Set up as a shop device…"))
+            .show(ui)
+            .clicked()
+        {
+            app.hub.join.open = true;
+        }
+        return;
+    }
     if let Some(rx) = &app.hub.join.running
         && let Ok(result) = rx.try_recv()
     {

@@ -36,7 +36,7 @@ pub fn controls(app: &mut App, ui: &mut egui::Ui) {
         w::help_text(ui, lang.text("ชุดสำรองเป็นโฟลเดอร์ รวมฐานข้อมูล ข้อมูลร้าน บิลค้างและร่างนับเงิน ไม่รวมการตั้งค่าเครื่องพิมพ์และหน้าจอ คัดลอกทั้งโฟลเดอร์ไปเก็บนอกเครื่องได้", "A backup folder includes the database, shop profile, open bill and drawer drafts. Printer and display settings stay on this device. Copy the entire folder to external storage."));
         ui.add_space(space::S3);
         w::field_label(ui, lang.text("โฟลเดอร์ชุดสำรอง หรือไฟล์ .phcloud จากคลาวด์ ที่ต้องการกู้คืน", "Backup folder, or .phcloud file from the cloud, to restore"), None);
-        if ui.add(egui::TextEdit::singleline(&mut app.recovery.source).desired_width(ui.available_width())).changed() { app.recovery.review = None; }
+        if w::text_input(ui, &mut app.recovery.source, w::FieldOpts { limit: 1000, ..Default::default() }).changed() { app.recovery.review = None; }
         if let Some(rx) = &app.recovery.decrypting && let Ok(result) = rx.try_recv() {
             app.recovery.decrypting = None;
             match result {
@@ -79,11 +79,12 @@ pub fn controls(app: &mut App, ui: &mut egui::Ui) {
             if w::button(lang.text("ตรวจและยืนยันการกู้คืน…", "Review recovery…")).show(ui).clicked() { app.recovery.confirm = true; }
         }
     });
-    crate::auto_backup_ui::card(app, ui);
+    // Previews land on the restore field and its review, above automatic backups.
     if app.recovery.focus {
-        ui.scroll_to_cursor(Some(egui::Align::BOTTOM));
+        ui.scroll_to_cursor(Some(egui::Align::Center));
         app.recovery.focus = false;
     }
+    crate::auto_backup_ui::card(app, ui);
 }
 pub fn dialog(app: &mut App, ctx: &egui::Context) {
     if !app.recovery.confirm {

@@ -62,12 +62,14 @@ for slug,label in [('close','นับและสรุปปิดกะ'),('c
     add('06-shifts',slug,label,'shift',slug)
 for slug,label in [('report-week','รายงาน 7 วัน'),('report-month','รายงานรายเดือน'),
     ('report-categories','รายงานหมวดหมู่'),('report-staff','รายงานพนักงาน'),
-    ('report-promos','รายงานโปรโมชัน'),('report-ingredients','รายงานวัตถุดิบ'),('report-profit','รายงานกำไรขั้นต้น')]:
+    ('report-promos','รายงานโปรโมชัน'),('report-ingredients','รายงานวัตถุดิบ'),('report-profit','รายงานกำไรขั้นต้น'),
+    ('report-registers','รายงานแยกเครื่องขาย')]:
     add('07-reports',slug,label,'reports',slug)
 
 for slug,label in [('shop','ร้านและหน้าเริ่มต้น'),('pricing','ราคาและภาษี'),('promotions','โปรโมชัน'),
     ('tables','โต๊ะและโซน'),('printing','เอกสารและการพิมพ์'),('staff','พนักงานและสิทธิ์'),
-    ('display','ภาษาและหน้าจอ'),('data','ข้อมูลและการสำรอง'),('vat','ข้อมูล VAT (ด้านล่าง)'),
+    ('display','ภาษาและหน้าจอ'),('devices','อุปกรณ์และคลาวด์'),('devices-pairing','จับคู่เครื่อง (รหัส 6 หลัก + QR iPad)'),
+    ('cloud','คลาวด์ที่เชื่อมแล้ว (ด้านล่าง)'),('data','ข้อมูลและการสำรอง'),('vat','ข้อมูล VAT (ด้านล่าง)'),
     ('printer','เครื่องพิมพ์ (ด้านล่าง)'),('roles','รายการบทบาท (ด้านล่าง)')]:
     add('08-settings','settings-'+slug,label,'settings','settings-'+slug)
 for slug,label in [('templates-bill','แม่แบบตรวจบิล'),('templates-kitchen','แม่แบบใบครัว'),
@@ -77,7 +79,8 @@ for slug,label in [('templates-bill','แม่แบบตรวจบิล'),
 
 for slug,label,page in [('palette','ค้นหาและสั่งงาน','home'),('display','เมนูภาษาและธีม','home'),
     ('approval','ขออนุมัติจากผู้จัดการ','history'),('backup-review','ตรวจชุดสำรอง','settings'),
-    ('backup-confirm','ยืนยันกู้คืน','settings'),('backup-pending','เตรียมกู้คืนแล้ว','settings')]:
+    ('backup-confirm','ยืนยันกู้คืน','settings'),('backup-pending','เตรียมกู้คืนแล้ว','settings'),
+    ('restore-cloud','กู้คืนจากไฟล์คลาวด์ (.phcloud)','settings')]:
     add('09-dialogs',slug,label,page,slug)
 
 
@@ -109,7 +112,7 @@ def main():
                 fixtures[name]=provided.resolve()
             else:
                 dest=scratch/name
-                flags=['--staff','--vat','--restaurant','--tables','--ingredients','--pictures','--promos','--purchases']
+                flags=['--staff','--vat','--restaurant','--tables','--ingredients','--pictures','--promos','--purchases','--registers']
                 if name=='sets': flags.append('--sets')
                 subprocess.run(['cargo','run','-p','pos-desktop','--example','seed_screens','--offline','--',str(dest),*flags],cwd=ROOT,check=True)
                 fixtures[name]=dest

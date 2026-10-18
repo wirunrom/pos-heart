@@ -104,6 +104,22 @@ pub fn apply(app: &mut App, ctx: &egui::Context) {
         "sell-pay" => app.sell.paying = Some(app.cart.id),
         // Settings → Devices with the hub running on a free port and a
         // pairing code on screen (nothing is saved to hub.json).
+        "settings-devices" | "settings-cloud" => {
+            app.page = crate::app::Page::Settings;
+            app.settings_section = crate::settings_ui::Section::Devices;
+            crate::cloud_ui::preview(app, name == "settings-cloud");
+            app.preview_scroll_bottom = name == "settings-cloud";
+        }
+        "restore-cloud" => {
+            app.page = crate::app::Page::Settings;
+            app.settings_section = crate::settings_ui::Section::Data;
+            app.recovery.source = "/Users/owner/Downloads/pos-heart-2026-10-18.phcloud".into();
+            app.recovery.focus = true;
+        }
+        "report-registers" => {
+            app.page = crate::app::Page::Reports;
+            app.report_group = crate::report_ui::Group::Registers;
+        }
         "settings-devices-pairing" => {
             app.page = crate::app::Page::Settings;
             app.settings_section = crate::settings_ui::Section::Devices;

@@ -25,6 +25,37 @@ pub struct State {
     confirm: String,
     deriving: Option<mpsc::Receiver<std::io::Result<crate::cloud_backup::Key>>>,
     changing: bool,
+    /// Debug captures: a sample sync status instead of a running sync.
+    #[cfg(debug_assertions)]
+    preview: Option<crate::cloud::Status>,
+}
+
+/// Debug captures: Settings → Devices & cloud, linked to a sample cloud
+/// (nothing is contacted) or not linked.
+#[cfg(debug_assertions)]
+pub fn preview(app: &mut App, linked: bool) {
+    app.cloud.started = true;
+    if !linked {
+        return;
+    }
+    let now = time::OffsetDateTime::now_utc().unix_timestamp();
+    app.cloud.file = Some(CloudFile {
+        server: "https://cloud.posheart.example".into(),
+        hub: uuid::Uuid::nil(),
+        token: String::new(),
+        shop: uuid::Uuid::nil(),
+        shop_name: "ร้านหัวใจ".into(),
+        backup_salt: Some("00".repeat(16)),
+        backup_key: Some("00".repeat(32)),
+        last_backup: Some(now - 3_600),
+    });
+    app.cloud.preview = Some(crate::cloud::Status {
+        last_sync: Some(now - 40),
+        pending: Some(0),
+        applied: 2,
+        last_backup: Some(now - 3_600),
+        ..Default::default()
+    });
 }
 
 /// Starts syncing once the database is open, when this computer is linked.
@@ -162,12 +193,10 @@ pub fn card(app: &mut App, ui: &mut egui::Ui) {
 
 fn linked(app: &mut App, ui: &mut egui::Ui, t: &Theme, file: &CloudFile, may: bool) {
     let lang = app.lang;
-    let status = app
-        .cloud
-        .sync
-        .as_ref()
-        .map(Syncer::status)
-        .unwrap_or_default();
+    let status = app.cloud.sync.as_ref().map(Syncer::status);
+    #[cfg(debug_assertions)]
+    let status = status.or_else(|| app.cloud.preview.clone());
+    let status = status.unwrap_or_default();
     w::kv(
         ui,
         lang.text("ร้านบนคลาวด์", "Cloud shop"),
@@ -218,8 +247,6 @@ fn linked(app: &mut App, ui: &mut egui::Ui, t: &Theme, file: &CloudFile, may: bo
         );
     }
     ui.add_space(space::S2);
-    backups(app, ui, t, file, &status, may);
-    ui.add_space(space::S2);
     ui.horizontal(|ui| {
         if w::button(lang.text("ซิงก์ตอนนี้", "Sync now"))
             .ghost()
@@ -249,6 +276,9 @@ fn linked(app: &mut App, ui: &mut egui::Ui, t: &Theme, file: &CloudFile, may: bo
             }
         }
     });
+    ui.add_space(space::S3);
+    w::divider(ui);
+    backups(app, ui, t, file, &status, may);
 }
 
 /// Encrypted daily backups to the cloud, sealed with the owner's password.

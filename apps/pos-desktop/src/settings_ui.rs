@@ -117,6 +117,7 @@ pub fn onboard(app: &mut App, ui: &mut egui::Ui) {
                     ui.horizontal(|ui| {
                         if w::button(lang.text("ตั้งค่าภายหลัง", "Set up later"))
                             .ghost()
+                            .size(w::Size::Lg)
                             .enabled(!app.busy)
                             .show(ui)
                             .clicked()

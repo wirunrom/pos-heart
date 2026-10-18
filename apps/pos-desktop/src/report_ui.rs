@@ -925,7 +925,8 @@ fn registers(app: &App, ui: &mut egui::Ui, s: &DailySummary) {
         return;
     }
     for r in &s.registers {
-        let name = if r.name.is_empty() {
+        // The main register's stored name is Thai; show it in the UI language.
+        let name = if r.name.is_empty() || r.register_id == pos_domain::MAIN_REGISTER {
             lang.text("เครื่องหลัก", "Main register")
         } else {
             r.name.as_str()
