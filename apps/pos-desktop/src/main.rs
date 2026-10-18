@@ -109,7 +109,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "POS Heart"
             })
             .with_inner_size(window_size)
-            .with_min_inner_size(window::MIN_SIZE),
+            .with_min_inner_size(window::MIN_SIZE)
+            .with_icon(
+                eframe::icon_data::from_png_bytes(include_bytes!("../assets/icon-256.png"))
+                    .unwrap_or_default(),
+            ),
         ..Default::default()
     };
     eframe::run_native(

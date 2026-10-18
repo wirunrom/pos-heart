@@ -93,8 +93,15 @@ pub fn onboard(app: &mut App, ui: &mut egui::Ui) {
             ui.vertical(|ui| {
                 ui.set_width(width);
                 ui.add_space(space::S8);
-                w::page_title(ui, lang.text("เริ่มต้นร้านของคุณ", "Set up your shop"));
-                ui.add(egui::Label::new(t.muted(
+                // On the graphite canvas, not a paper pane.
+                ui.add(
+                    egui::Label::new(t.chrome(
+                        lang.text("เริ่มต้นร้านของคุณ", "Set up your shop"),
+                        type_scale::TITLE,
+                    ))
+                    .wrap(),
+                );
+                ui.add(egui::Label::new(t.chrome_muted(
                     lang.text(
                         "ตั้งชื่อร้าน แล้วเพิ่มสินค้าเพื่อเริ่มขาย ข้อมูลทั้งหมดเก็บในเครื่องนี้ ไม่ต้องสมัครบัญชี",
                         "Name your shop, then add products to start selling. Everything stays on this device. No account needed.",
@@ -131,12 +138,15 @@ pub fn onboard(app: &mut App, ui: &mut egui::Ui) {
                     });
                 });
                 ui.add_space(space::S3);
-                w::help_text(
-                    ui,
-                    lang.text(
-                        "แก้ไขได้ภายหลังที่ตั้งค่า · ภาษา สีหลัก และขนาดปุ่ม ปรับได้จากปุ่มมุมขวาบน",
-                        "Change this later in Settings · language, theme and density are in the top-right button.",
-                    ),
+                ui.add(
+                    egui::Label::new(t.chrome_muted(
+                        lang.text(
+                            "แก้ไขได้ภายหลังที่ตั้งค่า · ภาษา สีหลัก รูปทรง และขนาดปุ่ม ปรับได้ที่แถบล่างขวา",
+                            "Change this later in Settings · language, accent, shape and density are at the bottom right.",
+                        ),
+                        type_scale::CAPTION,
+                    ))
+                    .wrap(),
                 );
             });
         });
@@ -182,6 +192,8 @@ impl Section {
         }
     }
     /// Debug presets and links: `settings-printing`, …
+    /// Debug capture presets only.
+    #[cfg(debug_assertions)]
     pub fn from_name(name: &str) -> Option<Self> {
         Some(match name {
             "shop" => Self::Shop,

@@ -4,6 +4,7 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 publish.workspace = true
+build = "build.rs"
 [[bin]]
 name = "pos-heart"
 path = "src/main.rs"
@@ -24,6 +25,9 @@ time.workspace = true
 qrcodegen = "1.8"
 sha2 = "0.10"
 ab_glyph = "0.2"
+[build-dependencies]
+# Embeds the icon and version in pos-heart.exe (Windows targets only).
+winresource = "0.1"
 [lints]
 workspace = true
 

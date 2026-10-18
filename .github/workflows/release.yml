@@ -1,0 +1,59 @@
+name: Release
+# Builds the macOS .dmg and Windows installer. A pushed tag vX.Y.Z (matching
+# the workspace version) also creates a draft GitHub release with both; a
+# manual run only uploads them as workflow artifacts.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin, x86_64-apple-darwin
+      - name: Version matches the tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          VERSION=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n 1)
+          test "v$VERSION" = "$GITHUB_REF_NAME"
+      - run: sh packaging/macos/build-dmg.sh
+        # Optional signing: set MACOS_SIGN_IDENTITY (with the certificate in
+        # the runner keychain) and APPLE_ID / APPLE_TEAM_ID / APPLE_APP_PASSWORD.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: target/dist/*.dmg
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo build --release --locked -p pos-desktop --bin pos-heart
+      - name: Installer
+        shell: pwsh
+        run: |
+          $version = (Select-String -Path Cargo.toml -Pattern '^version = "(.*)"' | Select-Object -First 1).Matches.Groups[1].Value
+          if (-not (Get-Command iscc -ErrorAction SilentlyContinue)) { choco install innosetup --no-progress -y }
+          $iscc = (Get-Command iscc -ErrorAction SilentlyContinue).Source
+          if (-not $iscc) { $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" }
+          & $iscc "/DVersion=$version" packaging\windows\pos-heart.iss
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: target/dist/*.exe
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [macos, windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/*/* --repo "$GITHUB_REPOSITORY" --draft --generate-notes --title "POS Heart $GITHUB_REF_NAME"

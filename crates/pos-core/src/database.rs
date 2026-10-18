@@ -87,6 +87,19 @@ impl Pos {
         ] {
             conn.batch_execute(pragma)?;
         }
+        // An app update that migrates the schema first keeps the database as
+        // it was (`<db>.pre-v<old>.sqlite3`), so an update can be undone.
+        let before = diesel::sql_query("PRAGMA user_version")
+            .get_result::<SchemaVersion>(&mut conn)?
+            .user_version;
+        if before > 0 && before < SCHEMA_VERSION {
+            let copy = format!("{path}.pre-v{before}.sqlite3");
+            if !Path::new(&copy).exists() {
+                diesel::sql_query("VACUUM INTO ?")
+                    .bind::<diesel::sql_types::Text, _>(&copy)
+                    .execute(&mut conn)?;
+            }
+        }
         conn.immediate_transaction::<_, Error, _>(|conn| {
             let version = diesel::sql_query("PRAGMA user_version")
                 .get_result::<SchemaVersion>(conn)?

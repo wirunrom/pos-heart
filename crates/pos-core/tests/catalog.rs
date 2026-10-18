@@ -1,4 +1,4 @@
-use diesel::{Connection, SqliteConnection, connection::SimpleConnection};
+use diesel::{Connection, RunQueryDsl, SqliteConnection, connection::SimpleConnection};
 use pos_core::{Error, Pos, ProductQuery, ProductView};
 use pos_domain::{
     Cart, CartLine, CashCount, DomainError, Money, PaymentMethod, PaymentRequest, Product,
@@ -43,6 +43,11 @@ fn cash(amount: &str) -> Result<PaymentRequest> {
     })
 }
 
+#[derive(diesel::QueryableByName)]
+struct UserVersion {
+    #[diesel(sql_type = diesel::sql_types::Integer)]
+    user_version: i32,
+}
 #[test]
 fn version_four_products_migrate_on_sale_without_barcodes() -> Result {
     let dir = tempfile::tempdir()?;
@@ -59,6 +64,15 @@ fn version_four_products_migrate_on_sale_without_barcodes() -> Result {
         )?;
     }
     let mut pos = Pos::open(&path)?;
+    // The update kept the version-4 database as it was, once.
+    let copy = dir.path().join("legacy.sqlite3.pre-v4.sqlite3");
+    let mut old = SqliteConnection::establish(copy.to_str().ok_or("copy")?)?;
+    let version: Vec<(i32,)> = diesel::sql_query("PRAGMA user_version")
+        .load::<UserVersion>(&mut old)?
+        .into_iter()
+        .map(|v| (v.user_version,))
+        .collect();
+    assert_eq!(version, vec![(4,)]);
     let p = &pos.products("", 0)?[0];
     assert!(p.on_sale);
     assert_eq!(p.barcode, None);

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleName</key><string>POS Heart</string>
+  <key>CFBundleDisplayName</key><string>POS Heart</string>
+  <key>CFBundleIdentifier</key><string>app.posheart.desktop</string>
+  <key>CFBundleExecutable</key><string>pos-heart</string>
+  <key>CFBundleIconFile</key><string>AppIcon</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleShortVersionString</key><string>__VERSION__</string>
+  <key>CFBundleVersion</key><string>__VERSION__</string>
+  <key>CFBundleDevelopmentRegion</key><string>th</string>
+  <key>CFBundleLocalizations</key><array><string>th</string><string>en</string></array>
+  <key>LSMinimumSystemVersion</key><string>11.0</string>
+  <key>LSApplicationCategoryType</key><string>public.app-category.business</string>
+  <key>NSHighResolutionCapable</key><true/>
+  <key>NSHumanReadableCopyright</key><string>POS Heart</string>
+  <!-- Shop devices (Settings → Devices & cloud) talk over the shop LAN and find the main register by Bonjour. -->
+  <key>NSLocalNetworkUsageDescription</key><string>POS Heart เชื่อมต่อเครื่องขาย จอครัว และ iPad ในร้านผ่าน Wi-Fi/LAN ของร้าน · POS Heart connects the shop's registers, kitchen screens and iPads over the shop network.</string>
+  <key>NSBonjourServices</key><array><string>_posheart._tcp</string></array>
+</dict>
+</plist>

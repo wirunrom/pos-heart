@@ -4,7 +4,11 @@
 
 **สถานะ: development foundation / ยังไม่พร้อมแทนระบบขายหน้างานจริง**
 
-## Run
+## Install
+
+Shops install from the macOS `.dmg` or the Windows setup built by the Release workflow (see [docs/release.md](docs/release.md): first-launch warnings while builds are unsigned, updating, where data lives). Updates keep the shop data, and a schema change first saves the old database next to it.
+
+## Run from source
 
 Install Rust stable (1.95+), and native build tools (macOS: Xcode Command Line Tools; Windows: Visual Studio C++ Build Tools). SQLite and the Thai font are bundled; customers do not install a database server.
 
