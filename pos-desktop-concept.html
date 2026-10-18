@@ -1,0 +1,626 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>POS Desktop Concept</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: one desktop window (graphite chrome + paper panes), scaled to fit the viewer. Single theme by design. */
+:root{
+ --stage:#121213;
+ --chrome-900:#1f2023; --chrome-800:#2a2b2f; --chrome-700:#35373b; --chrome-600:#46484d; --chrome-line:#18191b;
+ --chrome-fg:#ecebe7; --chrome-muted:#a6a7a2;
+ --pane:#f2f2ef; --pane-2:#e9e9e5; --pane-head:#e2e2dd; --well:#ffffff; --line:#cdcdc7; --line-2:#e0e0db;
+ --ink:#1c1d1f; --muted:#5c5e5a; --subtle:#878883;
+ --accent:#f0b232; --accent-h:#dc9810; --accent-line:#c48b10; --on-accent:#141310;
+ --chart:var(--chart);--flash:#fbe7b5;--sel:#dce3ed; --sel-line:#4f75aa; --focus:#2f6fd0;
+ --ok:#1f7a4d; --ok-bg:#dcefe4; --warn:#9a5306; --warn-bg:#f8e7d2; --bad:#a8302a; --bad-bg:#f7dfdc; --info:#285c9e; --info-bg:#dde8f6;
+ --ui:"IBM Plex Sans Thai","IBM Plex Sans",system-ui,sans-serif; --num:"IBM Plex Mono",ui-monospace,monospace;
+ color-scheme:dark;
+}
+html,body{height:100%}
+body{background:var(--stage);color:var(--chrome-fg);font-family:var(--ui);margin:0;overflow:hidden}
+#stage{position:absolute;inset:0;overflow:hidden}
+#win{position:absolute;left:0;top:0;width:1280px;height:820px;transform-origin:0 0;display:grid;grid-template-rows:40px 40px 1fr 24px;background:var(--chrome-800);font-size:13px;color:var(--ink);border-radius:10px;overflow:hidden;box-shadow:0 0 0 1px #000,0 20px 60px rgba(0,0,0,.5)}
+#win *{box-sizing:border-box}
+.num{font-family:var(--num);font-variant-numeric:tabular-nums}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+button:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
+kbd{font:500 10px var(--num)}
+/* chrome */
+.title{background:var(--chrome-900);display:flex;align-items:center;padding:0 12px;color:var(--chrome-muted);font-size:12px;border-bottom:1px solid var(--chrome-line)}
+.lights{display:flex;gap:7px;width:70px}.lights i{width:12px;height:12px;border-radius:50%;background:#ff5f57}.lights i:nth-child(2){background:#febc2e}.lights i:nth-child(3){background:#28c840}
+.title .t{flex:1;text-align:center;color:var(--chrome-fg)}
+.tabs{background:var(--chrome-900);display:flex;align-items:flex-end;padding:0 8px;gap:2px}
+.tab{height:30px;padding:0 14px;display:flex;align-items:center;gap:7px;color:var(--chrome-muted);border-radius:4px 4px 0 0;font-weight:500;position:relative}
+.tab:hover{color:var(--chrome-fg)}
+.tab.on{background:var(--chrome-800);color:var(--chrome-fg)}
+.tab.on::before{content:"";position:absolute;left:0;right:0;top:0;height:2px;background:var(--accent);border-radius:2px 2px 0 0}
+.tab kbd{color:var(--chrome-muted);opacity:.7}
+.tabs .sp{flex:1}
+.cmd{align-self:center;width:280px;height:24px;border-radius:4px;background:var(--chrome-700);color:var(--chrome-muted);display:flex;align-items:center;gap:8px;padding:0 8px;font-size:12px;margin-bottom:3px}
+.cmd span{flex:1}
+.tool{background:var(--chrome-800);display:flex;align-items:center;gap:2px;padding:0 8px;border-bottom:1px solid var(--chrome-line);color:var(--chrome-fg)}
+.tb{height:30px;padding:0 10px;display:flex;align-items:center;gap:6px;border-radius:4px;font-size:12.5px;color:var(--chrome-fg)}
+.tb:hover{background:var(--chrome-700)} .tb:disabled{opacity:.4;cursor:default;background:none}
+.tb svg{width:16px;height:16px}
+.tb kbd{color:var(--chrome-muted)}
+.sep{width:1px;height:20px;background:var(--chrome-600);margin:0 6px}
+.tool .sp{flex:1}
+.tool .ctx{font-size:12px;color:var(--chrome-muted);padding:0 8px}
+.seg{display:flex;background:var(--chrome-900);border-radius:4px;padding:2px;gap:2px}
+.seg button{padding:3px 10px;border-radius:3px;color:var(--chrome-muted);font-size:12px;font-weight:500}.seg button.on{background:var(--chrome-600);color:var(--chrome-fg)}
+.status{background:var(--chrome-900);color:var(--chrome-muted);display:flex;align-items:center;font-size:11.5px;border-top:1px solid var(--chrome-line)}
+.status>span{padding:0 12px;display:flex;align-items:center;gap:6px;height:100%;border-right:1px solid var(--chrome-700);white-space:nowrap}
+.status .sp{flex:1;border:0}
+.status b{color:var(--chrome-fg);font-weight:500}
+.dot{width:7px;height:7px;border-radius:50%;background:#7bd389;display:inline-block}.dot.h{background:transparent;border:1.5px solid var(--chrome-muted)}
+/* panes */
+.main{display:grid;background:var(--line);gap:1px;min-height:0}
+.pane{display:flex;flex-direction:column;min-height:0;min-width:0;background:var(--pane)}
+.ph{height:28px;flex:none;display:flex;align-items:center;gap:8px;padding:0 10px;background:var(--pane-head);border-bottom:1px solid var(--line);font-size:12px;font-weight:600;color:var(--muted)}
+.ph .sp{flex:1}.ph .c{font-weight:500;font-family:var(--num)}
+.ptab{height:28px;display:flex;align-items:center;padding:0 10px;border-right:1px solid var(--line);color:var(--muted);font-weight:600;font-size:12px}
+.ph.tabsh{padding-left:0}
+.ptab.on{background:var(--pane);color:var(--ink);height:29px;margin-bottom:-1px}
+.scroll{flex:1;overflow:auto;min-height:0;position:relative}
+.well{background:var(--well)}
+.btn{height:30px;padding:0 12px;border-radius:4px;border:1px solid var(--line);background:var(--well);display:inline-flex;align-items:center;justify-content:center;gap:7px;font-weight:600;font-size:12.5px;white-space:nowrap}
+.btn:hover{background:var(--pane-2)}
+.btn kbd{color:var(--muted);border:1px solid var(--line);border-radius:3px;padding:0 4px}
+.btn.pri{background:var(--accent);border-color:var(--accent-line);color:var(--on-accent)}
+.btn.pri:hover{background:var(--accent-h)}
+.btn.pri kbd{color:var(--on-accent);border-color:rgba(0,0,0,.25)}
+.btn.big{height:44px;font-size:15px}
+.btn:disabled,.btn.pri:disabled{background:var(--pane-2);border-color:var(--line);color:var(--subtle);cursor:not-allowed}
+.btn.danger{color:var(--bad)}
+.btn.sm{height:26px}
+.ib{width:26px;height:26px;border:1px solid var(--line);border-radius:3px;display:grid;place-items:center;background:var(--well)}
+.ib svg{width:15px;height:15px}
+.badge{display:inline-flex;align-items:center;height:18px;padding:0 6px;border-radius:3px;font-size:11px;font-weight:600;background:var(--pane-2);color:var(--muted);white-space:nowrap}
+.b-ok{background:var(--ok-bg);color:var(--ok)}.b-warn{background:var(--warn-bg);color:var(--warn)}.b-bad{background:var(--bad-bg);color:var(--bad)}.b-info{background:var(--info-bg);color:var(--info)}
+.input{height:28px;border:1px solid #a9aaa4;border-radius:3px;background:var(--well);padding:0 8px;font:inherit;color:var(--ink);width:100%}
+.input:focus{outline:none;border-color:var(--focus);box-shadow:0 0 0 2px rgba(47,111,208,.2)}
+.input.cashin{height:40px;font-size:20px}#win.touch .input.cashin{height:52px;font-size:22px}
+.input.money{font-family:var(--num);text-align:right;font-weight:600}
+.mut{color:var(--muted)} .sub{color:var(--subtle)} .neg{color:var(--bad)}
+/* table */
+table.t{color:var(--ink);font-family:var(--ui);width:100%;border-collapse:separate;border-spacing:0;font-size:12.5px;background:var(--well)}
+.t th{position:sticky;top:0;background:var(--pane-2);text-align:left;font-weight:600;font-size:11.5px;color:var(--muted);height:26px;padding:0 10px;border-bottom:1px solid var(--line);border-right:1px solid var(--line-2);white-space:nowrap;z-index:1}
+.t td{height:30px;padding:0 10px;border-bottom:1px solid var(--line-2);white-space:nowrap}
+.t tr:nth-child(even) td{background:#fafaf8}
+.t .r{text-align:right;font-family:var(--num)}
+.t tr.sel td{background:var(--sel)!important}
+.t tr.sel td:first-child{box-shadow:inset 2px 0 0 var(--sel-line)}
+.t tbody tr{cursor:default}.t tbody tr:hover td{background:#eef1f5}
+/* sell */
+.bill{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--line-2)}
+.bill .n{font-size:15px;font-weight:600;flex:1}.bill small{display:block;font-size:11px;color:var(--muted);font-weight:400}
+.ln{display:grid;grid-template-columns:30px 1fr auto;gap:0 8px;padding:6px 10px;border-bottom:1px solid var(--line-2);align-items:start;cursor:default}
+.ln:hover{background:#f4f6f9}
+.ln .q{font-family:var(--num);font-weight:600;text-align:right;color:var(--muted)}
+.ln .a{font-family:var(--num);text-align:right;font-weight:500}
+.ln .s{grid-column:2/4;font-size:11.5px;color:var(--muted)}.ln .m{color:#8a5a03;font-weight:500}
+.ln.cur{background:var(--sel);box-shadow:inset 2px 0 0 var(--sel-line)}.ln.cur .q{color:var(--ink)}
+.lnedit{grid-column:1/4;padding-left:38px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px}
+.lnedit .step{flex:none}.lnedit .rm{margin-left:auto;padding:0 8px}#win.touch .lnedit .rm{width:48px;padding:0}#win.touch .lnedit .step button{width:44px}#win.touch .lnedit .step output{min-width:44px}.cmd{text-align:left}
+.step{display:inline-flex;border:1px solid var(--line);border-radius:3px;background:var(--well);height:26px}
+.step button{width:26px;display:grid;place-items:center}.step output{min-width:32px;text-align:center;border-inline:1px solid var(--line-2);font-family:var(--num);font-weight:600;line-height:24px}
+.foot{border-top:1px solid var(--line);background:var(--pane);padding:8px 10px;display:grid;gap:5px;flex:none}
+.kv{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:12px;color:var(--muted)}
+.kv b{font-family:var(--num);font-weight:500;color:var(--ink);white-space:nowrap}
+.tot{display:flex;justify-content:space-between;align-items:baseline;padding-top:6px;border-top:1px solid var(--line)}
+.tot span{font-weight:600}.tot b{font-family:var(--num);font-size:30px;font-weight:600;letter-spacing:-.02em}
+.acts{display:grid;grid-template-columns:1fr 1.6fr;gap:6px;margin-top:3px}
+.empty{padding:40px 16px;text-align:center;color:var(--muted)}
+.empty b{display:block;color:var(--ink);margin-bottom:4px}
+.paybox{padding:12px 10px;display:grid;gap:10px;background:var(--well);flex:1}
+.paybox .lab{font-size:12px;font-weight:600;color:var(--muted)}
+.pseg{display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.pseg button{flex:1;height:32px;border-right:1px solid var(--line);font-weight:500}
+.pseg button:last-child{border:0}.pseg button.on{background:var(--chrome-800);color:var(--chrome-fg)}
+.qc{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.qc button{height:32px;border:1px solid var(--line);border-radius:4px;font-family:var(--num);background:var(--pane)}
+.qc button.on{background:var(--chrome-800);color:var(--chrome-fg);border-color:var(--chrome-800)}
+.change{display:flex;justify-content:space-between;align-items:baseline;padding:10px 12px;border-radius:4px;background:var(--pane)}
+.change b{font-family:var(--num);font-size:24px}
+.err{color:var(--bad);font-size:12px}
+.back{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);padding:6px 10px;border-bottom:1px solid var(--line-2)}
+.done{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:var(--well)}
+.done .big{font-family:var(--num);font-size:44px;font-weight:600}
+.cat{display:flex;justify-content:space-between;padding:6px 12px;width:100%;text-align:left}
+.cat:hover{background:#e9ecef}
+.cat .num{color:var(--subtle)}
+.cat.on{background:var(--sel);box-shadow:inset 2px 0 0 var(--sel-line);font-weight:600}
+.cath{font-size:11px;color:var(--subtle);padding:10px 12px 2px;font-weight:600;border-top:1px solid var(--line-2);margin-top:6px}
+.search{display:flex;align-items:center;gap:8px;margin:8px 10px;height:30px;background:var(--well);border:1px solid #a9aaa4;border-radius:3px;padding:0 8px;color:var(--subtle)}
+.search:focus-within{border-color:var(--focus);box-shadow:0 0 0 2px rgba(47,111,208,.18)}
+.search input{flex:1;border:0;outline:0;font:inherit;color:var(--ink);background:transparent}
+.search kbd{border:1px solid var(--line);border-radius:3px;padding:0 4px;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;padding:0 10px 10px;align-content:start}
+.tile{background:var(--well);border:1px solid var(--line);border-radius:3px;min-height:78px;padding:8px 9px;display:flex;flex-direction:column;justify-content:space-between;position:relative;text-align:left}
+.tile:hover{border-color:#9b9c96}
+.tile:active{background:#f4f6f9}
+.tile .nm{line-height:1.35;padding-right:20px}
+.tile .f{display:flex;justify-content:space-between;align-items:baseline;font-size:11.5px;color:var(--muted)}
+.tile .p{font-family:var(--num);font-weight:600;font-size:13px;color:var(--ink)}
+.cnt{position:absolute;top:6px;right:6px;min-width:18px;height:18px;border-radius:3px;background:var(--chrome-800);color:#fff;font:600 11px var(--num);display:grid;place-items:center;padding:0 4px}
+.tile.in{border-color:var(--sel-line);box-shadow:inset 0 0 0 1px var(--sel-line)}
+.tile.off{background:var(--pane-2);cursor:not-allowed}.tile.off .nm,.tile.off .p{color:var(--subtle)}
+.bad{color:var(--bad);font-weight:600}.warn{color:var(--warn);font-weight:600}
+/* inspector / forms */
+.insp{padding:12px;display:grid;gap:12px;align-content:start;background:var(--well)}
+.fgrid{display:grid;grid-template-columns:120px 1fr;gap:8px 12px;align-items:center}
+.fgrid label{font-size:12px;color:var(--muted);text-align:right}
+.hint{font-size:11.5px;color:var(--subtle)}
+.savebar{flex:none;display:flex;align-items:center;gap:8px;padding:8px 10px;border-top:1px solid var(--line);background:var(--pane-head)}
+.savebar .msg{flex:1;font-size:12px;color:var(--warn);font-weight:600;display:flex;align-items:center;gap:6px}
+.sw{width:32px;height:18px;border-radius:9px;background:var(--ok);position:relative;display:inline-block}.sw::after{content:"";position:absolute;right:2px;top:2px;width:14px;height:14px;border-radius:50%;background:#fff}
+.sw.off{background:#b9bab4}.sw.off::after{right:auto;left:2px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);background:var(--well);border-bottom:1px solid var(--line)}
+.kpi{padding:10px 14px;border-right:1px solid var(--line-2)}
+.kpi .l{font-size:11.5px;color:var(--muted)}.kpi .v{font-family:var(--num);font-size:22px;font-weight:600;margin-top:2px}.kpi .m{font-size:11.5px;color:var(--subtle)}
+.sect{font-size:11.5px;font-weight:600;color:var(--muted);padding:10px 12px 4px}
+.chart text{font:11px var(--ui);fill:var(--muted)}.chart .g{stroke:var(--line-2)}
+.steps{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--chrome-muted)}
+.steps b{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;border:1.5px solid var(--chrome-600);font-size:10px;margin-right:4px}
+.steps .d b{background:var(--chrome-fg);color:var(--chrome-900);border-color:var(--chrome-fg)}.steps .c{color:var(--chrome-fg);font-weight:600}.steps .c b{border-color:var(--chrome-fg)}
+.steps i{width:16px;height:1px;background:var(--chrome-600)}
+.toast{position:absolute;left:50%;bottom:36px;transform:translateX(-50%);background:var(--chrome-900);color:var(--chrome-fg);border-radius:4px;padding:8px 8px 8px 12px;display:flex;gap:12px;align-items:center;font-size:12.5px;box-shadow:0 6px 20px rgba(0,0,0,.3);z-index:20}
+.toast button{color:var(--accent);font-weight:600;padding:2px 6px}
+.tag{position:absolute;right:12px;top:7px;font:600 10px var(--ui);background:rgba(0,0,0,.55);color:#fff;padding:3px 6px;border-radius:3px;z-index:5}
+
+/* ---------- touch density: same layout, bigger targets (≥44px), no shortcut hints ---------- */
+#win.touch{grid-template-rows:48px 58px 1fr 32px;font-size:15px}
+#win.touch kbd,#win.touch .khint{display:none}
+#win.touch .tab{height:42px;padding:0 18px;font-size:15px}
+#win.touch .tb{height:48px;padding:0 14px;font-size:14px;gap:8px}#win.touch .tb svg{width:20px;height:20px}
+#win.touch .sep{height:30px}
+#win.touch .seg button{padding:9px 16px;font-size:14px}
+#win.touch .ph{height:38px;font-size:13px}#win.touch .ptab{height:38px;padding:0 18px;font-size:13px}#win.touch .ptab.on{height:39px}
+#win.touch .bill{padding:10px 12px}#win.touch .bill .n{font-size:17px}
+#win.touch .ib{width:44px;height:44px}#win.touch .ib svg{width:18px;height:18px}
+#win.touch .ln{grid-template-columns:36px 1fr auto;padding:12px 12px}
+#win.touch .ln .s{font-size:13px}
+#win.touch .lnedit{margin-top:10px;gap:8px;padding-left:0}
+#win.touch .step{height:44px}#win.touch .step button{width:52px}#win.touch .step output{min-width:48px;line-height:42px;font-size:16px}
+#win.touch .lnedit .btn{height:44px}
+#win.touch .btn{height:44px;font-size:14px;padding:0 16px}#win.touch .btn.big{height:62px;font-size:18px}
+#win.touch .kv{font-size:13.5px}#win.touch .tot b{font-size:34px}
+#win.touch .cat{padding:14px 14px;font-size:15px}
+#win.touch .search{height:48px;margin:10px 12px;font-size:15px}
+#win.touch .grid{grid-template-columns:repeat(auto-fill,minmax(172px,1fr));gap:8px;padding:0 12px 12px}
+#win.touch .tile{min-height:104px;padding:12px}#win.touch .tile .p{font-size:16px}#win.touch .tile .f{font-size:13px}
+#win.touch .cnt{min-width:26px;height:26px;font-size:14px}
+#win.touch .pseg button{height:52px;font-size:15px}#win.touch .qc{gap:8px}#win.touch .qc button{height:56px;font-size:16px}
+#win.touch .input{height:46px;font-size:15px}
+#win.touch .t{font-size:14px}#win.touch .t td{height:52px}#win.touch .t th{height:34px;font-size:12.5px}
+#win.touch .back{padding:14px 12px;font-size:14px}
+#win.touch .status{font-size:12.5px}
+#win.touch .savebar{padding:10px 12px}
+#win.touch .fgrid label{font-size:13.5px}
+.dens{display:flex;height:100%}.dens button{padding:0 10px;color:var(--chrome-muted);font-size:inherit}.dens button.on{color:var(--chrome-fg);background:var(--chrome-700)}
+
+/* ---------- shape: soft (modern) — panes float on the chrome, rounded controls, inset selections ---------- */
+#win.soft{border-radius:12px}
+#win.soft .main{background:var(--chrome-800);gap:6px;padding:0 6px 6px}
+#win.soft .pane{border-radius:10px;overflow:hidden}
+#win.soft .tool{border-bottom:0}
+#win.soft .tabs{gap:4px;padding:0 10px;align-items:center}
+#win.soft .tab{height:26px;border-radius:8px;padding:0 12px}
+#win.soft .tab.on{background:var(--chrome-700)}
+#win.soft .tab.on::before{top:auto;bottom:3px;left:12px;right:12px;height:2px;border-radius:2px}
+#win.soft .cmd{border-radius:8px;margin:0}
+#win.soft .tb{border-radius:8px}
+#win.soft .seg{border-radius:9px;padding:3px}#win.soft .seg button{border-radius:7px}
+#win.soft .ph{background:var(--pane);border-bottom:1px solid var(--line-2);color:var(--ink);font-weight:600}
+#win.soft .ph.tabsh{padding:0 6px;gap:4px}
+#win.soft .ptab{border:0;height:24px;border-radius:7px;padding:0 10px;margin:0;color:var(--muted)}
+#win.soft .ptab.on{height:24px;margin:0;background:var(--pane-2);color:var(--ink)}
+#win.soft .ln{margin:2px 6px;border-radius:8px;border-bottom:0;padding:7px 8px}
+#win.soft .ln+.ln{box-shadow:0 -1px 0 var(--line-2)}
+#win.soft .ln.cur{box-shadow:none;background:var(--sel)}
+#win.soft .ln.cur+.ln,#win.soft .ln:hover+.ln{box-shadow:none}
+#win.soft .ln:hover{border-radius:8px}
+#win.soft .bill{border-bottom:0}
+#win.soft .foot{border-top:1px solid var(--line-2);padding:10px}
+#win.soft .btn{border-radius:8px}#win.soft .btn.big{border-radius:10px}
+#win.soft .ib{border-radius:8px}
+#win.soft .step{border-radius:8px;overflow:hidden}
+#win.soft .input{border-radius:8px}
+#win.soft .search{border-radius:10px}
+#win.soft .cat{margin:1px 6px;width:calc(100% - 12px);border-radius:8px}
+#win.soft .cat.on{box-shadow:none}
+#win.soft .cath{border-top:0;margin-top:4px}
+#win.soft .tile{border-radius:10px;border-color:var(--line-2);box-shadow:0 1px 2px rgba(0,0,0,.05)}
+#win.soft .tile.in{border-color:var(--sel-line);box-shadow:inset 0 0 0 1px var(--sel-line)}
+#win.soft .cnt{border-radius:6px}
+#win.soft .badge{border-radius:6px}
+#win.soft .pseg{border-radius:10px;border:0;background:var(--pane-2);padding:3px;gap:3px}
+#win.soft .pseg button{border:0;border-radius:8px}
+#win.soft .qc button{border-radius:10px}
+#win.soft .change{border-radius:10px}
+#win.soft .back{border-bottom:0}
+#win.soft .paybox{background:var(--pane)}
+#win.soft .kpis{background:var(--pane);gap:8px;padding:10px;border-bottom:0}
+#win.soft .kpi{background:var(--well);border:1px solid var(--line-2);border-radius:10px}
+#win.soft table.t{background:var(--well)}
+#win.soft .t th{background:var(--pane);border-right:0}
+#win.soft .t tr.sel td:first-child{box-shadow:none;border-radius:8px 0 0 8px}#win.soft .t tr.sel td:last-child{border-radius:0 8px 8px 0}
+#win.soft .t tr:nth-child(even) td{background:transparent}
+#win.soft .savebar{background:var(--pane);border-top:1px solid var(--line-2)}
+#win.soft .toast{border-radius:10px}
+#win.soft .status{border-top:0}
+/* ---------- redesigned views ---------- */
+.col{display:grid;gap:1px;min-height:0;grid-auto-rows:minmax(0,auto);align-content:stretch}
+#win.soft .col{gap:6px}
+.col>.pane:last-child{min-height:0}
+.hbar{display:flex;gap:6px;align-items:center;padding:8px 10px;border-bottom:1px solid var(--line-2);flex-wrap:wrap}
+.chip{height:28px;padding:0 10px;border:1px solid var(--line);border-radius:14px;background:var(--well);font-size:12px;font-weight:500;display:inline-flex;gap:6px;align-items:center}
+.chip .num{color:var(--subtle)}.chip.on{background:var(--chrome-800);border-color:var(--chrome-800);color:var(--chrome-fg)}.chip.on .num{color:var(--chrome-muted)}
+#win.touch .chip{height:40px;padding:0 14px;border-radius:20px;font-size:14px}
+.grp{position:sticky;top:0;z-index:1;display:flex;justify-content:space-between;padding:6px 12px;background:var(--pane);border-bottom:1px solid var(--line-2);font-size:11.5px;font-weight:600;color:var(--muted)}
+.grp b{color:var(--ink)}
+.hrow{display:grid;grid-template-columns:70px 44px 1fr auto 90px;gap:10px;align-items:center;width:100%;text-align:left;padding:8px 12px;border-bottom:1px solid var(--line-2)}
+.hrow:hover{background:#f4f6f9}.hrow.on{background:var(--sel);box-shadow:inset 2px 0 0 var(--sel-line)}
+#win.soft .hrow{margin:2px 6px;width:calc(100% - 12px);border-radius:8px;border-bottom:0}#win.soft .hrow.on{box-shadow:none}
+#win.touch .hrow{padding:13px 12px}
+.hn{font-weight:600}.ht{color:var(--muted);font-family:var(--num);font-size:12px}.hm small{display:block;font-size:11px;color:var(--subtle)}.ha{text-align:right;font-weight:600}.strike{text-decoration:line-through;color:var(--subtle)}
+.paper{background:#fff;border-radius:4px;box-shadow:0 1px 3px rgba(0,0,0,.12);padding:16px 18px;font-size:12px;max-width:300px;width:100%;margin:0 auto;font-family:var(--ui)}
+.pc{text-align:center;font-weight:600}.pdash{border-top:1px dashed #b9bab4;margin:8px 0}
+.prow{display:flex;justify-content:space-between;gap:10px;padding:2px 0}.prow span:last-child{font-family:var(--num)}.prow.big{font-weight:600;font-size:15px;padding:4px 0}
+.tl{display:grid;gap:0}
+.tli{display:grid;grid-template-columns:16px 1fr;gap:10px;position:relative;padding-bottom:12px}
+.tli:not(:last-child)::before{content:"";position:absolute;left:5px;top:12px;bottom:0;width:2px;background:var(--line)}
+.tli i{width:12px;height:12px;border-radius:50%;background:var(--ok);margin-top:3px;box-shadow:0 0 0 3px var(--pane-2)}
+.tli.warn i{background:var(--warn)}.tli.bad i{background:var(--bad)}
+.tli small{display:block;color:var(--muted);font-size:11.5px}
+.vsteps{display:grid;gap:4px}
+.vs{display:grid;grid-template-columns:24px 1fr;gap:10px;padding:8px;border-radius:6px;color:var(--muted)}
+.vs b{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--line);display:grid;place-items:center;font-size:11px;background:var(--well)}
+.vs small{display:block;font-size:11px;color:var(--subtle);margin-top:1px}
+.vs.done{color:var(--ink)}.vs.done b{background:var(--chrome-800);border-color:var(--chrome-800);color:#fff}
+.vs.cur{background:var(--sel);color:var(--ink);font-weight:600}.vs.cur b{border-color:var(--sel-line);color:var(--sel-line)}
+.vnote{display:flex;gap:8px;margin-top:10px;padding:10px;border-radius:6px;background:var(--warn-bg);color:var(--warn);font-size:12px}
+.dens-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px}
+.den{background:var(--well);border:1px solid var(--line-2);border-radius:var(--r,4px);padding:10px;display:grid;gap:8px}
+#win.soft .den{border-radius:10px}
+.dv{display:flex;align-items:baseline;gap:6px}.dv .num{font-size:20px;font-weight:600}.dv small{color:var(--subtle)}
+.dstep{display:grid;grid-template-columns:40px 1fr 40px;border:1px solid var(--line);border-radius:6px;overflow:hidden;height:38px}
+.dstep button{display:grid;place-items:center;background:var(--pane)}.dstep button:hover{background:var(--pane-2)}
+.dstep output{display:grid;place-items:center;font-size:16px;font-weight:600;border-inline:1px solid var(--line-2)}
+#win.touch .dstep{height:52px;grid-template-columns:56px 1fr 56px}#win.touch .dstep output{font-size:19px}
+.dsum{text-align:right;color:var(--muted);font-size:12px}
+.countbar{flex:none;display:flex;justify-content:space-between;align-items:baseline;padding:10px 14px;border-top:1px solid var(--line);background:var(--well)}
+.countbar span{font-weight:600}.countbar b{font-size:24px}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:8px}.cmp div{background:var(--pane);border-radius:6px;padding:8px 10px}.cmp small{display:block;color:var(--muted);font-size:11.5px}.cmp b{font-size:18px}
+.meter{height:6px;border-radius:3px;background:var(--pane-2);overflow:hidden}.meter i{display:block;height:100%;background:var(--sel-line);border-radius:3px}
+.diffbox{display:flex;justify-content:space-between;align-items:center;padding:12px;border-radius:8px}
+.diffbox b.num{font-size:24px}.diffbox.short,.diffbox.over{background:var(--bad-bg)}.diffbox.short b.num,.diffbox.over b.num{color:var(--bad)}.diffbox.ok{background:var(--ok-bg)}.diffbox.ok b.num{color:var(--ok)}
+.det summary{cursor:pointer;font-size:12px;color:var(--info);font-weight:600;margin-bottom:6px}.det .kv{margin:3px 0}
+.pn{display:flex;gap:10px;align-items:center;white-space:normal}.pn small{display:block;font-size:11px;color:var(--subtle)}
+.sw2{width:8px;height:28px;border-radius:3px;flex:none}
+.pinsp-h{flex:none;padding:12px 12px 0;background:var(--well);border-bottom:1px solid var(--line-2)}
+.pt{font-size:16px;font-weight:600}
+.pchips{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:10px 0}
+.pchips span{background:var(--pane);border-radius:6px;padding:6px 8px}.pchips small{display:block;font-size:11px;color:var(--muted)}.pchips b{font-size:15px}
+.itabs{display:flex;gap:2px}
+.itabs button{padding:8px 10px;font-size:12.5px;color:var(--muted);font-weight:500;position:relative}
+.itabs button.on{color:var(--ink);font-weight:600}.itabs button.on::after{content:"";position:absolute;left:8px;right:8px;bottom:-1px;height:2px;background:var(--ink);border-radius:2px}
+#win.touch .itabs button{padding:12px 12px;font-size:14px}
+.kpirow{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--line)}
+#win.soft .kpirow{gap:6px;background:transparent}
+.kpi2{background:var(--well);padding:12px 14px}
+#win.soft .kpi2{border-radius:10px}
+.kpi2 .l{font-size:11.5px;color:var(--muted)}.kpi2 .v{font-family:var(--num);font-size:22px;font-weight:600;margin:2px 0}.kpi2 .v.sm{font-size:15px;font-family:var(--ui);margin:6px 0 4px}.kpi2 .m{font-size:11.5px;color:var(--subtle)}
+.rbody{padding:12px 14px;background:var(--well);flex:1;overflow:auto;min-height:0}
+.minis{display:inline-flex;background:var(--pane-2);border-radius:7px;padding:2px;gap:2px}
+.minis button{padding:3px 9px;border-radius:5px;font-size:12px;color:var(--muted);font-weight:500}.minis button.on{background:var(--well);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+#win.touch .minis button{padding:9px 14px;font-size:14px}
+.mixbar{display:flex;height:12px;border-radius:6px;overflow:hidden;gap:2px;margin-bottom:6px}
+.rank{display:grid;grid-template-columns:16px 1fr auto;gap:10px;align-items:center;padding:6px 0}
+.rn{font-size:12.5px;line-height:1.3}.rb{height:5px;border-radius:3px;background:var(--pane-2);margin-top:4px}.rb i{display:block;height:100%;border-radius:3px;background:var(--chart)}
+.hero{background:var(--chrome-700)!important;color:var(--chrome-fg)}
+.hero-in{padding:16px}.hk{font-size:12px;color:var(--chrome-muted)}.hv{font-size:22px;font-weight:600;margin-top:2px}.hs{font-size:12px;color:var(--chrome-muted)}
+.hero .btn:not(.pri){background:transparent;border-color:var(--chrome-600);color:var(--chrome-fg)}.hero .btn kbd{border-color:rgba(0,0,0,.25)}
+.task{display:grid;grid-template-columns:4px 1fr auto;gap:10px;align-items:center;padding:10px;border-radius:6px;background:var(--well);margin-bottom:6px;border:1px solid var(--line-2)}
+.task i{align-self:stretch;border-radius:2px;background:var(--subtle)}.task.t-warn i{background:var(--warn)}.task.t-info i{background:var(--info)}.task.t-ok i{background:var(--ok)}
+.task small{display:block;color:var(--muted);font-size:11.5px}
+#win.soft .task{border-radius:10px}
+.hold{display:flex;justify-content:space-between;align-items:center;width:100%;text-align:left;padding:10px 12px;border-radius:6px;background:var(--well);border:1px solid var(--line-2);margin-bottom:6px}
+.hold:hover{border-color:#9b9c96}.hold small{display:block;color:var(--muted);font-size:11.5px}.hold .num{font-weight:600}
+#win.soft .hold{border-radius:10px}#win.touch .hold,#win.touch .task{padding:14px}
+.snav{display:block;width:calc(100% - 12px);margin:1px 6px;text-align:left;padding:8px 10px;border-radius:6px}
+.snav b{display:block;font-weight:500}.snav small{display:block;color:var(--subtle);font-size:11.5px}
+.snav:hover{background:#e9ecef}.snav.on{background:var(--sel)}.snav.on b{font-weight:600}
+#win.touch .snav{padding:12px}
+.scard{background:var(--well);border:1px solid var(--line-2);border-radius:6px}
+#win.soft .scard{border-radius:12px}
+.sh{padding:10px 14px;font-weight:600;border-bottom:1px solid var(--line-2)}
+.srow{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:10px 14px;border-bottom:1px solid var(--line-2)}.srow:last-child{border-bottom:0}
+.srow small{display:block;color:var(--subtle);font-size:11.5px;font-weight:400}.srow b{font-weight:500}
+#win.touch .srow{padding:14px}
+.legend{font-size:11.5px;font-weight:400;color:var(--muted);display:flex;gap:6px;align-items:center}
+.lg{width:9px;height:9px;border-radius:50%;display:inline-block;margin-left:6px}.lg.free{border:1.5px solid var(--subtle)}.lg.busy{background:var(--info)}.lg.pay{background:var(--warn)}
+.floor{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;padding:12px}
+.tcard{background:var(--well);border:1px solid var(--line);border-radius:6px;min-height:110px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;text-align:left}
+#win.soft .tcard{border-radius:12px}
+.tcard:hover{border-color:#9b9c96}
+.tcard .th{display:flex;justify-content:space-between;align-items:baseline}.tcard .th b{font-size:17px}
+.tcard .tm{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;color:var(--muted);margin-top:auto}.tcard .tm b{font-size:15px;color:var(--ink)}
+.tfree{margin-top:auto;color:var(--subtle)}
+.tcard.s-free{background:var(--pane);border-style:dashed}
+.tcard.s-busy{box-shadow:inset 3px 0 0 var(--info)}.tcard.s-pay{box-shadow:inset 3px 0 0 var(--warn);background:#fffaf2}
+.tcard.s-clean{background:var(--pane-2)}
+#win.touch .tcard{min-height:130px}
+
+/* ---------- v5: unified title bar, scope, feedback, category color, status actions, overlays ---------- */
+.tabs{align-items:center!important;border-bottom:1px solid var(--chrome-line)}
+.tabs .lights{width:auto;margin:0 14px 0 4px}
+.tab{height:28px!important;border-radius:6px!important}
+.tab.on::before{top:auto!important;bottom:2px;left:12px!important;right:12px!important;height:2px;border-radius:2px}
+.store{font-size:12px;color:var(--chrome-muted);margin-left:12px;white-space:nowrap}
+#win.touch .tab{height:38px!important}
+.scope{font-size:11px;color:var(--chrome-muted);padding:0 4px 0 2px;text-transform:none;letter-spacing:.02em}
+@keyframes flashln{0%{background:var(--flash)}100%{background:var(--sel)}}
+.ln.flash{animation:flashln .6s ease-out}
+@keyframes bump{0%{transform:scale(1)}40%{transform:scale(1.35)}100%{transform:scale(1)}}
+.cnt.bump{animation:bump .3s ease-out}
+.tile{border-left:3px solid var(--cc,var(--line))!important}
+#win.soft .tile{border-left-width:1px!important;background:linear-gradient(90deg,var(--cc) 0 4px,var(--well) 4px)}
+#win.soft .tile.off{background:linear-gradient(90deg,var(--cc) 0 4px,var(--pane-2) 4px);opacity:.85}
+.cdot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;vertical-align:1px}
+.catchips{display:flex;gap:8px;padding:0 12px 4px;overflow-x:auto;flex:none}
+.catchips .chip{flex:none}
+.status .si{height:100%;padding:0 12px;display:flex;align-items:center;gap:6px;border-right:1px solid var(--chrome-700);color:var(--chrome-muted);font-size:inherit;white-space:nowrap}
+.status .si:hover{background:var(--chrome-800);color:var(--chrome-fg)}
+.av{width:18px;height:18px;border-radius:50%;background:var(--accent);color:var(--on-accent);font-style:normal;font-size:10px;font-weight:700;display:grid;place-items:center}
+#win.touch .av{width:22px;height:22px;font-size:12px}
+.ov{position:absolute;inset:0;z-index:30;display:grid;place-items:center;background:rgba(10,10,12,.45)}
+.dlg{background:var(--well);border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.4);padding:20px;width:320px;color:var(--ink)}
+.pdots{display:flex;gap:10px;justify-content:center;margin:12px 0 16px}.pdots i{width:12px;height:12px;border-radius:50%;border:2px solid var(--line)}.pdots i.f{background:var(--ink);border-color:var(--ink)}
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.pad button{height:52px;border-radius:10px;background:var(--pane);font:600 18px var(--num)}.pad button:hover{background:var(--pane-2)}
+.who{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}.who span{padding:4px 10px;border-radius:12px;background:var(--pane);font-size:12px}.who span.on{background:var(--chrome-800);color:var(--chrome-fg)}
+.cmdk{position:absolute;left:50%;top:70px;transform:translateX(-50%);width:560px;background:var(--well);border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.4);overflow:hidden;color:var(--ink)}
+.cmdk input{width:100%;border:0;outline:0;padding:14px 16px;font:15px var(--ui);border-bottom:1px solid var(--line-2)}
+.cmdk .res{max-height:320px;overflow:auto;padding:6px}
+.cmdk .res b{display:block;font-size:11px;color:var(--subtle);padding:8px 10px 4px;font-weight:600}
+.cmdk .res button{display:flex;justify-content:space-between;width:100%;text-align:left;padding:9px 10px;border-radius:8px}
+.cmdk .res button:hover,.cmdk .res button.on{background:var(--sel)}
+.cmdk .res span.k{color:var(--subtle);font-size:12px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<div id="stage"><div id="win"></div></div>
+<script>
+(function(){
+var W=document.getElementById('win'),ST=document.getElementById('stage');
+var IC={plus:'M12 6v12 M6 12h12',minus:'M6 12h12',pause:'M9 6v12 M15 6v12',note:'M5 5h14v10H9l-4 4z',tag:'M3 12V4h8l10 10-8 8z M7.5 7.5h.01',split:'M12 3v18 M5 8l-3 4 3 4 M19 8l3 4-3 4',kitchen:'M6 3v8a3 3 0 0 0 6 0V3 M9 3v18 M17 3c-2 2-2 6 0 8v10',search:'M10.5 4a6.5 6.5 0 1 0 0.01 0z M15.5 15.5L20 20',trash:'M4 7h16 M9 7V4h6v3 M6 7l1 13h10l1-13',edit:'M4 20h4L19 9l-4-4L4 16z',printer:'M7 9V3h10v6 M5 9h14v8h-3 M8 17H5V9 M8 14h8v7H8z',undo:'M9 14L4 9l5-5 M4 9h10a6 6 0 0 1 0 12h-3',x:'M7 7l10 10 M17 7L7 17',download:'M12 4v11 M7 10l5 5 5-5 M5 20h14',upload:'M12 20V9 M7 14l5-5 5 5 M5 4h14',filter:'M4 5h16l-6 7v6l-4 2v-8z',chevL:'M14 7l-5 5 5 5',check:'M5 12.5l4.5 4.5L19 7.5',drawer:'M3 5h18v6H3z M3 11h18v8H3z M10 15h4',lock:'M6 11h12v9H6z M8 11V8a4 4 0 0 1 8 0v3',cal:'M4 6h16v14H4z M4 10h16 M8 3v4 M16 3v4',refund:'M9 14L4 9l5-5 M4 9h10a6 6 0 0 1 0 12h-3',warn:'M12 4l9 16H3z M12 10v4 M12 17h.01',dots:'M5 12h.01 M12 12h.01 M19 12h.01'};
+function I(n,s){return '<svg width="'+(s||16)+'" height="'+(s||16)+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="'+(n==='dots'?3:1.8)+'" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="'+IC[n]+'"/></svg>'}
+function M(n,cur){var s=Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});return (n<0?'−':'')+(cur?'฿':'')+s}
+var P=[{n:'ข้าวกะเพราไก่ไข่ดาว',p:65,c:'food',o:1},{n:'ข้าวมันไก่ต้ม',p:55,c:'food'},{n:'ชุดข้าวมันไก่ + ซุป + น้ำเก๊กฮวย (พิเศษ)',p:89.5,c:'food'},{n:'ผัดไทยกุ้งสด',p:80,c:'food',closed:1},
+{n:'ชาไทยเย็น',p:45,c:'drink',o:1},{n:'กาแฟดำเย็น',p:50,c:'drink',o:1},{n:'น้ำดื่ม 600 มล.',p:10,c:'drink',s:124},{n:'โซดา 325 มล.',p:15,c:'drink',s:3},
+{n:'ผงซักฟอก 2.7 กก.',p:1019,c:'goods',s:5},{n:'กระดาษทิชชู่ 6 ม้วน',p:119,c:'goods',s:0},{n:'ขนมปังสังขยา',p:35,c:'snack'},{n:'มันฝรั่งทอด 75 ก.',p:32,c:'snack',s:18}];
+P.forEach(function(p,i){p.id=i;p.sku=['F-001','F-002','F-003','F-004','D-001','D-002','8851234000017','8851234000024','8859876500011','8859876500028','S-001','8851111100035'][i]});
+var CC={food:'#c9781a',drink:'#3f78b5',goods:'#5f8f5a',snack:'#a0569a'};var CATS=[['all','ทั้งหมด'],['food','อาหาร'],['drink','เครื่องดื่ม'],['goods','ของใช้'],['snack','ขนม']];
+var st={ws:'sell',cat:'all',q:'',bill:{name:'โต๊ะริมหน้าต่าง 2',lines:[{pid:0,q:2,mods:'เผ็ดน้อย'},{pid:2,q:1},{pid:6,q:3},{pid:8,q:1},{pid:4,q:2,mods:'หวานน้อย · +ไข่มุก',extra:10}]},sel:4,held:[{name:'โต๊ะ 4',at:'13:42',lines:[{pid:4,q:2}]},{name:'กลับบ้าน · คุณเอ',at:'14:05',lines:[{pid:8,q:1}]}],
+  tab:'cur',mode:'order',touch:false,soft:true,acc:'saffron',sound:true,staff:'สมชาย',flash:-1,bump:-1,pin:null,cmd:null,view:'products',den:[[1000,2],[500,1],[100,8],[50,4],[20,6],[10,0],[5,3],[2,0],[1,5]],tender:'cash',recv:'',done:null,toast:null,hist:1,dirty:true,repTab:'day'};
+var DISC=50,SC=0.10;
+var ACC={saffron:['หญ้าฝรั่น','#f0b232','#dc9810','#c48b10','#141310','#c08a0e','#fbe7b5'],jade:['หยก','#0f7a5f','#0c6550','#0a5443','#ffffff','#0f7a5f','#cfeadf'],ocean:['น้ำทะเล','#1d6a8c','#185a77','#134a62','#ffffff','#1d6a8c','#cfe3ee'],plum:['พลัม','#7b3c8f','#68327a','#562966','#ffffff','#7b3c8f','#ead7f1'],ink:['หมึก','#2c2d31','#1f2023','#111214','#ffffff','#45474c','#e2e2de']};
+try{var sa=localStorage.getItem('posd.accent');if(sa&&ACC[sa])st.acc=sa}catch(e){}
+try{var sh=localStorage.getItem('posd.shape');if(sh)st.soft=sh==='soft'}catch(e){}
+try{var sv=localStorage.getItem('posd.density');st.touch=sv?sv==='touch':matchMedia('(pointer: coarse)').matches}catch(e){try{st.touch=matchMedia('(pointer: coarse)').matches}catch(_){}}
+function unit(l){return P[l.pid].p+(l.extra||0)}
+function sub(b){return (b||st.bill).lines.reduce(function(a,l){return a+unit(l)*l.q},0)}
+function sums(){var s=sub(),d=s>=500?DISC:0,sc=Math.round((s-d)*SC*100)/100;return {s:s,d:d,sc:sc,t:Math.round((s-d+sc)*100)/100}}
+function items(b){return (b||st.bill).lines.reduce(function(a,l){return a+l.q},0)}
+function inCart(id){return st.bill.lines.filter(function(l){return l.pid===id}).reduce(function(a,l){return a+l.q},0)}
+var snap=null,ttimer=null;
+function toast(m,undo){snap=undo||null;st.toast=m;clearTimeout(ttimer);ttimer=setTimeout(function(){st.toast=null;snap=null;draw()},5000)}
+function S(){return JSON.stringify({bill:st.bill,held:st.held,sel:st.sel})}
+function undo(){if(!snap)return;var o=JSON.parse(snap);st.bill=o.bill;st.held=o.held;st.sel=o.sel;st.toast=null;snap=null;st.tab='cur';draw()}
+
+/* ---------- chrome ---------- */
+var WS=[['home','หน้าหลัก','Alt 1'],['sell','ขาย','Alt 2'],['history','ประวัติขาย','Alt 3'],['shift','กะและลิ้นชัก','Alt 4'],['products','สินค้า','Alt 5'],['reports','รายงาน','Alt 6'],['settings','ตั้งค่า','Alt 7']];
+function tabs(){return '<div class="tabs" role="tablist"><div class="lights"><i></i><i></i><i></i></div>'+WS.map(function(w){return '<button class="tab '+(st.ws===w[0]?'on':'')+'" data-ws="'+w[0]+'" role="tab" aria-selected="'+(st.ws===w[0])+'">'+w[1]+(st.ws===w[0]?' <kbd>'+w[2]+'</kbd>':'')+'</button>'}).join('')+'<span class="sp"></span><button class="cmd" data-act="cmdk">'+I('search',14)+'<span>ค้นหาหรือสั่งงาน</span><kbd>Ctrl K</kbd></button><span class="store">ร้านหัวใจ · เครื่อง 1</span></div>'}
+function tb(ic,label,k,act,dis){return '<button class="tb" '+(act?'data-act="'+act+'"':'')+(dis?' disabled':'')+'>'+I(ic)+label+(k?' <kbd>'+k+'</kbd>':'')+'</button>'}
+function toolbar(){var h='';var has=st.bill.lines.length>0;
+ if(st.ws==='sell')h=tb('plus','บิลใหม่','Ctrl N','new')+'<span class="sep"></span><span class="scope">ทั้งบิล</span>'+tb('pause','พักบิล','F4','hold',!has)+tb('tag','ส่วนลดบิล','','billdisc',!has)+tb('split','แยกบิล','','split',!has)+tb('kitchen','ส่งครัว','F10','kitchen',!has)+'<span class="sp"></span><div class="seg"><button class="'+(st.view!=='tables'?'on':'')+'" data-view="products">สินค้า</button><button class="'+(st.view==='tables'?'on':'')+'" data-view="tables">โต๊ะ · 4 เปิด</button></div>';
+ else if(st.ws==='history')h=tb('printer','พิมพ์ใบเสร็จซ้ำ','Ctrl P')+tb('refund','คืนสินค้า','')+tb('x','ยกเลิกทั้งบิล','')+'<span class="sep"></span>'+tb('download','ส่งออก CSV','')+'<span class="sp"></span><div class="seg"><button class="on">วันนี้</button><button>เมื่อวาน</button><button>7 วัน</button></div>';
+ else if(st.ws==='shift')h=tb('plus','เงินเข้า','')+tb('minus','เงินออก','')+'<span class="sep"></span>'+tb('drawer','เปิดลิ้นชัก','')+'<span class="sp"></span><div class="steps"><span class="d"><b>'+I('check',10)+'</b>นับเงิน</span><i></i><span class="c"><b>2</b>ตรวจยอด</span><i></i><span><b>3</b>ยืนยันปิดกะ</span></div>';
+ else if(st.ws==='products')h=tb('plus','เพิ่มสินค้า','Ctrl N')+tb('upload','นำเข้า CSV','')+tb('download','ส่งออก','')+'<span class="sep"></span>'+tb('tag','เปลี่ยนหมวด','')+tb('lock','ปิดขาย','')+'<span class="sp"></span><span class="ctx">เลือก 1 รายการ</span>';
+ else if(st.ws==='reports')h=tb('cal','14 ต.ค. 2569','')+tb('download','ส่งออก CSV','')+'<span class="sp"></span><div class="seg">'+[['day','วันนี้'],['week','7 วัน'],['month','เดือนนี้']].map(function(x){return '<button class="'+(st.repTab===x[0]?'on':'')+'" data-rep="'+x[0]+'">'+x[1]+'</button>'}).join('')+'</div>';
+ else if(st.ws==='settings')h=tb('download','สำรองข้อมูล','')+tb('upload','กู้คืน','')+'<span class="sp"></span><span class="ctx">การเปลี่ยนแปลงมีผลเมื่อกดบันทึก</span>';
+ else h=tb('plus','บิลใหม่','Ctrl N','gosell')+tb('drawer','นับเงินและปิดกะ','','goshift')+'<span class="sep"></span>'+tb('download','สำรองข้อมูล','')+'<span class="sp"></span>';
+ return '<div class="tool">'+h+'</div>'}
+function status(){return '<div class="status"><button class="si" data-act="staff" title="สลับพนักงาน"><i class="av">'+st.staff[0]+'</i>'+st.staff+'</button><button class="si" data-act="offline" title="ดูรายการที่รอ sync"><i class="dot h"></i>ออฟไลน์ · รอ sync 14</button><button class="si" data-ws="shift" title="ไปหน้ากะ"><i class="dot"></i>กะ #12 · เปิด 08:02</button><button class="si" data-ws="shift">ลิ้นชัก <b class="num">4,086.20</b></button><button class="si" data-act="printer" title="พิมพ์ทดสอบ"><i class="dot"></i>เครื่องพิมพ์พร้อม</button><span class="sp"></span><button class="si" data-act="accent" title="เปลี่ยนสีหลัก"><i class="dot" style="background:'+ACC[st.acc][1]+';box-shadow:0 0 0 1px rgba(255,255,255,.3)"></i>สีหลัก: '+ACC[st.acc][0]+'</button><button class="si" data-act="sound" title="เสียงยืนยัน">'+(st.sound?'เสียง เปิด':'เสียง ปิด')+'</button><span class="dens" style="padding:0"><button class="'+(st.soft?'':'on')+'" data-shape="square">เหลี่ยม</button><button class="'+(st.soft?'on':'')+'" data-shape="soft">โค้ง</button></span><span>ไทย</span><span class="dens" style="padding:0"><button class="'+(st.touch?'':'on')+'" data-dens="compact">เมาส์/คีย์บอร์ด</button><button class="'+(st.touch?'on':'')+'" data-dens="touch">จอสัมผัส</button></span><span class="num">13:55</span><span style="color:var(--accent)">ข้อมูลตัวอย่าง</span></div>'}
+
+/* ---------- sell ---------- */
+function cartPane(){var b=st.bill,sm=sums();
+ var head='<div class="ph tabsh"><button class="ptab '+(st.tab==='cur'?'on':'')+'" data-tab="cur">บิลปัจจุบัน</button><button class="ptab '+(st.tab==='held'?'on':'')+'" data-tab="held">พักไว้ · '+st.held.length+'</button><span class="sp"></span>'+(st.tab==='cur'?'<span class="c">'+b.lines.length+' รายการ · '+items()+' ชิ้น</span>':'')+'</div>';
+ if(st.tab==='held')return '<section class="pane">'+head+'<div class="scroll well">'+(st.held.length?'<table class="t"><thead><tr><th>บิล</th><th>พักเมื่อ</th><th class="r">ชิ้น</th><th class="r">ยอด</th></tr></thead><tbody>'+st.held.map(function(h,k){return '<tr data-resume="'+k+'" style="cursor:pointer"><td><b>'+h.name+'</b></td><td class="num mut">'+h.at+'</td><td class="r">'+items(h)+'</td><td class="r">'+M(sub(h))+'</td></tr>'}).join('')+'</tbody></table><div class="hint" style="padding:8px 10px">'+(st.touch?'แตะ':'คลิก')+'บิลเพื่อเปิดต่อ · บิลปัจจุบันจะถูกพักแทน</div>':'<div class="empty"><b>ไม่มีบิลที่พักไว้</b>กด F4 เพื่อพักบิลปัจจุบัน</div>')+'</div></section>';
+ if(st.done)return '<section class="pane">'+head+'<div class="done"><span class="badge b-ok">'+I('check',12)+' ชำระแล้ว · #000059</span><div class="mut" style="margin-top:10px">เงินทอน</div><div class="big">'+M(st.done.change,1)+'</div><div class="mut num">ยอด '+M(st.done.total)+' · รับ '+M(st.done.recv)+'</div><div style="display:flex;gap:8px;margin-top:14px"><button class="btn">'+I('printer')+'พิมพ์ใบเสร็จ</button><button class="btn pri" data-act="newbill" id="nb">เริ่มบิลใหม่ <kbd>Enter</kbd></button></div></div></section>';
+ var bh='<div class="bill"><div class="n"><small>ชื่อบิล</small>'+(b.name||'บิล #A-0206')+'</div><button class="ib" aria-label="แก้ชื่อบิล" title="แก้ชื่อบิล">'+I('edit',15)+'</button><button class="ib" aria-label="เพิ่มเติม" title="เพิ่มเติม">'+I('dots',15)+'</button></div>';
+ var summary='<div class="kv"><span>รวมรายการ</span><b>'+M(sm.s)+'</b></div>'+(sm.d?'<div class="kv"><span>ส่วนลด · โปร ครบ 500 ลด 50</span><b class="neg">'+M(-sm.d)+'</b></div>':'')+'<div class="kv"><span>Service charge 10%</span><b>'+M(sm.sc)+'</b></div><div class="tot"><span>ยอดชำระ</span><b>'+M(sm.t,1)+'</b></div>';
+ if(st.mode==='pay'){var r=parseFloat(String(st.recv).replace(/,/g,''))||0,ok=st.recv!==''&&r>=sm.t;
+  var q=[sm.t];[100,500,1000].forEach(function(s){var v=Math.ceil(sm.t/s)*s;if(v>sm.t&&q.indexOf(v)<0)q.push(v)});while(q.length<4)q.push(q[q.length-1]+1000);q=q.slice(0,4);
+  return '<section class="pane">'+head+'<button class="back" data-act="back">'+I('chevL',14)+'กลับไปแก้บิล <kbd style="margin-left:auto">Esc</kbd></button>'+
+  '<div class="paybox"><div><div class="lab" style="margin-bottom:6px">วิธีชำระ</div><div class="pseg">'+[['cash','เงินสด'],['qr','โอน / QR'],['card','บัตร'],['split','แบ่งจ่าย']].map(function(x){return '<button class="'+(st.tender===x[0]?'on':'')+'" data-tender="'+x[0]+'">'+x[1]+'</button>'}).join('')+'</div></div>'+
+  (st.tender==='cash'?'<div><div class="lab" style="margin-bottom:6px">รับเงินสด</div><input id="cash" class="input money cashin" inputmode="decimal" placeholder="0.00" value="'+st.recv+'"></div><div class="qc">'+q.map(function(v,i){return '<button class="'+(st.recv!==''&&r===v?'on':'')+'" data-cash="'+v+'">'+(i?M(v).replace('.00',''):'พอดี')+'</button>'}).join('')+'</div>'+
+  (st.recv!==''&&!ok?'<div class="err">'+I('warn',12)+' รับเงินน้อยกว่ายอดชำระ '+M(sm.t-r)+'</div>':'')+'<div class="change"><span class="mut">เงินทอน</span><b>'+(ok?M(r-sm.t):'—')+'</b></div>':'<div class="empty" style="padding:24px"><b>ตัวอย่างนี้สาธิตเฉพาะเงินสด</b>วิธีอื่นใช้โครงเดียวกัน</div>')+'</div>'+
+  '<div class="foot">'+summary+'<button class="btn pri big" data-act="confirm" '+(ok?'':'disabled')+'>'+(ok?'ยืนยันรับเงิน '+M(sm.t,1):'ใส่จำนวนเงินที่รับ')+' <kbd>Enter</kbd></button></div></section>'}
+ var lines=b.lines.length?b.lines.map(function(l,i){var p=P[l.pid];return '<div class="ln '+(i===st.sel?'cur':'')+(i===st.flash?' flash':'')+'" data-line="'+i+'"><span class="q">'+l.q+'</span><span>'+p.n+'</span><span class="a">'+M(unit(l)*l.q)+'</span>'+((l.mods||l.q>1)?'<div class="s">'+(l.mods?'<span class="m">'+l.mods+(l.extra?' +'+M(l.extra):'')+'</span>':'')+(l.mods&&l.q>1?' · ':'')+(l.q>1?'× '+M(unit(l)):'')+'</div>':'')+
+  (i===st.sel?'<div class="lnedit"><span class="step"><button data-q="-1" aria-label="ลด">'+I('minus',14)+'</button><output>'+l.q+'</output><button data-q="1" aria-label="เพิ่ม">'+I('plus',14)+'</button></span><button class="btn sm" data-act="lnote">'+I('note',14)+(p.o?'ตัวเลือก':'หมายเหตุ')+'</button><button class="btn sm" data-act="ldisc">'+I('tag',14)+'ลด</button><button class="btn danger sm rm" data-rm="'+i+'" aria-label="ลบรายการ" title="ลบรายการ (Del)">'+I('trash',14)+'</button></div>':'')+'</div>'}).join(''):'<div class="empty"><b>บิลว่าง</b>'+(st.touch?'แตะสินค้าเพื่อเพิ่มลงบิล':'คลิกสินค้า หรือพิมพ์ค้นหาแล้วกด Enter')+'</div>';
+ return '<section class="pane">'+head+bh+'<div class="scroll well">'+lines+'</div><div class="foot">'+summary+'<div class="acts"><button class="btn big" data-act="kitchen" '+(b.lines.length?'':'disabled')+'>'+I('kitchen')+'ส่งครัว <kbd>F10</kbd></button><button class="btn pri big" data-act="pay" '+(b.lines.length?'':'disabled')+'>ชำระเงิน <kbd>F9</kbd></button></div></div></section>'}
+function sellView(){var q=st.q.trim().toLowerCase();
+ var list=(st.cat==='pin'&&!q?PIN.map(function(i){return P[i]}):P).filter(function(p){return (st.cat==='all'||st.cat==='pin'||p.c===st.cat)&&(!q||p.n.toLowerCase().indexOf(q)>=0||p.sku.toLowerCase().indexOf(q)>=0)});
+ var PIN=[0,4,6,2,8,10];var cats=[['pin','ปักหมุด']].concat(CATS).map(function(c){var n=c[0]==='pin'?PIN.length:P.filter(function(p){return c[0]==='all'||p.c===c[0]}).length;return '<button class="cat '+(st.cat===c[0]?'on':'')+'" data-cat="'+c[0]+'"><span>'+(c[0]==='pin'?'★ ':'')+(c[0]!=='pin'&&c[0]!=='all'?'<i class="cdot" style="background:'+CC[c[0]]+'"></i>':'')+c[1]+'</span><span class="num">'+n+'</span></button>'}).join('')+'<div class="cath">มุมมอง</div><button class="cat"><span>ขายดีวันนี้</span><span class="num">8</span></button><button class="cat"><span>สต็อกต่ำ</span><span class="num" style="color:var(--warn)">2</span></button>';
+ var tiles=list.length?list.map(function(p){var n=inCart(p.id),off=p.closed||p.s===0;var stt=p.closed?'<span class="bad">ปิดขาย</span>':p.s===0?'<span class="bad">หมด</span>':(p.s!=null&&p.s<=3)?'<span class="warn">เหลือ '+p.s+'</span>':p.s!=null?'เหลือ '+p.s:p.o?'≡ มีตัวเลือก':'';
+  return '<button class="tile '+(n?'in ':'')+(off?'off':'')+'" style="--cc:'+CC[p.c]+'" data-p="'+p.id+'" '+(off?'aria-disabled="true"':'')+'>'+(n?'<span class="cnt'+(st.bump===p.id?' bump':'')+'">'+n+'</span>':'')+'<span class="nm">'+p.n+'</span><span class="f"><span>'+stt+'</span><span class="p">'+M(p.p)+'</span></span></button>'}).join(''):'<div class="empty" style="grid-column:1/-1"><b>ไม่พบ “'+st.q+'”</b>ลองคำอื่น หรือเลือกหมวด “ทั้งหมด”</div>';
+ if(st.view==='tables')return '<div class="main" style="grid-template-columns:'+(st.touch?'430px 0px':'392px 168px')+' 1fr">'+cartPane()+tablesPane()+'</div>';
+ var chips=st.touch?'<div class="catchips">'+[['pin','★ ปักหมุด']].concat(CATS).map(function(c){return '<button class="chip '+(st.cat===c[0]?'on':'')+'" data-cat="'+c[0]+'">'+(CC[c[0]]?'<i class="cdot" style="background:'+CC[c[0]]+'"></i>':'')+c[1]+'</button>'}).join('')+'</div>':'';
+ return '<div class="main" style="grid-template-columns:'+(st.touch?'430px':'392px 168px')+' 1fr">'+cartPane()+(st.touch?'':'<section class="pane"><div class="ph">หมวดหมู่</div><div class="scroll" style="padding:4px 0">'+cats+'</div></section>')+'<section class="pane"><div class="ph">สินค้า<span class="sp"></span><span class="c">'+list.length+'</span></div><label class="search">'+I('search',14)+'<input id="q" placeholder="ค้นหาชื่อ รหัส หรือสแกนบาร์โค้ด" value="'+st.q.replace(/"/g,'&quot;')+'" autocomplete="off"><kbd>F2</kbd></label>'+chips+'<div class="scroll"><div class="grid">'+tiles+'</div></div></section></div>'}
+
+/* ---------- history: grouped list + receipt detail with timeline ---------- */
+var BILLS=[['#000058','19:52','—','เงินสด','ok','ชำระแล้ว',969],['#000057','19:25','—','เงินสด','ok','ชำระแล้ว',154],['#000056','18:57','โต๊ะ 3','เงินสด','warn','คืนบางส่วน',198],['#000055','18:39','—','QR','warn','คืนบางส่วน',132],['#000054','18:00','—','เงินสด','ok','ชำระแล้ว',22],['#000053','17:29','—','บัตร','ok','ชำระแล้ว',230.45],['#000052','17:04','—','โอน','ok','ชำระแล้ว',213.4],['#000051','16:45','—','เงินสด','bad','ยกเลิก',60.5],['#000050','16:07','โต๊ะ 2','เงินสด','ok','ชำระแล้ว',427.75],['#000049','15:35','—','เงินสด','ok','ชำระแล้ว',73.5],['#000048','15:10','—','บัตร','ok','ชำระแล้ว',110],['#000047','14:52','—','โอน','ok','ชำระแล้ว',230.45],['#000046','14:14','กลับบ้าน · คุณบี','QR','ok','ชำระแล้ว',345]];
+function historyView(){var f=st.hf||'all',list=BILLS.map(function(b,i){return [b,i]}).filter(function(x){var b=x[0];return f==='all'||(f==='ref'&&b[4]==='warn')||(f==='void'&&b[4]==='bad')||(f==='cashless'&&b[3]!=='เงินสด')});
+ var groups={};list.forEach(function(x){var h=x[0][1].slice(0,2)+':00';(groups[h]=groups[h]||[]).push(x)});
+ var rows=Object.keys(groups).map(function(h){var g=groups[h],tot=g.reduce(function(a,x){return a+(x[0][4]==='bad'?0:x[0][6])},0);
+  return '<div class="grp"><span>'+h+'–'+String(+h.slice(0,2)+1).padStart(2,'0')+':00</span><span>'+g.length+' บิล · <b class="num">'+M(tot)+'</b></span></div>'+g.map(function(x){var b=x[0],i=x[1];return '<button class="hrow '+(i===st.hist?'on':'')+'" data-hist="'+i+'"><span class="num hn">'+b[0]+'</span><span class="ht">'+b[1]+'</span><span class="hm">'+(b[2]==='—'?'<span class="sub">ไม่มีชื่อบิล</span>':b[2])+'<small>'+b[3]+'</small></span><span class="badge b-'+b[4]+'">'+b[5]+'</span><span class="num ha'+(b[4]==='bad'?' strike':'')+'">'+M(b[6])+'</span></button>'}).join('')}).join('');
+ var b=BILLS[st.hist];
+ var chips=[['all','ทั้งหมด',BILLS.length],['ref','คืนเงิน',2],['void','ยกเลิก',1],['cashless','ไม่ใช่เงินสด',5]].map(function(c){return '<button class="chip '+(f===c[0]?'on':'')+'" data-hf="'+c[0]+'">'+c[1]+' <span class="num">'+c[2]+'</span></button>'}).join('');
+ var receipt='<div class="paper"><div class="pc">ร้านหัวใจ</div><div class="pc sub" style="font-size:11px">ใบเสร็จรับเงิน '+b[0]+'</div><div class="pdash"></div>'+
+  '<div class="prow"><span>1 × ข้าวกะเพราไก่ไข่ดาว</span><span>65.00</span></div><div class="prow"><span>1 × ข้าวกะเพราไก่ไข่ดาว<br><small class="mut">+ไข่ดาว 10.00</small></span><span>75.00</span></div><div class="pdash"></div>'+
+  '<div class="prow mut"><span>รวมรายการ</span><span>140.00</span></div><div class="prow mut"><span>Service charge 10%</span><span>14.00</span></div><div class="prow big"><span>ยอดรวม</span><span>154.00</span></div><div class="prow mut"><span>VAT 7% (รวมแล้ว)</span><span>10.07</span></div><div class="pdash"></div><div class="prow mut"><span>'+b[3]+'</span><span>500.00</span></div><div class="prow mut"><span>เงินทอน</span><span>346.00</span></div></div>';
+ var tl='<div class="tl"><div class="tli done"><i></i><div><b>สร้างบิล</b><small>14 ต.ค. 19:18 · มานี</small></div></div><div class="tli done"><i></i><div><b>ชำระเงิน '+b[3]+'</b><small>'+b[1]+' · รับ 500.00 ทอน 346.00</small></div></div>'+(b[4]==='warn'?'<div class="tli warn"><i></i><div><b>คืนบางส่วน −71.50</b><small>20:41 · ลูกค้าคืน · อนุมัติโดย สมชาย</small></div></div>':'')+(b[4]==='bad'?'<div class="tli bad"><i></i><div><b>ยกเลิกทั้งบิล</b><small>16:52 · คีย์ผิด · คืนสต็อกแล้ว</small></div></div>':'')+'</div>';
+ return '<div class="main" style="grid-template-columns:1fr 400px"><section class="pane"><div class="ph">ประวัติขาย · วันนี้<span class="sp"></span><span class="c">58 บิล · 3,783.00</span></div><div class="hbar"><label class="search" style="margin:0;flex:1">'+I('search',14)+'<input placeholder="เลขบิล ชื่อบิล หรือยอดเงิน"><kbd>/</kbd></label>'+chips+'</div><div class="scroll well">'+(rows||'<div class="empty"><b>ไม่มีบิลในตัวกรองนี้</b></div>')+'</div></section>'+
+ '<section class="pane"><div class="ph">บิล '+b[0]+'<span class="sp"></span><span class="badge b-'+b[4]+'">'+b[5]+'</span></div><div class="scroll" style="background:var(--pane-2);padding:14px;display:grid;gap:14px;align-content:start">'+receipt+'<div><div class="sect" style="padding:0 0 6px">ลำดับเหตุการณ์</div>'+tl+'</div></div>'+
+ '<div class="savebar"><button class="btn">'+I('printer')+'พิมพ์ซ้ำ</button><button class="btn">ใบกำกับภาษี</button><span style="flex:1"></span><button class="btn danger">'+I('refund')+'คืนสินค้า</button><button class="btn" title="เพิ่มเติม" aria-label="เพิ่มเติม">'+I('dots')+'</button></div></section></div>'}
+
+/* ---------- shift: vertical steps · denomination counters · live reconciliation ---------- */
+function shiftView(){var D=st.den;var counted=D.reduce(function(a,d){return a+d[0]*d[1]},0),exp=4086.2,diff=Math.round((counted-exp)*100)/100;
+ var steps='<div class="vsteps"><div class="vs done"><b>'+I('check',12)+'</b><div>เปิดกะ<small>08:02 · ตั้งต้น 1,000.00</small></div></div><div class="vs cur"><b>2</b><div>นับเงินในลิ้นชัก<small>นับทีละชนิด ยอดรวมคำนวณให้</small></div></div><div class="vs"><b>3</b><div>ตรวจส่วนต่าง<small>ใส่เหตุผลถ้าไม่ตรง</small></div></div><div class="vs"><b>4</b><div>ปิดกะและพิมพ์สรุป</div></div>'+
+  '<div class="vnote">'+I('warn',14)+'<span>มีบิลค้างชำระ 5 บิล ปิดกะได้หลังพักหรือชำระ</span></div></div>';
+ var cards=D.map(function(d,i){return '<div class="den"><div class="dv"><span class="num">'+(d[0]>=1?d[0].toLocaleString():d[0])+'</span><small>'+(d[0]>=20?'ธนบัตร':'เหรียญ')+'</small></div><div class="dstep"><button data-den="'+i+'" data-d="-1" aria-label="ลด">'+I('minus',16)+'</button><output class="num">'+d[1]+'</output><button data-den="'+i+'" data-d="1" aria-label="เพิ่ม">'+I('plus',16)+'</button></div><div class="dsum num">'+M(d[0]*d[1])+'</div></div>'}).join('');
+ var pct=Math.min(100,counted/exp*100);
+ var kv=function(a,b,c){return '<div class="kv" style="font-size:12.5px"><span>'+a+'</span><b'+(c?' class="neg"':'')+'>'+b+'</b></div>'};
+ var ok=Math.abs(diff)<0.005;
+ return '<div class="main" style="grid-template-columns:230px 1fr 360px"><section class="pane"><div class="ph">ปิดกะ #12</div><div class="scroll" style="padding:12px">'+steps+'</div></section>'+
+ '<section class="pane"><div class="ph">นับเงินในลิ้นชัก<span class="sp"></span><span style="font-weight:400" class="mut">บันทึกร่างอัตโนมัติ 17:43</span></div><div class="scroll"><div class="dens-grid">'+cards+'</div></div><div class="countbar"><span>นับได้</span><b class="num">'+M(counted,1)+'</b></div></section>'+
+ '<section class="pane"><div class="ph">ตรวจยอด</div><div class="scroll insp">'+
+ '<div class="cmp"><div><small>ควรมี</small><b class="num">'+M(exp)+'</b></div><div><small>นับได้</small><b class="num">'+M(counted)+'</b></div></div><div class="meter"><i style="width:'+pct+'%"></i></div>'+
+ '<div class="diffbox '+(ok?'ok':(diff<0?'short':'over'))+'"><span><b>ส่วนต่าง</b> <span class="badge '+(ok?'b-ok':'b-bad')+'">'+(ok?'ตรง':(diff<0?'ขาด':'เกิน'))+'</span></span><b class="num">'+(ok?'0.00':(diff>0?'+':'')+M(diff))+'</b></div>'+
+ (ok?'':'<div><div style="font-size:12px;font-weight:600;margin-bottom:6px">เหตุผลของส่วนต่าง <span class="sub" style="font-weight:400">(จำเป็น)</span></div><input class="input" placeholder="เช่น ทอนเกินบิล #000177"></div>')+
+ '<details class="det"><summary>ที่มาของยอดที่ควรมี</summary>'+kv('เงินตั้งต้น','1,000.00')+kv('รับเงินสดจากการขาย','+2,993.75')+kv('คืนเงินสด','−187.55')+kv('เงินเข้า · แลกเหรียญ','+500.00')+kv('เงินออก · ซื้อน้ำแข็ง','−220.00')+'</details>'+
+ '<div class="sect" style="padding:4px 0 0">ยอดขายของกะ <span class="sub" style="font-weight:400">— ไม่ใช่เงินในลิ้นชัก</span></div>'+kv('ยอดขายสุทธิ','3,783.00')+kv('คืนเงิน · 3 บิล','−187.55',1)+'</div>'+
+ '<div class="savebar"><span style="flex:1"></span><button class="btn pri" '+(ok?'':'disabled')+'>'+(ok?'ปิดกะและพิมพ์สรุป':'ใส่เหตุผลก่อนปิดกะ')+'</button></div></section></div>'}
+
+/* ---------- products: table + tabbed inspector with margin + stock trend ---------- */
+function productsView(){var sel=st.psel==null?8:st.psel,p=P[sel],cost=Math.round(p.p*0.62*100)/100,mg=Math.round((1-cost/p.p)*100);
+ var rows=P.map(function(q,i){var stock=q.s==null?'<span class="sub">ไม่นับ</span>':q.s===0?'<span class="badge b-bad">หมด</span>':q.s<=5?'<span class="badge b-warn">'+q.s+'</span>':q.s;
+  return '<tr class="'+(i===sel?'sel':'')+'" data-psel="'+i+'" style="cursor:pointer"><td><div class="pn"><span class="sw2" style="background:'+['#c98f12','#4f75aa','#3c8a5f','#8a5ca8','#b0583d'][['food','drink','goods','snack'].indexOf(q.c)+1]+'"></span><span>'+q.n+'<small class="num">'+q.sku+'</small></span></div></td><td>'+CATS.filter(function(c){return c[0]===q.c})[0][1]+'</td><td class="r">'+stock+'</td><td class="r">'+M(q.p)+'</td><td>'+(q.closed?'<span class="badge">ปิดขาย</span>':'<span class="badge b-ok">เปิดขาย</span>')+'</td></tr>'}).join('');
+ var side=CATS.map(function(c,i){return '<button class="cat '+(i?'':'on')+'"><span>'+c[1]+'</span><span class="num">'+(i?P.filter(function(q){return q.c===c[0]}).length:12)+'</span></button>'}).join('')+'<div class="cath">มุมมอง</div><button class="cat"><span>สต็อกต่ำ</span><span class="num" style="color:var(--warn)">2</span></button><button class="cat"><span>หมดสต็อก</span><span class="num" style="color:var(--bad)">1</span></button><button class="cat"><span>ปิดขาย</span><span class="num">1</span></button><div class="cath">จัดการ</div><button class="cat"><span>ชุดตัวเลือก</span><span class="num">1</span></button><button class="cat"><span>วัตถุดิบ</span><span class="num">4</span></button><button class="cat"><span>ผู้ขายและใบสั่งซื้อ</span><span class="num">1</span></button>';
+ var spark=[9,8,8,7,7,6,6,6,5,5].map(function(v,i){return (i*18)+','+(40-v*3.5)}).join(' ');
+ var tabs=['ข้อมูล','ราคาและต้นทุน','สต็อก','ตัวเลือก'],pt=st.ptab||0;
+ var body=pt===0?'<div class="fgrid"><label>ชื่อสินค้า</label><input class="input" value="'+p.n+'"><label>หมวดหมู่</label><select class="input"><option>'+CATS.filter(function(c){return c[0]===p.c})[0][1]+'</option></select><label>บาร์โค้ด / รหัส</label><input class="input num" value="'+p.sku+'"><label>เปิดขาย</label><span><span class="sw '+(p.closed?'off':'')+'"></span></span></div>':
+  pt===1?'<div class="fgrid"><label>ราคาขาย</label><div><input class="input money" value="'+M(p.p)+'"></div><label>ต้นทุนต่อชิ้น</label><input class="input money" value="'+M(cost)+'"><label>กำไรขั้นต้น</label><b class="num">'+M(p.p-cost)+' <span class="mut" style="font-weight:400">('+mg+'%)</span></b></div>':
+  pt===2?(p.s==null?'<div class="empty" style="padding:20px"><b>ไม่นับสต็อก</b>สินค้าที่ทำตามสั่งไม่ต้องนับสต็อก</div>':'<div class="fgrid"><label>คงเหลือ</label><b class="num" style="font-size:18px">'+p.s+' ชิ้น</b><label>แจ้งเตือนเมื่อต่ำกว่า</label><input class="input money" value="5" style="width:90px"></div><div class="sect" style="padding:6px 0 0">คงเหลือ 10 วันล่าสุด</div><svg viewBox="0 0 170 44" width="100%" height="56"><polyline points="'+spark+'" fill="none" stroke="#4f75aa" stroke-width="2"/></svg><div style="display:flex;gap:6px"><button class="btn">ตรวจนับ</button><button class="btn">รับเข้า</button><button class="btn">นำออก</button></div>'):
+  '<div class="empty" style="padding:20px"><b>'+(p.o?'ใช้ชุดตัวเลือก “ระดับความหวาน”':'ยังไม่มีชุดตัวเลือก')+'</b><button class="btn" style="margin-top:8px">เลือกชุดตัวเลือก</button></div>';
+ return '<div class="main" style="grid-template-columns:200px 1fr 380px"><section class="pane"><div class="ph">หมวดหมู่</div><div class="scroll" style="padding:4px 0">'+side+'</div></section>'+
+ '<section class="pane"><div class="ph">สินค้าทั้งหมด<span class="sp"></span><span class="c">12</span></div><label class="search">'+I('search',14)+'<input placeholder="ค้นหาชื่อ รหัส บาร์โค้ด"><kbd>/</kbd></label><div class="scroll"><table class="t"><thead><tr><th>สินค้า</th><th>หมวด</th><th class="r">คงเหลือ</th><th class="r">ราคา</th><th>สถานะ</th></tr></thead><tbody>'+rows+'</tbody></table></div></section>'+
+ '<section class="pane"><div class="pinsp-h"><div class="pt">'+p.n+'</div><div class="pchips"><span><small>ราคา</small><b class="num">'+M(p.p)+'</b></span><span><small>กำไร</small><b class="num">'+mg+'%</b></span><span><small>คงเหลือ</small><b class="num">'+(p.s==null?'—':p.s)+'</b></span></div><div class="itabs">'+tabs.map(function(t,i){return '<button class="'+(i===pt?'on':'')+'" data-ptab="'+i+'">'+t+'</button>'}).join('')+'</div></div><div class="scroll insp">'+body+'</div>'+
+ '<div class="savebar"><span class="msg">'+I('edit',14)+'แก้ไข 1 รายการ · ยังไม่บันทึก</span><button class="btn">ทิ้ง</button><button class="btn pri">บันทึก <kbd>Ctrl S</kbd></button></div></section></div>'}
+
+/* ---------- reports: dashboard grid ---------- */
+function reportsView(){var A=[0,0,0,0,0,0,420,180,420,340,180,1611,420,340,180,210],B=[0,0,0,0,0,0,300,250,350,300,200,900,500,300,200,150];var hrs=[8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23];
+ var w=620,h=210,x0=44,step=(w-x0-8)/hrs.length,yv=function(v){return 178-v/2000*158};
+ var chart='<svg class="chart" viewBox="0 0 '+w+' '+h+'" width="100%" role="img" aria-label="ยอดขายรายชั่วโมง">'+[0,500,1000,1500,2000].map(function(v){return '<line class="g" x1="'+x0+'" x2="'+(w-6)+'" y1="'+yv(v)+'" y2="'+yv(v)+'"/><text x="'+(x0-6)+'" y="'+(yv(v)+4)+'" text-anchor="end">'+v.toLocaleString()+'</text>'}).join('')+
+  hrs.map(function(hh,i){var x=x0+i*step+4,bw=step/2-4;return '<rect x="'+x+'" y="'+yv(B[i])+'" width="'+bw+'" height="'+(178-yv(B[i]))+'" fill="#55575c" rx="2"/><rect x="'+(x+bw+1)+'" y="'+yv(A[i])+'" width="'+bw+'" height="'+(178-yv(A[i]))+'" style="fill:var(--chart)" rx="2"/><text x="'+(x+bw)+'" y="198" text-anchor="middle">'+hh+'</text>'}).join('')+'</svg>';
+ var top=[['ผงซักฟอก 2.7 กก.',969],['ข้าวกะเพราไก่ไข่ดาว',582.84],['ชุดข้าวมันไก่ + ซุป + น้ำเก๊กฮวย (พิเศษ)',491.98],['ชาไทยเย็น',456.21],['น้ำดื่ม 600 มล.',220]];
+ var mix=[['เงินสด',2993.75,'var(--chart)'],['โอน / QR',554.75,'#4f75aa'],['บัตร',234.5,'#55575c']],mt=mix.reduce(function(a,m){return a+m[1]},0);
+ var card=function(t,b,x){return '<section class="pane rcard"><div class="ph">'+t+(x||'')+'</div><div class="rbody">'+b+'</div></section>'};
+ var kpi=function(l,v,m,c){return '<div class="kpi2"><div class="l">'+l+'</div><div class="v'+(c?' '+c:'')+'">'+v+'</div><div class="m">'+m+'</div></div>'};
+ return '<div class="main" style="grid-template-columns:1fr 360px;grid-template-rows:auto 1fr">'+
+ '<div class="kpirow" style="grid-column:1/3">'+kpi('ยอดขายก่อนคืน','3,970.55','20 บิล')+kpi('คืนเงิน','−187.55','3 ครั้ง','neg')+kpi('ยอดขายสุทธิ','3,783.00','<span style="color:var(--ok);font-weight:600">▲ 8.2%</span> เทียบ อ. ที่แล้ว')+kpi('เฉลี่ยต่อบิล','189.15','ยกเลิก 1 บิล')+kpi('กำไรขั้นต้น','ยังคำนวณไม่ได้','<a style="color:var(--info);text-decoration:underline">ตั้งต้นทุน 57 สินค้า</a>','sub sm')+'</div>'+
+ card('ยอดขายรายชั่วโมง',chart+'<div class="mut" style="font-size:12px;margin-top:4px">ช่วงขายดีสุด 19:00–20:00 · ฿1,611.25 · <i style="display:inline-block;width:9px;height:9px;background:var(--chart);border-radius:2px"></i> วันนี้ <i style="display:inline-block;width:9px;height:9px;background:#55575c;border-radius:2px;margin-left:6px"></i> อ. ที่แล้ว</div>','<span class="sp"></span><div class="minis"><button class="on">ยอดเงิน</button><button>จำนวนบิล</button></div>')+
+ '<div class="col" style="grid-template-rows:auto 1fr">'+card('รายรับตามวิธีชำระ','<div class="mixbar">'+mix.map(function(m){return '<i style="width:'+(m[1]/mt*100)+'%;background:'+m[2]+'"></i>'}).join('')+'</div>'+mix.map(function(m){return '<div class="kv" style="font-size:12.5px;margin-top:6px"><span><i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:'+m[2]+';margin-right:6px"></i>'+m[0]+'</span><b>'+M(m[1])+' <span class="sub" style="font-weight:400">'+Math.round(m[1]/mt*100)+'%</span></b></div>'}).join(''))+
+ card('สินค้าขายดี',top.map(function(t,i){return '<div class="rank"><span class="num sub">'+(i+1)+'</span><div><div class="rn">'+t[0]+'</div><div class="rb"><i style="width:'+(t[1]/969*100)+'%"></i></div></div><b class="num">'+M(t[1])+'</b></div>'}).join(''),'<span class="sp"></span><span class="c">ยอดสุทธิ</span>')+'</div></div>'}
+
+/* ---------- home: launch pad ---------- */
+function homeView(){var tasks=[['warn','ยังไม่เคยสำรองข้อมูล','ข้อมูลอยู่ในเครื่องนี้เท่านั้น','สำรองตอนนี้'],['warn','สต็อกต่ำ 2 รายการ','โซดา 325 มล. เหลือ 3 · ผงซักฟอก เหลือ 5','ดูสินค้า'],['info','บิลค้างชำระ 5 บิล','ต้องชำระหรือพักก่อนปิดกะ','ดูบิล'],['ok','เครื่องพิมพ์พร้อม','ใบเสร็จ 80 มม. · เชื่อมต่อ LAN','']];
+ var spark=[0,0,0,0,0,0,420,180,420,340,180,1611,420,340,180,210].map(function(v,i){return (i*20)+','+(60-v/1611*54)}).join(' ');
+ return '<div class="main" style="grid-template-columns:1.15fr 1fr 1fr">'+
+ '<div class="col" style="grid-template-rows:auto 1fr"><section class="pane hero"><div class="hero-in"><div class="hk">กะ #12 · สมชาย</div><div class="hv">เปิดอยู่ 6 ชม. 13 นาที</div><div class="hs">เปิด 08:02 · เงินตั้งต้น 1,000.00</div><div style="display:flex;gap:8px;margin-top:14px"><button class="btn pri big" style="flex:1.4" data-act="gosell">ขายต่อ <kbd>Alt 2</kbd></button><button class="btn big" style="flex:1" data-act="goshift">ปิดกะ</button></div></div></section>'+
+ '<section class="pane"><div class="ph">วันนี้</div><div class="rbody"><div class="kv"><span>ยอดขายสุทธิ</span><b style="font-size:22px">3,783.00</b></div><svg viewBox="0 0 300 64" width="100%" height="64" style="margin:6px 0"><polyline points="'+spark+'" fill="none" style="stroke:var(--chart)" stroke-width="2" stroke-linejoin="round"/></svg><div class="kv"><span>บิล</span><b>20</b></div><div class="kv"><span>คืนเงิน</span><b class="neg">−187.55</b></div><div class="kv"><span>เงินสดที่ควรมีในลิ้นชัก</span><b>4,086.20</b></div></div></section></div>'+
+ '<section class="pane"><div class="ph">ต้องทำ<span class="sp"></span><span class="c">3</span></div><div class="scroll" style="padding:6px">'+tasks.map(function(t){return '<div class="task t-'+t[0]+'"><i></i><div><b>'+t[1]+'</b><small>'+t[2]+'</small></div>'+(t[3]?'<button class="btn">'+t[3]+'</button>':'<span class="badge b-ok">ปกติ</span>')+'</div>'}).join('')+'</div></section>'+
+ '<section class="pane"><div class="ph">บิลที่พักไว้และโต๊ะที่เปิด<span class="sp"></span><span class="c">5</span></div><div class="scroll" style="padding:6px">'+[['โต๊ะริมหน้าต่าง','พัก 12:40',209.5],['กลับบ้าน · คุณเอ','พัก 13:05',120],['T2 · 4 คน','เปิด 37 นาที',769.75],['P2 · 2 คน','เปิด 16 นาที',531],['T5 · 2 คน','เปิด 25 นาที',476.25]].map(function(r){return '<button class="hold" data-act="gosell"><div><b>'+r[0]+'</b><small>'+r[1]+'</small></div><span class="num">'+M(r[2])+'</span></button>'}).join('')+'</div></section></div>'}
+
+/* ---------- settings: described nav + searchable sections ---------- */
+function settingsView(){var nav=[['ร้านและหน้าเริ่มต้น','ชื่อร้าน พร้อมเพย์ หน้าแรก'],['ราคาและภาษี','service charge, VAT, ปัดเศษ'],['โปรโมชัน','ส่วนลด คูปอง ช่วงเวลา'],['โต๊ะและโซน','ผังโต๊ะ จำนวนที่นั่ง'],['การพิมพ์','เครื่องพิมพ์ ใบเสร็จ ใบครัว'],['พนักงานและสิทธิ์','PIN บทบาท การอนุมัติ'],['ภาษาและหน้าจอ','ภาษา โหมดจอสัมผัส'],['ข้อมูลและการสำรอง','สำรอง กู้คืน ส่งออก']];
+ return '<div class="main" style="grid-template-columns:260px 1fr"><section class="pane"><label class="search">'+I('search',14)+'<input placeholder="ค้นหาการตั้งค่า"></label><div class="scroll" style="padding:0 0 6px">'+nav.map(function(n,i){return '<button class="snav '+(i===1?'on':'')+'"><b>'+n[0]+'</b><small>'+n[1]+'</small></button>'}).join('')+'</div></section>'+
+ '<section class="pane"><div class="scroll" style="background:var(--pane-2)"><div style="max-width:760px;margin:0 auto;padding:18px 20px;display:grid;gap:14px">'+
+ '<div><div style="font-size:18px;font-weight:600">ราคาและภาษี</div><div class="mut" style="font-size:12.5px">ลำดับการคำนวณ: ส่วนลด → service charge → VAT → ปัดเศษเงินสด</div></div>'+
+ '<div class="scard"><div class="sh">การคิดราคา</div><div class="srow"><div><b>Service charge</b><small>คิดจากยอดหลังส่วนลด · 0 = ไม่คิด</small></div><div style="display:flex;gap:8px;align-items:center"><input class="input money" value="10" style="width:80px"><span class="mut">%</span></div></div>'+
+ '<div class="srow"><div><b>ปัดเศษเงินสด</b><small>ใช้เฉพาะการรับเงินสด</small></div><div class="minis"><button>ไม่ปัด</button><button class="on">0.25</button><button>0.50</button><button>1 บาท</button></div></div>'+
+ '<div class="srow"><div><b>วิธีปัด</b></div><div class="minis"><button class="on">ปัดลง</button><button>ใกล้สุด</button></div></div></div>'+
+ '<div class="scard"><div class="sh">ภาษีมูลค่าเพิ่ม (VAT)</div><div class="srow"><div><b>จดทะเบียน VAT</b><small>เปิดเพื่อออกใบกำกับภาษีได้</small></div><span class="sw"></span></div>'+
+ '<div class="srow"><div><b>ชื่อผู้ประกอบการ</b></div><input class="input" value="บริษัท ร้านหัวใจ จำกัด (ตัวอย่าง)" style="width:320px"></div>'+
+ '<div class="srow"><div><b>เลขประจำตัวผู้เสียภาษี</b><small>13 หลัก</small></div><input class="input num" value="0105555123450" style="width:200px"></div>'+
+ '<div class="srow"><div><b>ราคาที่ตั้งไว้</b></div><div class="minis"><button class="on">รวม VAT แล้ว</button><button>ยังไม่รวม VAT</button></div></div>'+
+ '<div class="srow"><div><b>อัตรา VAT</b></div><div style="display:flex;gap:8px;align-items:center"><input class="input money" value="7" style="width:80px"><span class="mut">%</span></div></div></div></div></div>'+
+ '<div class="savebar"><span class="msg">'+I('edit',14)+'แก้ไข 2 รายการ · ยังไม่บันทึก</span><button class="btn">ทิ้งการแก้ไข</button><button class="btn pri">บันทึก <kbd>Ctrl S</kbd></button></div></section></div>'}
+
+/* ---------- tables (sell › โต๊ะ) ---------- */
+var TBL=[['T1',4,'free'],['T2',4,'busy',4,37,769.75,'ready'],['T3',4,'free'],['T4',4,'pay',2,58,356],['T5',4,'busy',2,25,476.25,'cook'],['T6',4,'free'],['T7',6,'busy',5,12,1280,'cook'],['T8',2,'clean'],['P1',2,'free'],['P2',2,'busy',2,16,531,'served'],['P3',2,'free'],['P4',2,'free']];
+function tablesPane(){var lab={free:['ว่าง',''],busy:['มีลูกค้า','info'],pay:['ขอเช็กบิล','warn'],clean:['รอเก็บโต๊ะ','']},fl={ready:['พร้อมเสิร์ฟ 2','b-warn'],cook:['กำลังทำ','b-info'],served:['เสิร์ฟครบ','b-ok']};
+ var z=st.zone||'in',list=TBL.filter(function(t){return z==='in'?t[0][0]==='T':t[0][0]==='P'});
+ return '<section class="pane" style="grid-column:2/4"><div class="ph tabsh"><button class="ptab '+(z==='in'?'on':'')+'" data-zone="in">ในร้าน · 8</button><button class="ptab '+(z==='out'?'on':'')+'" data-zone="out">ระเบียง · 4</button><span class="sp"></span><span class="legend"><i class="lg free"></i>ว่าง <i class="lg busy"></i>มีลูกค้า <i class="lg pay"></i>ขอเช็กบิล</span></div><div class="scroll"><div class="floor">'+list.map(function(t){var l=lab[t[2]];return '<button class="tcard s-'+t[2]+'" data-table="'+t[0]+'"><div class="th"><b>'+t[0]+'</b><span class="sub">'+(t[3]||0)+'/'+t[1]+' ที่</span></div>'+(t[2]==='busy'||t[2]==='pay'?'<div class="tm"><span class="num">'+t[4]+' นาที</span><b class="num">'+M(t[5])+'</b></div>'+(t[6]?'<span class="badge '+fl[t[6]][1]+'">'+fl[t[6]][0]+'</span>':'<span class="badge b-warn">ขอเช็กบิล</span>'):'<div class="tfree">'+l[0]+'</div>')+'</button>'}).join('')+'</div></div></section>'}
+
+/* ---------- render ---------- */
+function runCmd(c){st.cmd=null;var t=c.split(':');if(t[0]==='ws'){st.ws=t[1];draw()}else if(t[0]==='p'){st.ws='sell';add(+t[1])}else if(t[1]==='hold')hold();else if(t[1]==='new')newBill();else if(t[1]==='printer'){toast('ส่งพิมพ์ทดสอบแล้ว');draw()}}
+function overlays(){var h='';
+ if(st.pin!==null){var names=['สมชาย','มานี','ต้น','นิด'];h+='<div class="ov"><div class="dlg" role="dialog" aria-label="สลับพนักงาน"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:16px">สลับพนักงาน</b><button class="ib" data-act="pinclose" aria-label="ปิด">'+I('x',15)+'</button></div><div class="mut" style="font-size:12px;margin:4px 0 10px">เลือกชื่อแล้วใส่ PIN 4 หลัก · บิลที่เปิดอยู่ไม่หาย</div><div class="who">'+names.map(function(n,i){return '<span class="'+(i===1?'on':'')+'">'+n+'</span>'}).join('')+'</div><div class="pdots">'+[0,1,2,3].map(function(i){return '<i class="'+(i<st.pin.length?'f':'')+'"></i>'}).join('')+'</div><div class="pad">'+['1','2','3','4','5','6','7','8','9','','0','⌫'].map(function(k){return k?'<button data-pk="'+k+'">'+k+'</button>':'<span></span>'}).join('')+'</div></div></div>'}
+ if(st.cmd!==null){var q=st.cmd.trim().toLowerCase();var C=[['ไปหน้า ขาย','ws:sell','Alt 2'],['ไปหน้า ประวัติขาย','ws:history','Alt 3'],['นับเงินและปิดกะ','ws:shift','Alt 4'],['ไปหน้า สินค้า','ws:products','Alt 5'],['ดูรายงานวันนี้','ws:reports','Alt 6'],['ตั้งค่า','ws:settings','Alt 7'],['พักบิล','act:hold','F4'],['บิลใหม่','act:new','Ctrl N'],['พิมพ์ทดสอบ','act:printer','']];
+  var cm=C.filter(function(c){return !q||c[0].indexOf(q)>=0}),pm=q?P.filter(function(p){return p.n.toLowerCase().indexOf(q)>=0||p.sku.toLowerCase().indexOf(q)>=0}).slice(0,5):[];
+  h+='<div class="ov" style="place-items:start" data-act="cmdclose"><div class="cmdk" data-stop="1"><input id="cmdi" placeholder="พิมพ์คำสั่ง ชื่อสินค้า หรือเลขบิล…" value="'+st.cmd.replace(/"/g,'&quot;')+'" autocomplete="off"><div class="res">'+(cm.length?'<b>คำสั่ง</b>'+cm.map(function(c,i){return '<button class="'+(i===0?'on':'')+'" data-cmd="'+c[1]+'"><span>'+c[0]+'</span><span class="k num">'+c[2]+'</span></button>'}).join(''):'')+(pm.length?'<b>สินค้า · กด Enter เพื่อเพิ่มลงบิล</b>'+pm.map(function(p){return '<button data-cmd="p:'+p.id+'"><span>'+p.n+'</span><span class="k num">'+M(p.p)+'</span></button>'}).join(''):'')+(!cm.length&&!pm.length?'<div class="empty" style="padding:20px"><b>ไม่พบ “'+st.cmd+'”</b></div>':'')+'</div></div></div>'}
+ return h}
+
+function body(){return st.ws==='sell'?sellView():st.ws==='history'?historyView():st.ws==='shift'?shiftView():st.ws==='products'?productsView():st.ws==='reports'?reportsView():st.ws==='settings'?settingsView():homeView()}
+function draw(){var a=document.activeElement,fid=a&&a.id,ss=a&&a.selectionStart;
+ var sc=W.querySelector('.ln.cur')&&W.querySelector('.pane .scroll'),top=sc?sc.scrollTop:0;
+ W.innerHTML=tabs()+toolbar()+body()+status()+overlays()+(st.toast?'<div class="toast">'+st.toast+(snap?'<button data-act="undo">เลิกทำ</button>':'')+'</div>':'');
+ if(st.done){var nb=W.querySelector('#nb');nb&&nb.focus()}
+ else if(fid&&W.querySelector('#'+fid)){var el=W.querySelector('#'+fid);el.focus();try{el.setSelectionRange(ss,ss)}catch(e){}}
+ W.className=(st.touch?'touch ':'')+(st.soft?'soft':'');var av=ACC[st.acc];['--accent','--accent-h','--accent-line','--on-accent','--chart','--flash'].forEach(function(n,i){W.style.setProperty(n,av[i+1])});var cur=W.querySelector('.ln.cur');if(cur){var sc2=cur.parentNode;var b2=cur.offsetTop+cur.offsetHeight;if(b2>sc2.scrollTop+sc2.clientHeight)sc2.scrollTop=b2-sc2.clientHeight;if(cur.offsetTop<sc2.scrollTop)sc2.scrollTop=cur.offsetTop}fit()}
+function fit(){var s=Math.min(1,(ST.clientWidth-16)/1280,(ST.clientHeight-16)/820);W.style.transform='scale('+s+')';W.style.left=Math.max(8,(ST.clientWidth-1280*s)/2)+'px';W.style.top=Math.max(8,(ST.clientHeight-820*s)/2)+'px'}
+window.addEventListener('resize',fit);
+var AC=null;function beep(ok){if(!st.sound)return;try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();var o=AC.createOscillator(),g=AC.createGain();o.type='sine';o.frequency.value=ok?1320:220;g.gain.setValueAtTime(0.0001,AC.currentTime);g.gain.exponentialRampToValueAtTime(0.18,AC.currentTime+0.01);g.gain.exponentialRampToValueAtTime(0.0001,AC.currentTime+(ok?0.09:0.25));o.connect(g);g.connect(AC.destination);o.start();o.stop(AC.currentTime+(ok?0.1:0.26))}catch(e){}}
+function add(id){var p=P[id];if(p.closed||p.s===0){beep(false);return}if(p.s!=null&&inCart(id)>=p.s){beep(false);toast('สต็อกไม่พอ · เหลือ '+p.s);draw();return}
+ var i=st.bill.lines.findIndex(function(l){return l.pid===id&&!l.mods});if(i<0){st.bill.lines.push({pid:id,q:1});i=st.bill.lines.length-1}else st.bill.lines[i].q++;st.sel=i;st.tab='cur';st.flash=i;st.bump=id;beep(true);draw();st.flash=-1;st.bump=-1}
+function remove(i){var s=S(),l=st.bill.lines[i];if(!l)return;st.bill.lines.splice(i,1);st.sel=Math.min(i,st.bill.lines.length-1);toast('ลบ “'+P[l.pid].n+'” แล้ว',s);draw()}
+function qty(d){var l=st.bill.lines[st.sel];if(!l)return;if(l.q+d<=0){remove(st.sel);return}l.q+=d;draw()}
+function hold(){if(!st.bill.lines.length)return;var s=S();var b=st.bill;b.at='13:55';st.held.push(b);st.bill={name:'',lines:[]};st.sel=-1;st.mode='order';toast('พักบิล “'+(b.name||'บิลใหม่')+'” แล้ว',s);draw()}
+function pay(){if(!st.bill.lines.length)return;st.mode='pay';st.recv='';draw();var c=W.querySelector('#cash');c&&c.focus()}
+function confirmPay(){var sm=sums(),r=parseFloat(String(st.recv).replace(/,/g,''))||0;if(r<sm.t)return;st.done={total:sm.t,recv:r,change:r-sm.t};draw()}
+function newBill(){st.bill={name:'',lines:[]};st.done=null;st.mode='order';st.recv='';st.sel=-1;draw();var q=W.querySelector('#q');q&&q.focus()}
+W.addEventListener('click',function(e){var pk=e.target.closest('[data-pk]');if(pk){var k=pk.dataset.pk;if(k==='⌫')st.pin=st.pin.slice(0,-1);else st.pin+=k;if(st.pin.length>=4){st.pin=null;st.staff=st.staff==='สมชาย'?'มานี':'สมชาย';toast('สลับเป็น '+st.staff+' แล้ว')}draw();return}
+ var cmb=e.target.closest('[data-cmd]');if(cmb){runCmd(cmb.dataset.cmd);return}
+ if(e.target.closest('[data-stop]')&&!e.target.closest('[data-act]'))return;
+ var shp=e.target.closest('[data-shape]');if(shp){st.soft=shp.dataset.shape==='soft';try{localStorage.setItem('posd.shape',shp.dataset.shape)}catch(_){}draw();return}
+ var dz=e.target.closest('[data-dens]');if(dz){st.touch=dz.dataset.dens==='touch';try{localStorage.setItem('posd.density',dz.dataset.dens)}catch(_){}draw();return}
+ var y=e.target.closest('[data-hf],[data-den],[data-psel],[data-ptab],[data-zone],[data-table],[data-view]');if(y){var g=y.dataset;
+ if(g.hf){st.hf=g.hf}else if(g.den!=null){var dd=st.den[+g.den];dd[1]=Math.max(0,dd[1]+(+g.d))}else if(g.psel!=null){st.psel=+g.psel}else if(g.ptab!=null){st.ptab=+g.ptab}else if(g.zone){st.zone=g.zone}else if(g.view){st.view=g.view}
+ else if(g.table){var tt=TBL.filter(function(t){return t[0]===g.table})[0];var s0=S();if(st.bill.lines.length){st.bill.at='13:55';st.held.push(st.bill)}st.bill={name:'โต๊ะ '+tt[0],lines:(tt[2]==='busy'||tt[2]==='pay')?[{pid:0,q:2,mods:'เผ็ดน้อย'},{pid:4,q:2},{pid:2,q:1}]:[]};st.sel=st.bill.lines.length-1;st.view='products';st.mode='order';st.tab='cur';toast('เปิดบิลโต๊ะ '+tt[0],s0)}
+ draw();return}
+ var x=e.target.closest('[data-ws],[data-act],[data-p],[data-line],[data-q],[data-rm],[data-cat],[data-tab],[data-resume],[data-cash],[data-tender],[data-hist],[data-rep]');if(!x)return;var d=x.dataset;
+ if(d.ws){st.ws=d.ws;draw()}else if(d.p!=null){add(+d.p)}else if(d.q!=null){qty(+d.q)}else if(d.rm!=null){remove(+d.rm)}else if(d.line!=null){st.sel=(st.touch&&st.sel===+d.line)?-1:+d.line;draw()}
+ else if(d.cat){st.cat=d.cat;draw()}else if(d.tab){st.tab=d.tab;draw()}else if(d.resume!=null){var s=S();var b=st.held.splice(+d.resume,1)[0];if(st.bill.lines.length){st.bill.at='13:55';st.held.push(st.bill)}st.bill=b;st.tab='cur';st.sel=b.lines.length-1;toast('เปิดบิล “'+b.name+'”',s);draw()}
+ else if(d.cash){st.recv=M(+d.cash);draw()}else if(d.tender){st.tender=d.tender;draw()}else if(d.hist!=null){st.hist=+d.hist;draw()}else if(d.rep){st.repTab=d.rep;draw()}
+ else if(d.act){var a=d.act;if(a==='hold')hold();else if(a==='pay')pay();else if(a==='back'){st.mode='order';draw()}else if(a==='confirm')confirmPay();else if(a==='newbill'||a==='new')newBill();else if(a==='undo')undo();else if(a==='kitchen'){toast('ส่งครัวแล้ว · '+items()+' ชิ้น');draw()}else if(a==='gosell'){st.ws='sell';draw()}else if(a==='lnote'){toast('หมายเหตุ/ตัวเลือก ใช้กับรายการนี้เท่านั้น');draw()}else if(a==='ldisc'){toast('ส่วนลดรายการ ใช้กับรายการนี้เท่านั้น');draw()}else if(a==='billdisc'){toast('ส่วนลดบิล ใช้กับทั้งบิล');draw()}else if(a==='split'){toast('แยกบิล: เลือกรายการที่จะย้าย');draw()}else if(a==='printer'){toast('ส่งพิมพ์ทดสอบแล้ว · ตรวจกระดาษที่เครื่องพิมพ์');draw()}else if(a==='offline'){toast('ออฟไลน์: 14 บิลบันทึกในเครื่อง · จะ sync เมื่อออนไลน์');draw()}else if(a==='sound'){st.sound=!st.sound;draw()}else if(a==='accent'){var ks=Object.keys(ACC);st.acc=ks[(ks.indexOf(st.acc)+1)%ks.length];try{localStorage.setItem('posd.accent',st.acc)}catch(_){}toast('สีหลัก: '+ACC[st.acc][0]+' · เปลี่ยนเฉพาะปุ่มหลัก แท็บ และกราฟ');draw()}else if(a==='staff'){st.pin='';draw()}else if(a==='pinclose'){st.pin=null;draw()}else if(a==='cmdk'){st.cmd='';draw();var ci=W.querySelector('#cmdi');ci&&ci.focus()}else if(a==='cmdclose'){st.cmd=null;draw()}else if(a==='goshift'){st.ws='shift';draw()}}});
+W.addEventListener('input',function(e){if(e.target.id==='cmdi'){st.cmd=e.target.value;draw();return}if(e.target.id==='q'){st.q=e.target.value;draw()}else if(e.target.id==='cash'){st.recv=e.target.value.replace(/[^0-9.,]/g,'');draw()}});
+document.addEventListener('keydown',function(e){var t=e.target,inQ=t.id==='q',inC=t.id==='cash';
+ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();st.cmd='';draw();var ci=W.querySelector('#cmdi');ci&&ci.focus();return}
+ if(st.cmd!==null){if(e.key==='Escape'){st.cmd=null;draw()}else if(e.key==='Enter'){e.preventDefault();var f=W.querySelector('.cmdk [data-cmd]');f&&runCmd(f.dataset.cmd)}return}
+ if(st.pin!==null){if(e.key==='Escape'){st.pin=null;draw()}else if(/^[0-9]$/.test(e.key)){W.querySelector('[data-pk="'+e.key+'"]').click()}return}
+ if(e.altKey&&/^[1-7]$/.test(e.key)){e.preventDefault();st.ws=WS[+e.key-1][0];draw();return}
+ if(st.ws!=='sell')return;
+ if(st.done){if(e.key==='Enter'){e.preventDefault();newBill()}return}
+ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'&&!inC&&!(inQ&&st.q)){e.preventDefault();undo();return}
+ if(e.key==='F2'||(e.key==='/'&&!inQ&&!inC)){e.preventDefault();var q=W.querySelector('#q');q&&q.focus();return}
+ if(e.key==='F4'){e.preventDefault();hold();return}
+ if(e.key==='F9'){e.preventDefault();pay();return}
+ if(e.key==='Escape'){if(st.mode==='pay'){st.mode='order';draw()}else if(st.q){st.q='';draw()}return}
+ if(inC&&e.key==='Enter'){e.preventDefault();confirmPay();return}
+ if(inQ&&e.key==='Enter'){e.preventDefault();var s=st.q.trim().toLowerCase();var m=P.filter(function(p){return !p.closed&&p.s!==0&&(p.n.toLowerCase().indexOf(s)>=0||p.sku.toLowerCase().indexOf(s)>=0)});if(s&&m.length){st.q='';add(m[0].id);var q2=W.querySelector('#q');q2&&q2.focus()}else if(s){beep(false);toast('ไม่พบ “'+st.q+'” · ตรวจรหัสหรือบาร์โค้ด');draw();var q3=W.querySelector('#q');q3&&q3.select()}return}
+ if(inC||st.mode==='pay')return;var n=st.bill.lines.length;if(!n)return;
+ if(e.key==='ArrowUp'){e.preventDefault();st.sel=st.sel<=0?n-1:st.sel-1;draw()}else if(e.key==='ArrowDown'){e.preventDefault();st.sel=st.sel>=n-1?0:st.sel+1;draw()}
+ else if(!inQ||!st.q){if(e.key==='+'||e.key==='='){e.preventDefault();qty(1)}else if(e.key==='-'){e.preventDefault();qty(-1)}else if(e.key==='Delete'){e.preventDefault();remove(st.sel)}}});
+draw();setTimeout(function(){var q=W.querySelector('#q');q&&q.focus({preventScroll:true})},50);
+})();
+</script>
+
+</body>
+</html>
