@@ -27,7 +27,7 @@ Unsigned builds work but warn on first launch:
 ## Computer requirements
 
 - macOS 11 or later (Apple silicon or Intel); Windows 10/11 64-bit.
-- 2 CPU cores and 4 GB RAM are enough (measured on a 2 vCPU / 4 GB Windows VM: little memory, idle CPU a few percent).
+- 2 CPU cores and 4 GB RAM are enough (measured: a 2 vCPU / 4 GB Windows VM idles at a few percent CPU; on an Apple-silicon Mac the app used at most about 20% CPU and under 70 MB of memory).
 - **A graphics adapter is needed for smooth use:** any integrated GPU (Intel UHD/Iris, AMD Radeon, Apple) with DirectX 12, Vulkan or Metal. Without one (cloud VMs, remote desktops) Windows draws the app on the CPU: it works, but CPU jumps while the screen changes.
 - Screen at least 1000×700 points (the app scales down to fit, e.g. 1366×768 at 125%).
 
