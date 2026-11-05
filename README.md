@@ -1,52 +1,52 @@
 # POS Heart
 
-POS Heart เป็นแอปขายหน้าร้านสำหรับร้านค้าทั่วไปและร้านอาหาร ออกแบบให้ใช้งานที่เคาน์เตอร์ได้ทั้งเมาส์ คีย์บอร์ด และจอสัมผัส รองรับภาษาไทยและ English พัฒนาด้วย Rust และ egui โดยเก็บข้อมูลหลักใน SQLite บนเครื่อง
+POS Heart is a desktop point-of-sale application for retail shops and counter-service restaurants. Built with Rust and egui, it stores its primary data in a local SQLite database and supports Thai and English, mouse, keyboard, and touch input.
 
-**สถานะ: อยู่ระหว่างพัฒนา ยังไม่พร้อมนำไปแทนระบบขายจริง** การทดสอบอุปกรณ์จริง ความพร้อมใช้งานหลายเครื่อง และเอกสารภาษียังต้องตรวจสอบเพิ่มเติม ดูหลักฐานและข้อจำกัดใน [validation](docs/validation.md)
+**Status: under development and not ready to replace a production POS.** Physical hardware, multi-device operation, and tax documents need further verification. See the [validation record](docs/validation.md) for evidence and outstanding checks.
 
-![หน้าจอขาย POS Heart พร้อมข้อมูลตัวอย่าง](screenshots/2026-10-14/soft/01-main/sell.png)
+![POS Heart sales screen with fictional data](screenshots/2026-10-14/soft/01-main/sell.png)
 
-*หน้าจอตัวอย่างจากชุดภาพที่สร้างด้วยข้อมูลสมมติ ดูภาพและเงื่อนไขการจัดทำเพิ่มเติมใน [screenshot catalog](screenshots/2026-10-14/README.md)*
+*This screenshot uses fictional data. See the [screenshot catalog](screenshots/2026-10-14/README.md) for more views and capture details.*
 
-## ความสามารถ
+## Features
 
-- **ขายหน้าร้าน:** สินค้าและตัวเลือก ส่วนลด โปรโมชั่น พักบิล แยกบิล และรับชำระเงินสด โอน หรือบัตร รวมถึงแบ่งชำระหลายวิธี
-- **จัดการร้านอาหาร:** ผังโต๊ะ ส่งรายการเข้าครัว ติดตามรายการ และพิมพ์ใบเช็กบิล
-- **สินค้าและสต็อก:** หมวดหมู่ รูปสินค้า นำเข้า CSV ประวัติปรับสต็อก วัตถุดิบและสูตร รวมถึงใบสั่งซื้อและรับสินค้า
-- **หลังการขาย:** ประวัติใบเสร็จ คืนสินค้าบางส่วนหรือยกเลิกทั้งบิล กะและลิ้นชักเงิน รายงานและส่งออก CSV
-- **การตั้งค่า:** พนักงานและสิทธิ์ ภาษีมูลค่าเพิ่ม ใบกำกับภาษี ใบลดหนี้ เครื่องพิมพ์ และสำรองข้อมูล
-- **อุปกรณ์และคลาวด์:** มีส่วนสำหรับเชื่อมอุปกรณ์บน LAN และบริการคลาวด์แบบเลือกใช้ อ่านสถานะและข้อจำกัดใน [multi-device](docs/multi-device.md)
+- **Point of sale:** products and options, discounts and promotions, held bills, split bills, and cash, transfer, card, or split payments.
+- **Restaurant operations:** table floor, kitchen orders and tracking, and printable check bills.
+- **Catalog and stock:** categories, product images, CSV import, stock movement history, ingredients and recipes, purchase orders, and receiving.
+- **Sales management:** receipt history, partial refunds and full voids, shifts and cash drawers, reports, and CSV export.
+- **Shop settings:** staff permissions, VAT, tax invoices and credit notes, receipt printers, and backups.
+- **Devices and cloud:** optional shop LAN devices and a cloud service. See [multi-device](docs/multi-device.md) for their status and limitations.
 
-การโอนและบัตรเป็นการบันทึกที่พนักงานยืนยันเอง แอปไม่ได้ตรวจสอบเงินเข้า หักเงิน หรือคืนเงินผ่านผู้ให้บริการชำระเงินโดยอัตโนมัติ เอกสารภาษียังไม่ได้รับการยืนยันรูปแบบทางกฎหมาย
+Transfers and card payments are recorded after manual confirmation. The app does not automatically verify a transfer, charge a card, or send a refund. Tax document layouts have not been legally reviewed.
 
-## เริ่มใช้งานจากซอร์ส
+## Getting started
 
-ต้องมี Rust stable **1.95 ขึ้นไป** และเครื่องมือ build ของระบบ: Xcode Command Line Tools บน macOS หรือ Visual Studio C++ Build Tools บน Windows การ build ครั้งแรกต้องดาวน์โหลด dependencies; แอปเดสก์ท็อปแบบเครื่องเดียวไม่ต้องติดตั้ง database server
+Install Rust stable **1.95 or later** and the native build tools for your platform: Xcode Command Line Tools on macOS or Visual Studio C++ Build Tools on Windows. The first build downloads dependencies. The standalone desktop app does not require a database server.
 
 ```sh
-# เปิดด้วยข้อมูลตัวอย่างในโฟลเดอร์ demo แยกจากข้อมูลร้าน
+# Open with fictional sample data in a separate demo folder
 cargo run -p pos-desktop --bin pos-heart -- --demo
 
-# เปิดตามปกติ หรือกำหนดโฟลเดอร์ข้อมูลเอง
+# Open normally, or choose a data directory
 cargo run -p pos-desktop --bin pos-heart
 cargo run -p pos-desktop --bin pos-heart -- --data-dir ./data
 ```
 
-ครั้งแรกสามารถตั้งชื่อร้านและเพิ่มสินค้า หรือเลือกตั้งค่าภายหลังได้ เปิดกะก่อนรับชำระเงิน ข้อมูลปกติอยู่ในโฟลเดอร์ application data ของระบบ และดูตำแหน่งได้จาก Settings → Data & backup รายละเอียดการติดตั้งและสร้างตัวติดตั้งอยู่ใน [release guide](docs/release.md); ตัวติดตั้งยังไม่มีการลงนามอย่างสมบูรณ์
+On first launch, set a shop name and add products, or choose to set up later. Open a shift before taking payment. Normal data lives in the operating system's application-data directory; its location is shown in Settings → Data & backup. See the [release guide](docs/release.md) for installation and packaging. Installers are not yet fully signed.
 
-## โครงสร้างโปรเจกต์
+## Project structure
 
-| ส่วน | หน้าที่ |
+| Directory | Purpose |
 | --- | --- |
-| [`apps/pos-desktop`](apps/pos-desktop) | แอปเดสก์ท็อป UI และงานเบื้องหลัง |
-| [`crates/pos-domain`](crates/pos-domain) | กฎธุรกิจ การคำนวณราคาและข้อมูลการขาย |
-| [`crates/pos-core`](crates/pos-core) | ฐานข้อมูล ธุรกรรม และการจัดเก็บข้อมูล |
-| [`crates/pos-service`](crates/pos-service) | โปรโตคอลและตัว dispatch คำสั่ง |
-| [`crates/pos-hub`](crates/pos-hub) | การเชื่อมต่ออุปกรณ์ภายในร้าน |
-| [`apps/pos-cloud`](apps/pos-cloud) | บริการคลาวด์และแดชบอร์ดแบบเลือกใช้ |
-| [`design`](design) | design system, tokens และภาพอ้างอิง |
+| [`apps/pos-desktop`](apps/pos-desktop) | Desktop interface and background work |
+| [`crates/pos-domain`](crates/pos-domain) | Business rules, pricing, and sales data types |
+| [`crates/pos-core`](crates/pos-core) | Database, transactions, and persistence |
+| [`crates/pos-service`](crates/pos-service) | Command protocol and dispatcher |
+| [`crates/pos-hub`](crates/pos-hub) | Shop LAN device connectivity |
+| [`apps/pos-cloud`](apps/pos-cloud) | Optional cloud service and dashboard |
+| [`design`](design) | Design system, tokens, and visual references |
 
-แอปเครื่องเดียวเก็บข้อมูลในเครื่องโดยปริยาย ส่วน LAN และคลาวด์ต้องตั้งค่าเพิ่มเติม ดูแนวทางและคำสั่งสำหรับบริการคลาวด์ใน [multi-device](docs/multi-device.md) และ [CLAUDE.md](CLAUDE.md)
+The standalone app keeps data locally by default. LAN devices and cloud features require additional setup; see [multi-device](docs/multi-device.md) and the developer commands in [CLAUDE.md](CLAUDE.md).
 
 ## Checks
 
@@ -56,17 +56,17 @@ cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 ```
 
-การทดสอบบางส่วนของคลาวด์ต้องมี PostgreSQL และตัวแปร `POS_CLOUD_TEST_DATABASE_URL` ตาม [คำสั่งสำหรับนักพัฒนา](CLAUDE.md#commands) ผล build หรือภาพตัวอย่างเพียงอย่างเดียวไม่ได้ยืนยันการใช้งานจริงบนทุกแพลตฟอร์มหรืออุปกรณ์
+Some cloud tests require PostgreSQL and `POS_CLOUD_TEST_DATABASE_URL`; see the [developer commands](CLAUDE.md#commands). A successful build or a screenshot alone does not establish runtime behavior on every platform or device.
 
-## เอกสารเพิ่มเติม
+## Documentation
 
-- [คู่มือรายละเอียดและขั้นตอนใช้งาน](docs/user-guide.md) — รวมบันทึกจากช่วงพัฒนา บางหัวข้ออธิบายสถานะในอดีต
-- [ขอบเขตผลิตภัณฑ์](PRODUCT.md) · [สถาปัตยกรรม](docs/architecture.md) · [ระบบดีไซน์](design/README.md)
-- [อุปกรณ์หลายเครื่องและคลาวด์](docs/multi-device.md) · [การติดตั้งและ release](docs/release.md) · [ผลการตรวจสอบ](docs/validation.md)
-- [แนวทางทำงานใน repository](AGENTS.md) · [คำสั่งและบริบทสำหรับนักพัฒนา](CLAUDE.md)
+- [Detailed user guide](docs/user-guide.md) — includes development-era notes; some sections describe earlier milestones.
+- [Product scope](PRODUCT.md) · [Architecture](docs/architecture.md) · [Design system](design/README.md)
+- [Multi-device and cloud](docs/multi-device.md) · [Installation and release](docs/release.md) · [Validation record](docs/validation.md)
+- [Repository guidance](AGENTS.md) · [Developer commands and context](CLAUDE.md)
 
-## ข้อมูลและสิทธิ์ใช้งาน
+## Data and licensing
 
-ใช้ข้อมูลสมมติในการพัฒนาและภาพตัวอย่าง อย่า commit ฐานข้อมูลร้าน ไฟล์สำรอง credentials หรือการตั้งค่าเฉพาะเครื่อง ฐานข้อมูลในเครื่องไม่ได้เข้ารหัส PIN พนักงานไม่ได้ป้องกันการเข้าถึงไฟล์ฐานข้อมูลโดยตรง
+Use fictional data for development and screenshots. Do not commit shop databases, backups, credentials, or device-specific settings. The local database is not encrypted, and staff PINs do not protect the database file from direct access.
 
-โปรเจกต์ยังไม่ได้เลือก license สำหรับซอร์สโค้ด ส่วนฟอนต์ที่รวมมาใช้ license ของฟอนต์แต่ละชุดใน [`assets/fonts`](assets/fonts)
+No license has been selected for the project source code. Bundled fonts retain their own licenses in [`assets/fonts`](assets/fonts).
