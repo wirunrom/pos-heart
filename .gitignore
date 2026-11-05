@@ -8,3 +8,29 @@
 /data/
 /work/
 /.impeccable/review/
+
+# Local editor, agent and operating-system state
+.claude/*.lock
+.vscode/
+.idea/
+Thumbs.db
+
+# Local credentials and configuration
+.env
+.env.*
+!.env.example
+cloud.json
+printer.json
+auto-backup.json
+auto-lock.json
+
+# Shop data, SQLite sidecars and recovery/export artifacts
+*.sqlite
+*.sqlite-*
+*.sqlite3-wal
+*.sqlite3-shm
+*.posbackup/
+*.phcloud
+shop.json
+receipt-logo.png
+current-bill.txt

@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # POS Heart
 
 Read and follow AGENTS.md. It is the canonical development guide (respond mainly in Thai; keep changes to the assigned scope; update docs when architecture or key flows change).
-Setup and commands: README.md. Module/data decisions: docs/architecture.md. Scope: PRODUCT.md.
+Setup and commands: README.md; detailed historical usage notes: docs/user-guide.md. Module/data decisions: docs/architecture.md. Scope: PRODUCT.md.
 
 ## Commands
 
